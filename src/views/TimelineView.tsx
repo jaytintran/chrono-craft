@@ -24,14 +24,21 @@ import {
   Clock,
   Trash2,
   Hourglass,
-  LayoutGrid,
-  List,
   ExternalLink,
   MoreVertical,
 } from "lucide-react";
-import { CalendarEvent, EntryType, Note, TimelineEntry } from "../types";
+import {
+  CalendarEvent,
+  EntryType,
+  Note,
+  TimelineEntry,
+  TimelineDisplayMode,
+} from "../types";
+import { InlineTitle } from "../components/InlineTitle";
 import { RichContent } from "../components/RichContent";
 import { NLPInputBar } from "../components/NLPInputBar";
+import { toLocalDateKey } from "../utils/date";
+
 import { CustomCalendarDropdown } from "../components/CustomCalendarDropdown";
 import { CustomTimePickerPopover } from "../components/CustomTimePickerPopover";
 import { useLongPress } from "../hooks/useLongPress";
@@ -51,9 +58,18 @@ interface TimelineViewProps {
     pos: { x: number; y: number },
   ) => void;
   onUpdateEntryTime?: (entryId: string, newIso: string) => Promise<void>;
+  displayMode?: TimelineDisplayMode;
+  onUpdateEntryTitle?: (entryId: string, newTitle: string) => Promise<void>;
 }
 
-type TimelineDisplayMode = "default" | "minimal";
+// Each entry belongs to exactly ONE day:
+// time block start > scheduled > completed > created
+const getEntryDateKey = (e: TimelineEntry): string =>
+  toLocalDateKey(
+    new Date(
+      e.timeBlock?.startIso || e.scheduledAt || e.completedAt || e.createdAt,
+    ),
+  );
 
 export const TimelineView: React.FC<TimelineViewProps> = ({
   entries,
@@ -67,13 +83,14 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
   onOpenEventDetail,
   onOpenContextMenu,
   onUpdateEntryTime,
+  displayMode = "default",
+  onUpdateEntryTitle,
 }) => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [filterType, setFilterType] = useState<"all" | EntryType | "habit">(
     "all",
   );
-  const [displayMode, setDisplayMode] =
-    useState<TimelineDisplayMode>("default");
+
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [timePickerTarget, setTimePickerTarget] = useState<{
     entryId: string;
@@ -87,6 +104,17 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
       return entry.title.replace(/^Completed habit:\s*/i, "");
     }
     return entry.title;
+  };
+
+  const saveEntryTitle = (
+    entry: TimelineEntry,
+    next: string,
+    restorePrefix = false,
+  ) => {
+    const prefix = restorePrefix
+      ? (entry.title.match(/^Completed habit:\s*/i)?.[0] ?? "")
+      : "";
+    onUpdateEntryTitle?.(entry.id, prefix + next);
   };
 
   // Get content of notes and events entries
@@ -121,7 +149,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
     setSelectedDate(next);
   };
 
-  const selectedDateStr = selectedDate.toISOString().split("T")[0];
+  const selectedDateStr = toLocalDateKey(selectedDate);
   const isToday = selectedDate.toDateString() === new Date().toDateString();
 
   // Format date button text:
@@ -157,6 +185,15 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
     return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
   };
 
+  // "DD/MM · 9:30 AM"
+  const formatCreatedAt = (iso?: string) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    return `${dd}/${mm} · ${formatTimestamp(iso)}`;
+  };
+
   // Calculate elapsed turnaround time
   const getElapsedDuration = (startIso: string, endIso: string) => {
     const start = new Date(startIso).getTime();
@@ -171,20 +208,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
   // Filter day entries
   const dayEntries = useMemo(() => {
     return entries
-      .filter((e) => {
-        const scheduledMatch =
-          e.scheduledAt && e.scheduledAt.startsWith(selectedDateStr);
-        const createdMatch =
-          e.createdAt && e.createdAt.startsWith(selectedDateStr);
-        const completedMatch =
-          e.completedAt && e.completedAt.startsWith(selectedDateStr);
-        const blockStartMatch =
-          e.timeBlock?.startIso &&
-          e.timeBlock.startIso.startsWith(selectedDateStr);
-        return (
-          scheduledMatch || createdMatch || completedMatch || blockStartMatch
-        );
-      })
+      .filter((e) => getEntryDateKey(e) === selectedDateStr)
       .filter((e) => {
         if (filterType === "all") return true;
         if (filterType === "habit") return e.source === "habit";
@@ -329,37 +353,6 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
 
         {/* Right Controls: Density Switcher (Default vs Minimal) & Filter Tabs */}
         <div className="flex items-center gap-3">
-          {/* Density Mode Switcher */}
-          <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-xs">
-            <button
-              type="button"
-              onClick={() => setDisplayMode("default")}
-              title="Standard Card View"
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-medium transition-colors cursor-pointer ${
-                displayMode === "default"
-                  ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xs font-semibold"
-                  : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
-              }`}
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              <span>Default</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setDisplayMode("minimal")}
-              title="Compact Two-Line View"
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-medium transition-colors cursor-pointer ${
-                displayMode === "minimal"
-                  ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xs font-semibold"
-                  : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
-              }`}
-            >
-              <List className="w-3.5 h-3.5" />
-              <span>Minimal</span>
-            </button>
-          </div>
-
           {/* Filter Tabs */}
           <div className="hidden lg:flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 text-xs">
             {(
@@ -412,12 +405,16 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                 </div>
               </div>
             ) : (
-              <div className="space-y-4 relative">
+              <div
+                className={`${displayMode === "flat" ? "space-y-1" : "space-y-4"} relative`}
+              >
+                {" "}
                 {processedItems.map((item) => {
                   const entry = item.originalEntry;
                   const isCompleted = entry.status === "completed";
                   const isNoteOrEvent =
                     entry.type === "note" || entry.type === "event";
+                  const isLog = entry.type === "log";
                   const isTimeBlockMarker = item.isTimeBlockMarker;
                   const isContainedInBlock = !!item.containedInBlock;
 
@@ -469,9 +466,11 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                             <span className="font-bold uppercase tracking-wider text-[11px] px-1.5 py-0.5 rounded bg-violet-500/20">
                               BLOCK START
                             </span>
-                            <span className="font-bold text-slate-900 dark:text-slate-100 text-sm">
-                              {entry.title}
-                            </span>
+                            <InlineTitle
+                              value={entry.title}
+                              onSave={(t) => saveEntryTitle(entry, t)}
+                              className="font-bold text-slate-900 dark:text-slate-100 text-sm"
+                            />
                             <span className="text-violet-400">·</span>
                             <span>
                               {formatTimestamp(entry.timeBlock?.startIso)}
@@ -522,9 +521,11 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                             <span className="font-bold uppercase tracking-wider text-[10px] px-1.5 py-0.5 rounded bg-violet-500/10">
                               BLOCK END
                             </span>
-                            <span className="text-slate-700 dark:text-slate-300">
-                              {entry.title}
-                            </span>
+                            <InlineTitle
+                              value={entry.title}
+                              onSave={(t) => saveEntryTitle(entry, t)}
+                              className="text-slate-700 dark:text-slate-300"
+                            />
                             <span>·</span>
                             <span>
                               {formatTimestamp(entry.timeBlock?.endIso)}
@@ -545,7 +546,10 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                             </button>
                             <button
                               type="button"
-                              onClick={() => onDeleteEntry(entry.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDeleteEntry(entry.id);
+                              }}
                               className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-500 transition-opacity"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -557,7 +561,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                   }
 
                   // =================== MINIMAL VIEW ===================
-                  if (displayMode === "minimal") {
+                  if (displayMode === "compact") {
                     return (
                       <div
                         key={item.id}
@@ -604,16 +608,16 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                         >
                           {/* Line 1: Title & Time */}
                           <div className="flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <InlineTitle
+                                value={getCleanTitle(entry)}
+                                onSave={(t) => saveEntryTitle(entry, t, true)}
                                 className={`text-xs font-semibold truncate ${
                                   isCompleted && entry.type === "task"
                                     ? "line-through text-slate-400 dark:text-slate-500"
                                     : "text-slate-900 dark:text-slate-100"
                                 }`}
-                              >
-                                {getCleanTitle(entry)}
-                              </span>
+                              />
 
                               {entry.priority === "high" && (
                                 <span className="text-[9px] font-mono text-rose-500 font-bold uppercase shrink-0">
@@ -677,6 +681,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                               </span>
 
                               {isCompleted &&
+                                !isLog &&
                                 !entry.scheduledAt &&
                                 entry.completedAt && (
                                   <>
@@ -684,7 +689,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                                       ·
                                     </span>
                                     <span className="text-emerald-500">
-                                      Created {formatTimestamp(entry.createdAt)}{" "}
+                                      Created {formatCreatedAt(entry.createdAt)}{" "}
                                       → Done{" "}
                                       {formatTimestamp(entry.completedAt)} (
                                       {getElapsedDuration(
@@ -791,21 +796,25 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                       {/* Horizontal Card along the spine */}
                       <div
                         onClick={isNoteOrEvent ? handleTitleClick : undefined}
-                        className={`flex-1 p-4 rounded-xl bg-white dark:bg-[#131926] border border-slate-200 dark:border-slate-800/80 shadow-xs hover:border-indigo-500/40 hover:shadow-md transition-all ${isNoteOrEvent ? "cursor-pointer" : ""}`}
+                        className={`flex-1 transition-all ${
+                          displayMode === "flat"
+                            ? "py-1.5 px-2 -mx-2 rounded-lg hover:bg-slate-100/70 dark:hover:bg-slate-800/40"
+                            : "p-4 rounded-xl bg-white dark:bg-[#131926] border border-slate-200 dark:border-slate-800/80 shadow-xs hover:border-indigo-500/40 hover:shadow-md"
+                        } ${isNoteOrEvent ? "cursor-pointer" : ""}`}
                       >
                         <div className="flex items-start justify-between gap-3">
-                          <div className="space-y-1 min-w-0">
+                          <div className="space-y-1 min-w-0 flex-1">
                             {/* Title */}
                             <div className="flex items-center gap-2">
-                              <span
+                              <InlineTitle
+                                value={entry.title}
+                                onSave={(t) => saveEntryTitle(entry, t)}
                                 className={`text-sm font-semibold truncate ${
                                   isCompleted && entry.type === "task"
                                     ? "line-through text-slate-400 dark:text-slate-500"
                                     : "text-slate-900 dark:text-slate-100"
                                 }`}
-                              >
-                                {entry.title}
-                              </span>
+                              />
 
                               {entry.priority === "high" && (
                                 <span className="text-[10px] font-mono text-rose-500 font-bold uppercase">
@@ -838,6 +847,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                               )}
 
                               {isCompleted &&
+                                !isLog &&
                                 !entry.scheduledAt &&
                                 entry.completedAt && (
                                   <>
@@ -884,6 +894,17 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                                   </>
                                 )}
 
+                              {isLog && entry.createdAt && (
+                                <>
+                                  <span className="text-slate-300 dark:text-slate-700">
+                                    ·
+                                  </span>
+                                  <span>
+                                    Created {formatCreatedAt(entry.createdAt)}
+                                  </span>
+                                </>
+                              )}
+
                               {entry.tags.length > 0 && (
                                 <>
                                   <span className="text-slate-300 dark:text-slate-700">
@@ -909,7 +930,10 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                             </button>
                             <button
                               type="button"
-                              onClick={() => onDeleteEntry(entry.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDeleteEntry(entry.id);
+                              }}
                               className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-rose-500 transition-opacity cursor-pointer"
                             >
                               <Trash2 className="w-3.5 h-3.5" />

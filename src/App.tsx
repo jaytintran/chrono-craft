@@ -33,6 +33,7 @@ import { NotesView } from "./views/NotesView";
 import { EventsView } from "./views/EventsView";
 import { HabitsView } from "./views/HabitsView";
 import { ListsView } from "./views/ListsView";
+import { toLocalDateKey } from "./utils/date";
 
 export default function App() {
   // Navigation State
@@ -178,6 +179,30 @@ export default function App() {
 
   const handleDeleteEntry = async (entryId: string) => {
     await appDb.delete("entries", entryId);
+  };
+
+  const handleUpdateEntryTitle = async (entryId: string, newTitle: string) => {
+    const entry = entries.find((e) => e.id === entryId);
+    if (!entry) return;
+
+    await appDb.put("entries", { ...entry, title: newTitle });
+
+    if (entry.type === "note") {
+      const note = notes.find(
+        (n) => n.id === entry.id || n.title === entry.title,
+      );
+      if (note)
+        await appDb.put("notes", {
+          ...note,
+          title: newTitle,
+          updatedAt: new Date().toISOString(),
+        });
+    } else if (entry.type === "event") {
+      const ev = events.find(
+        (x) => x.id === entry.id || x.title === entry.title,
+      );
+      if (ev) await appDb.put("events", { ...ev, title: newTitle });
+    }
   };
 
   // Scratchpad
@@ -659,10 +684,12 @@ export default function App() {
     (e) => e.source === "focus-active" && e.status !== "completed",
   ).length;
 
-  const todayIsoPrefix = new Date().toISOString().split("T")[0];
+  const todayKey = toLocalDateKey(new Date());
   const completedTodayCount = entries.filter(
     (e) =>
-      e.status === "completed" && e.completedAt?.startsWith(todayIsoPrefix),
+      e.status === "completed" &&
+      !!e.completedAt &&
+      toLocalDateKey(new Date(e.completedAt)) === todayKey,
   ).length;
 
   // Notes created in Timeline view for cross-view aggregation
@@ -736,6 +763,8 @@ export default function App() {
               onAddEntry={handleAddEntry}
               onToggleEntryStatus={handleToggleEntryStatus}
               onDeleteEntry={handleDeleteEntry}
+              displayMode={settings.timelineDisplayMode ?? "default"}
+              onUpdateEntryTitle={handleUpdateEntryTitle}
               onOpenNoteDetail={(entryId) => {
                 const entry = entries.find((e) => e.id === entryId);
                 const noteMatch = notes.find(

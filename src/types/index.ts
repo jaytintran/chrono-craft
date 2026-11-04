@@ -148,11 +148,14 @@ export interface ScratchpadCard {
   updatedAt: string;
 }
 
+export type TimelineDisplayMode = "default" | "compact" | "flat";
+
 export interface AppSettings {
   xActiveLimit: number; // Defaults to 5
   theme: "dark" | "light";
   nlpAutoExtract: boolean;
   showEntryContent?: boolean; // Defaults to true
+  timelineDisplayMode?: TimelineDisplayMode; // undefined = "default"
 }
 
 export type ActiveView =
