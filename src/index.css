@@ -1,0 +1,130 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+    --font-mono: "JetBrains Mono", monospace;
+  }
+
+  body {
+    font-family: var(--font-sans);
+  }
+}
+
+/* Custom subtle scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.4);
+}
+
+.tiptap {
+  outline: none;
+  line-height: 1.65;
+}
+.tiptap > * + * {
+  margin-top: 0.5rem;
+}
+.tiptap h2 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin-top: 1rem;
+}
+.tiptap ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+}
+.tiptap ol {
+  list-style: decimal;
+  padding-left: 1.25rem;
+}
+.tiptap blockquote {
+  border-left: 3px solid #6366f1;
+  padding-left: 0.75rem;
+  color: #94a3b8;
+}
+.tiptap code {
+  background: rgba(100, 116, 139, 0.2);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  font-family: ui-monospace, monospace;
+  font-size: 0.85em;
+}
+.tiptap pre {
+  background: rgba(2, 6, 23, 0.6);
+  padding: 0.75rem;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+.tiptap pre code {
+  background: none;
+  padding: 0;
+}
+.tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: #64748b;
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.tiptap h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-top: 1.25rem;
+}
+.tiptap h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-top: 0.75rem;
+}
+.tiptap hr {
+  border: none;
+  border-top: 1px solid rgba(100, 116, 139, 0.35);
+  margin: 1rem 0;
+}
+
+.tiptap ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+.tiptap ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+.tiptap ul[data-type="taskList"] li > label {
+  margin-top: 0.3rem;
+  user-select: none;
+}
+.tiptap ul[data-type="taskList"] li > label input {
+  accent-color: #6366f1;
+  cursor: pointer;
+}
+.tiptap ul[data-type="taskList"] li > div {
+  flex: 1;
+}
+.tiptap ul[data-type="taskList"] li[data-checked="true"] > div {
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+
+.rich-content > :first-child {
+  margin-top: 0;
+}
+.rich-content input[type="checkbox"] {
+  pointer-events: none;
+}

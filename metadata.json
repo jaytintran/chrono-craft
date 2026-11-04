@@ -1,0 +1,6 @@
+{
+  "name": "ChronoCraft",
+  "description": "An interconnected offline-first personal productivity workspace featuring Focus, Timeline, Notes, Events, Habits, and Lists.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
