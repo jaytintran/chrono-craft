@@ -36,6 +36,11 @@ export interface TimelineEntry {
     habitId?: string;
     listId?: string;
     notes?: string;
+    // Timeline-born note/event extras (the entry is the source of truth)
+    isPinned?: boolean;
+    endAt?: string;
+    allDay?: boolean;
+    category?: "official" | "personal";
   };
 }
 

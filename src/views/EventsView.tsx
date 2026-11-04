@@ -95,10 +95,13 @@ export const EventsView: React.FC<EventsViewProps> = ({
     title: te.title,
     description: te.metadata?.notes || "(Captured via Timeline View spine)",
     startAt: te.scheduledAt || te.createdAt,
-    allDay: false,
-    category: (te.tags.includes("official") || te.tags.includes("work")
-      ? "official"
-      : "personal") as "official" | "personal",
+    endAt: te.metadata?.endAt,
+    allDay: te.metadata?.allDay ?? false,
+    category:
+      te.metadata?.category ??
+      (te.tags.includes("official") || te.tags.includes("work")
+        ? "official"
+        : "personal"),
     tags: te.tags,
     listIds: te.metadata?.listId ? [te.metadata.listId] : [],
     createdAt: te.createdAt,

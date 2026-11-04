@@ -379,14 +379,13 @@ export const FocusView: React.FC<FocusViewProps> = ({
                 <div className="flex items-center gap-2">
                   <Zap className="w-4 h-4 text-indigo-400" />
                   <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
-                    X-Active Engine ({settings.xActiveLimit} Max Concurrent
-                    Tasks)
+                    {settings.xActiveLimit}-Active Max Concurrent Tasks
                   </h3>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <span
-                    className={`text-xs font-mono font-bold tabular-nums px-2 py-0.5 rounded-md ${
+                    className={`text-[0.5rem] md:text-[0.6rem] font-mono font-bold tabular-nums px-2 py-0.5 rounded-md ${
                       isEngineAtCapacity
                         ? "bg-rose-500/10 text-rose-400 border border-rose-500/20"
                         : "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20"

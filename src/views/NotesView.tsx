@@ -94,7 +94,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
     listIds: tn.metadata?.listId ? [tn.metadata.listId] : [],
     createdAt: tn.createdAt,
     updatedAt: tn.createdAt,
-    isPinned: false,
+    isPinned: tn.metadata?.isPinned ?? false,
   }));
 
   const allNotes = [...notes, ...syntheticTimelineNotes];

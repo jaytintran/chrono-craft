@@ -139,6 +139,36 @@ export default function App() {
     }
   }, [settings.theme]);
 
+  // Resolve "tl_<id>" or "<id>" to the Timeline entry that owns a note/event
+  const findLinkedEntry = (id: string | undefined, type: "note" | "event") => {
+    if (!id) return undefined;
+    const entryId = id.startsWith("tl_") ? id.slice(3) : id;
+    return entries.find((e) => e.id === entryId && e.type === type);
+  };
+
+  const buildNoteSheetData = (entry: TimelineEntry): Partial<Note> => ({
+    id: entry.id,
+    title: entry.title,
+    content: entry.metadata?.notes || "",
+    tags: entry.tags,
+    listIds: entry.metadata?.listId ? [entry.metadata.listId] : [],
+    isPinned: entry.metadata?.isPinned ?? false,
+  });
+
+  const buildEventSheetData = (
+    entry: TimelineEntry,
+  ): Partial<CalendarEvent> => ({
+    id: entry.id,
+    title: entry.title,
+    description: entry.metadata?.notes || "",
+    startAt: entry.scheduledAt || entry.createdAt,
+    endAt: entry.metadata?.endAt,
+    allDay: entry.metadata?.allDay ?? false,
+    category: entry.metadata?.category,
+    tags: entry.tags,
+    listIds: entry.metadata?.listId ? [entry.metadata.listId] : [],
+  });
+
   // ================= ACTION HANDLERS =================
 
   // Entries (Timeline / Focus)
@@ -181,28 +211,17 @@ export default function App() {
     await appDb.delete("entries", entryId);
   };
 
+  const handleUpdateEntryTime = async (entryId: string, newIso: string) => {
+    const entry = entries.find((e) => e.id === entryId);
+    if (!entry) return;
+    await appDb.put("entries", { ...entry, scheduledAt: newIso });
+  };
+
   const handleUpdateEntryTitle = async (entryId: string, newTitle: string) => {
     const entry = entries.find((e) => e.id === entryId);
     if (!entry) return;
 
     await appDb.put("entries", { ...entry, title: newTitle });
-
-    if (entry.type === "note") {
-      const note = notes.find(
-        (n) => n.id === entry.id || n.title === entry.title,
-      );
-      if (note)
-        await appDb.put("notes", {
-          ...note,
-          title: newTitle,
-          updatedAt: new Date().toISOString(),
-        });
-    } else if (entry.type === "event") {
-      const ev = events.find(
-        (x) => x.id === entry.id || x.title === entry.title,
-      );
-      if (ev) await appDb.put("events", { ...ev, title: newTitle });
-    }
   };
 
   // Scratchpad
@@ -276,6 +295,25 @@ export default function App() {
   // Notes
   const handleSaveNote = async (noteData: Partial<Note>) => {
     const now = new Date().toISOString();
+
+    const linked = findLinkedEntry(noteData.id, "note");
+    if (linked) {
+      await appDb.put("entries", {
+        ...linked,
+        title: noteData.title ?? linked.title,
+        tags: noteData.tags ?? linked.tags,
+        metadata: {
+          ...linked.metadata,
+          notes: noteData.content ?? linked.metadata?.notes,
+          listId: noteData.listIds
+            ? noteData.listIds[0]
+            : linked.metadata?.listId,
+          isPinned: noteData.isPinned ?? linked.metadata?.isPinned,
+        },
+      });
+      return;
+    }
+
     if (noteData.id && !noteData.id.startsWith("tl_")) {
       const existing = notes.find((n) => n.id === noteData.id);
       if (existing) {
@@ -302,17 +340,36 @@ export default function App() {
   };
 
   const handleDeleteNote = async (id: string) => {
-    if (id.startsWith("tl_")) {
-      const rawId = id.replace("tl_", "");
-      await appDb.delete("entries", rawId);
-    } else {
-      await appDb.delete("notes", id);
-    }
+    const linked = findLinkedEntry(id, "note");
+    if (linked) await appDb.delete("entries", linked.id);
+    else await appDb.delete("notes", id);
   };
 
   // Events
   const handleSaveEvent = async (eventData: Partial<CalendarEvent>) => {
     const now = new Date().toISOString();
+
+    const linked = findLinkedEntry(eventData.id, "event");
+    if (linked) {
+      await appDb.put("entries", {
+        ...linked,
+        title: eventData.title ?? linked.title,
+        scheduledAt: eventData.startAt ?? linked.scheduledAt,
+        tags: eventData.tags ?? linked.tags,
+        metadata: {
+          ...linked.metadata,
+          notes: eventData.description ?? linked.metadata?.notes,
+          listId: eventData.listIds
+            ? eventData.listIds[0]
+            : linked.metadata?.listId,
+          endAt: eventData.endAt,
+          allDay: eventData.allDay,
+          category: eventData.category,
+        },
+      });
+      return;
+    }
+
     if (eventData.id && !eventData.id.startsWith("tl_")) {
       const existing = events.find((e) => e.id === eventData.id);
       if (existing) {
@@ -339,12 +396,9 @@ export default function App() {
   };
 
   const handleDeleteEvent = async (id: string) => {
-    if (id.startsWith("tl_")) {
-      const rawId = id.replace("tl_", "");
-      await appDb.delete("entries", rawId);
-    } else {
-      await appDb.delete("events", id);
-    }
+    const linked = findLinkedEntry(id, "event");
+    if (linked) await appDb.delete("entries", linked.id);
+    else await appDb.delete("events", id);
   };
 
   // Habits
@@ -407,25 +461,13 @@ export default function App() {
       if (item.type === "note") {
         setSheetMode({
           type: "note",
-          data: {
-            id: item.id,
-            title: item.title,
-            content: item.metadata?.notes || "",
-            tags: item.tags,
-          },
+          data: buildNoteSheetData(item),
           isNew: false,
         });
       } else if (item.type === "event") {
         setSheetMode({
           type: "event",
-          data: {
-            id: item.id,
-            title: item.title,
-            description: item.metadata?.notes || "",
-            startAt: item.scheduledAt || item.createdAt,
-            allDay: false,
-            tags: item.tags,
-          },
+          data: buildEventSheetData(item),
           isNew: false,
         });
       } else {
@@ -758,8 +800,6 @@ export default function App() {
           {activeView === "timeline" && (
             <TimelineView
               entries={entries}
-              notes={notes}
-              events={events}
               onAddEntry={handleAddEntry}
               onToggleEntryStatus={handleToggleEntryStatus}
               onDeleteEntry={handleDeleteEntry}
@@ -767,60 +807,27 @@ export default function App() {
               onUpdateEntryTitle={handleUpdateEntryTitle}
               onOpenNoteDetail={(entryId) => {
                 const entry = entries.find((e) => e.id === entryId);
-                const noteMatch = notes.find(
-                  (n) => n.id === entryId || (entry && n.title === entry.title),
-                );
-                if (noteMatch) {
-                  setSheetMode({ type: "note", data: noteMatch, isNew: false });
-                } else if (entry) {
+                if (entry)
                   setSheetMode({
                     type: "note",
-                    data: {
-                      id: entry.id,
-                      title: entry.title,
-                      content: entry.metadata?.notes || "",
-                      tags: entry.tags,
-                      listIds: entry.metadata?.listId
-                        ? [entry.metadata.listId]
-                        : [],
-                    },
+                    data: buildNoteSheetData(entry),
                     isNew: false,
                   });
-                }
               }}
               onOpenEventDetail={(entryId) => {
                 const entry = entries.find((e) => e.id === entryId);
-                const eventMatch = events.find(
-                  (ev) =>
-                    ev.id === entryId || (entry && ev.title === entry.title),
-                );
-                if (eventMatch) {
+                if (entry)
                   setSheetMode({
                     type: "event",
-                    data: eventMatch,
+                    data: buildEventSheetData(entry),
                     isNew: false,
                   });
-                } else if (entry) {
-                  setSheetMode({
-                    type: "event",
-                    data: {
-                      id: entry.id,
-                      title: entry.title,
-                      description: entry.metadata?.notes || "",
-                      startAt: entry.scheduledAt || entry.createdAt,
-                      allDay: false,
-                      tags: entry.tags,
-                      listIds: entry.metadata?.listId
-                        ? [entry.metadata.listId]
-                        : [],
-                    },
-                    isNew: false,
-                  });
-                }
               }}
               onOpenContextMenu={(item, pos) =>
                 handleOpenContextMenu(item, "timeline", pos)
               }
+              onUpdateEntryTime={handleUpdateEntryTime}
+              showEntryContent={settings.showEntryContent}
             />
           )}
 

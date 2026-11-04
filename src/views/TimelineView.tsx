@@ -24,16 +24,10 @@ import {
   Clock,
   Trash2,
   Hourglass,
-  ExternalLink,
   MoreVertical,
+  History,
 } from "lucide-react";
-import {
-  CalendarEvent,
-  EntryType,
-  Note,
-  TimelineEntry,
-  TimelineDisplayMode,
-} from "../types";
+import { EntryType, TimelineEntry, TimelineDisplayMode } from "../types";
 import { InlineTitle } from "../components/InlineTitle";
 import { RichContent } from "../components/RichContent";
 import { NLPInputBar } from "../components/NLPInputBar";
@@ -45,8 +39,6 @@ import { useLongPress } from "../hooks/useLongPress";
 
 interface TimelineViewProps {
   entries: TimelineEntry[];
-  notes?: Note[];
-  events?: CalendarEvent[];
   showEntryContent?: boolean;
   onAddEntry: (entry: Partial<TimelineEntry>) => Promise<void>;
   onToggleEntryStatus: (entryId: string) => Promise<void>;
@@ -64,17 +56,23 @@ interface TimelineViewProps {
 
 // Each entry belongs to exactly ONE day:
 // time block start > scheduled > completed > created
+// The moment that decides which day an entry lives on:
+// completed → completion time; otherwise block start > scheduled > created
+const getEntryAnchorIso = (e: TimelineEntry): string =>
+  e.status === "completed" && e.completedAt
+    ? e.completedAt
+    : e.timeBlock?.startIso || e.scheduledAt || e.createdAt;
+
 const getEntryDateKey = (e: TimelineEntry): string =>
-  toLocalDateKey(
-    new Date(
-      e.timeBlock?.startIso || e.scheduledAt || e.completedAt || e.createdAt,
-    ),
-  );
+  toLocalDateKey(new Date(getEntryAnchorIso(e)));
+
+const formatDayMonth = (iso: string) => {
+  const d = new Date(iso);
+  return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
+};
 
 export const TimelineView: React.FC<TimelineViewProps> = ({
   entries,
-  notes = [],
-  events = [],
   showEntryContent = true,
   onAddEntry,
   onToggleEntryStatus,
@@ -86,10 +84,12 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
   displayMode = "default",
   onUpdateEntryTitle,
 }) => {
+  const isFlat = displayMode === "flat";
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [filterType, setFilterType] = useState<"all" | EntryType | "habit">(
     "all",
   );
+  const [isCarryOverOpen, setIsCarryOverOpen] = useState(false);
 
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [timePickerTarget, setTimePickerTarget] = useState<{
@@ -119,15 +119,6 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
 
   // Get content of notes and events entries
   const getEntryContent = (entry: TimelineEntry): string => {
-    if (entry.type === "note") {
-      const n = notes.find((x) => x.id === entry.id || x.title === entry.title);
-      if (n?.content) return n.content;
-    } else if (entry.type === "event") {
-      const ev = events.find(
-        (x) => x.id === entry.id || x.title === entry.title,
-      );
-      if (ev?.description) return ev.description;
-    }
     return (
       entry.metadata?.notes ||
       (entry.metadata as any)?.details ||
@@ -216,6 +207,24 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
       });
   }, [entries, selectedDateStr, filterType]);
 
+  const todayKey = toLocalDateKey(new Date());
+  const carryOver = useMemo(
+    () =>
+      entries
+        .filter(
+          (e) =>
+            e.type === "task" &&
+            e.status !== "completed" &&
+            // Limit the tray to tasks created in the timeline only
+            e.source === "timeline" &&
+            getEntryDateKey(e) < todayKey, // YYYY-MM-DD compares correctly as strings
+        )
+        .sort((a, b) =>
+          getEntryAnchorIso(b).localeCompare(getEntryAnchorIso(a)),
+        ),
+    [entries, todayKey],
+  );
+
   const activeTimeBlocks = useMemo(() => {
     return dayEntries.filter((e) => e.type === "timeblock" && e.timeBlock);
   }, [dayEntries]);
@@ -250,9 +259,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
           isTimeBlockMarker: "end",
         });
       } else {
-        const itemTime = new Date(
-          e.scheduledAt || e.completedAt || e.createdAt,
-        ).getTime();
+        const itemTime = new Date(getEntryAnchorIso(e)).getTime();
 
         const enclosingBlock = activeTimeBlocks.find((tb) => {
           if (!tb.timeBlock) return false;
@@ -386,6 +393,68 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
       {/* 2. Scrollable Canvas Area (Padded at bottom so cards aren't obscured by sticky input) */}
       <div className="flex-1 overflow-y-auto px-4 md:px-8 pt-6 pb-36">
         <div className="max-w-3xl mx-auto">
+          {/* Carry Over Past Tasks Tray */}
+          {isToday &&
+            (filterType === "all" || filterType === "task") &&
+            carryOver.length > 0 && (
+              <div className="mb-5 rounded-xl border border-amber-500/30 bg-amber-500/5">
+                <button
+                  type="button"
+                  onClick={() => setIsCarryOverOpen((v) => !v)}
+                  aria-expanded={isCarryOverOpen}
+                  className="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-xs cursor-pointer"
+                >
+                  <span className="flex items-center gap-2 font-semibold text-amber-700 dark:text-amber-400">
+                    <History className="w-4 h-4" />
+                    Unfinished from earlier
+                    <span className="px-1.5 py-0.5 rounded-md bg-amber-500/15 font-mono text-[10px]">
+                      {carryOver.length}
+                    </span>
+                  </span>
+                  <ChevronDown
+                    className={`w-4 h-4 text-amber-500 transition-transform ${isCarryOverOpen ? "rotate-180" : ""}`}
+                  />
+                </button>
+
+                {isCarryOverOpen && (
+                  <ul className="max-h-60 overflow-y-auto divide-y divide-amber-500/15 border-t border-amber-500/20">
+                    {carryOver.map((t) => (
+                      <li
+                        key={t.id}
+                        className="flex items-center gap-3 px-4 py-2.5"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate">
+                            {t.title}
+                          </p>
+                          <p className="text-[10px] font-mono text-slate-400">
+                            From {formatDayMonth(getEntryAnchorIso(t))}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onUpdateEntryTime?.(t.id, new Date().toISOString())
+                          }
+                          className="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 transition-colors cursor-pointer"
+                        >
+                          Move to today
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onToggleEntryStatus(t.id)}
+                          title="Mark complete"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-500 hover:bg-emerald-500/10 transition-colors cursor-pointer"
+                        >
+                          <CheckCircle2 className="w-4 h-4" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+
           {/* Vertical Spine Container */}
           <div className="relative pt-2">
             {/* Continuous Vertical Spine line */}
@@ -780,14 +849,14 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                               : "Click to complete task"
                             : undefined
                         }
-                        className={`relative z-10 w-11 h-11 rounded-xl bg-white dark:bg-[#111724] border flex items-center justify-center shadow-md shrink-0 transition-transform ${
-                          entry.type === "task"
-                            ? "cursor-pointer hover:scale-110 hover:border-emerald-500"
-                            : "cursor-default"
+                        className={`relative z-10 w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-transform ${
+                          isFlat
+                            ? "bg-white dark:bg-[#0B0F17] border border-transparent"
+                            : "bg-white dark:bg-[#111724] border border-slate-200 dark:border-slate-800 shadow-md"
                         } ${
-                          isCompleted
-                            ? "border-slate-200 dark:border-slate-800"
-                            : "border-slate-200 dark:border-slate-800"
+                          entry.type === "task"
+                            ? `cursor-pointer ${isFlat ? "" : "hover:scale-110 hover:border-emerald-500"}`
+                            : "cursor-default"
                         }`}
                       >
                         {getEntryIcon(entry)}
@@ -900,7 +969,11 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                                     ·
                                   </span>
                                   <span>
-                                    Created {formatCreatedAt(entry.createdAt)}
+                                    {toLocalDateKey(
+                                      new Date(entry.createdAt),
+                                    ) === selectedDateStr
+                                      ? formatTimestamp(entry.createdAt)
+                                      : `Created ${formatCreatedAt(entry.createdAt)}`}
                                   </span>
                                 </>
                               )}
