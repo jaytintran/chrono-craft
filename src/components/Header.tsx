@@ -86,7 +86,7 @@ export const Header: React.FC<HeaderProps> = ({
   }).format(new Date());
 
   return (
-    <header className="sticky top-0 z-30 bg-white/90 dark:bg-[#0B0F17]/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800/80 transition-colors">
+    <header className="sticky top-0 z-30 bg-white/90 dark:bg-[#0B0F17]/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800/80 transition-colors pt-[env(safe-area-inset-top)]">
       <div className="h-14 md:h-16 px-4 md:px-6 flex items-center justify-between">
         {/* Zone 1: Brand & Desktop Breadcrumbs / Mobile View Switcher */}
         <div className="flex items-center gap-4 max-md:hidden">
@@ -139,6 +139,12 @@ export const Header: React.FC<HeaderProps> = ({
             })}
           </div>
         </nav>
+
+        {/* Vertical Divider between Tab Group and Action Group */}
+        <div
+          aria-hidden="true"
+          className="w-px h-7 bg-slate-200 dark:bg-slate-800 shrink-0 md:hidden"
+        />
 
         {/* Zone 2: Date & Executive Progress Overview */}
         <div className="hidden lg:flex items-center gap-4 text-xs font-mono text-slate-500 dark:text-slate-400">

@@ -10,7 +10,6 @@ import {
   Plus,
   Clock,
   Folder,
-  Trash2,
   Search,
   ArrowUpDown,
   Building2,
@@ -22,6 +21,7 @@ import { CalendarEvent, CustomList, TimelineEntry } from "../types";
 import { RichContent } from "../components/RichContent";
 import { FilterSelect } from "../components/FilterSelect";
 import { stripHtml } from "../components/RichTextEditor";
+import { toLocalDateKey } from "../utils/date";
 
 interface EventsViewProps {
   events: CalendarEvent[];
@@ -110,7 +110,7 @@ export const EventsView: React.FC<EventsViewProps> = ({
   const allEvents = [...events, ...syntheticTimelineEvents];
 
   const now = new Date();
-  const todayStr = now.toISOString().split("T")[0];
+  const todayStr = toLocalDateKey(now);
 
   const filteredEvents = allEvents
     .filter((ev) => {
@@ -341,8 +341,8 @@ export const EventsView: React.FC<EventsViewProps> = ({
       </div>
 
       {/* Events List */}
-      <div className="flex-1 overflow-y-auto px-6 py-6">
-        <div className="max-w-4xl mx-auto space-y-4">
+      <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
+        <div className="max-w-6xl mx-auto space-y-4">
           {filteredEvents.length === 0 ? (
             <div className="p-12 text-center rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 text-xs text-slate-400">
               No events found matching your active options. Try adjusting the
@@ -471,16 +471,6 @@ export const EventsView: React.FC<EventsViewProps> = ({
                       className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
                     >
                       <MoreVertical className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeleteEvent(event.id);
-                      }}
-                      className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-rose-500 transition-opacity cursor-pointer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>

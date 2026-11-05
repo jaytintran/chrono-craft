@@ -10,7 +10,6 @@ export type EntrySource =
   | "timeline"
   | "habit"
   | "custom-tab";
-export type EntryPriority = "low" | "normal" | "high";
 
 export interface TimeBlockInfo {
   startIso: string;
@@ -29,7 +28,6 @@ export interface TimelineEntry {
   status: EntryStatus;
   source: EntrySource;
   tags: string[];
-  priority?: EntryPriority;
   tabId?: string; // Custom focus tab ID if created there
   timeBlock?: TimeBlockInfo;
   metadata?: {
@@ -105,23 +103,15 @@ export type ListItemStatus =
   | "todo"
   | "done";
 
-export interface ListFolder {
-  id: string;
-  name: string;
-  collapsed?: boolean;
-}
-
 export interface ListItem {
   id: string;
   listId: string;
   title: string;
   subtitle?: string;
   status: ListItemStatus;
-  priority?: "low" | "normal" | "high";
   tags: string[];
   notes?: string;
   dueDate?: string;
-  folderId?: string;
   createdAt: string;
 }
 
@@ -132,7 +122,6 @@ export interface CustomList {
   description?: string;
   icon: string;
   color: string;
-  folders?: ListFolder[];
   createdAt: string;
 }
 
@@ -178,7 +167,6 @@ export interface ParsedNLPResult {
   scheduledAt?: string;
   scheduledDisplay?: string;
   tags: string[];
-  priority?: EntryPriority;
   timeBlock?: TimeBlockInfo;
   isTimeBlockValid?: boolean;
   timeBlockError?: string;

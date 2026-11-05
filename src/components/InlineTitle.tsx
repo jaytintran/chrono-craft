@@ -16,6 +16,20 @@ export const InlineTitle: React.FC<InlineTitleProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const cancelled = useRef(false);
 
+  // Mobile: tap goes to the Detail Sheet instead of inline editing
+  const [isMobile, setIsMobile] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(max-width: 767px)").matches,
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
   useEffect(() => {
     if (!editing) setDraft(value);
   }, [value, editing]);
@@ -40,6 +54,10 @@ export const InlineTitle: React.FC<InlineTitleProps> = ({
   };
 
   if (!editing) {
+    if (isMobile) {
+      // No stopPropagation: the tap bubbles up to the card and opens the Detail Sheet
+      return <span className={`min-w-0 ${className}`}>{value}</span>;
+    }
     return (
       <span
         role="button"

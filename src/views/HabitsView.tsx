@@ -4,7 +4,7 @@
  * "+ New Habit" action, and clickable habit rows opening the specialized DetailSheet.
  */
 
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Flame,
   Plus,
@@ -14,8 +14,9 @@ import {
   Calendar,
   Sparkles,
   TrendingUp,
-} from 'lucide-react';
-import { Habit, HabitLog } from '../types';
+} from "lucide-react";
+import { Habit, HabitLog } from "../types";
+import { toLocalDateKey } from "../utils/date";
 
 interface HabitsViewProps {
   habits: Habit[];
@@ -55,13 +56,13 @@ export const HabitsView: React.FC<HabitsViewProps> = ({
     for (let i = 0; i < 7; i++) {
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
-      const dStr = d.toISOString().split('T')[0];
-      const todayStr = new Date().toISOString().split('T')[0];
+      const dStr = toLocalDateKey(d);
+      const todayStr = toLocalDateKey(new Date());
 
       days.push({
         date: d,
         dateStr: dStr,
-        dayName: d.toLocaleDateString('en-US', { weekday: 'short' }),
+        dayName: d.toLocaleDateString("en-US", { weekday: "short" }),
         dayNum: d.getDate(),
         isToday: dStr === todayStr,
         dayIndex: d.getDay(),
@@ -79,14 +80,14 @@ export const HabitsView: React.FC<HabitsViewProps> = ({
     const today = new Date();
     let streak = 0;
     let check = new Date(today);
-    const todayKey = `${habitId}_${today.toISOString().split('T')[0]}`;
+    const todayKey = `${habitId}_${toLocalDateKey(today)}`;
 
     if (!logDatesSet.has(todayKey)) {
       check.setDate(check.getDate() - 1);
     }
 
     while (true) {
-      const dStr = check.toISOString().split('T')[0];
+      const dStr = toLocalDateKey(check);
       if (logDatesSet.has(`${habitId}_${dStr}`)) {
         streak++;
         check.setDate(check.getDate() - 1);
@@ -99,28 +100,29 @@ export const HabitsView: React.FC<HabitsViewProps> = ({
 
   const formatScheduleBadge = (habit: Habit) => {
     switch (habit.scheduleType) {
-      case 'everyday':
-        return 'Daily (7d)';
-      case 'bi-weekly':
-        return 'Bi-Weekly (2d)';
-      case 'weekly':
-        return 'Weekly (1d)';
-      case 'monthly':
-        return 'Monthly';
-      case 'custom':
-        return 'Custom Days';
+      case "everyday":
+        return "Daily (7d)";
+      case "bi-weekly":
+        return "Bi-Weekly (2d)";
+      case "weekly":
+        return "Weekly (1d)";
+      case "monthly":
+        return "Monthly";
+      case "custom":
+        return "Custom Days";
       default:
-        return 'Active';
+        return "Active";
     }
   };
 
   // Week range heading string formatted as DD/MM - DD/MM
-  const pad = (n: number) => n.toString().padStart(2, '0');
+  const pad = (n: number) => n.toString().padStart(2, "0");
   const startD = weekDays[0].date;
   const endD = weekDays[6].date;
   const currentYear = new Date().getFullYear();
   const weekRangeText =
-    startD.getFullYear() === endD.getFullYear() && endD.getFullYear() === currentYear
+    startD.getFullYear() === endD.getFullYear() &&
+    endD.getFullYear() === currentYear
       ? `${pad(startD.getDate())}/${pad(startD.getMonth() + 1)} - ${pad(endD.getDate())}/${pad(endD.getMonth() + 1)}`
       : `${pad(startD.getDate())}/${pad(startD.getMonth() + 1)}/${startD.getFullYear()} - ${pad(endD.getDate())}/${pad(endD.getMonth() + 1)}/${endD.getFullYear()}`;
 
@@ -136,7 +138,8 @@ export const HabitsView: React.FC<HabitsViewProps> = ({
             </h2>
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
-            Click cells to record completions. Click any habit row to view streak analytics and custom cadence.
+            Click cells to record completions. Click any habit row to view
+            streak analytics and custom cadence.
           </p>
         </div>
 
@@ -155,11 +158,15 @@ export const HabitsView: React.FC<HabitsViewProps> = ({
             <button
               type="button"
               onClick={() => setWeekOffset(0)}
-              title={weekOffset !== 0 ? 'Click to jump to Current Week' : 'Current Week'}
+              title={
+                weekOffset !== 0
+                  ? "Click to jump to Current Week"
+                  : "Current Week"
+              }
               className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold font-mono shadow-xs transition-all cursor-pointer ${
                 weekOffset === 0
-                  ? 'text-slate-800 dark:text-slate-200 border-indigo-500/40 ring-1 ring-indigo-500/20'
-                  : 'text-indigo-500 dark:text-indigo-400 hover:bg-slate-50 dark:hover:bg-slate-800/80'
+                  ? "text-slate-800 dark:text-slate-200 border-indigo-500/40 ring-1 ring-indigo-500/20"
+                  : "text-indigo-500 dark:text-indigo-400 hover:bg-slate-50 dark:hover:bg-slate-800/80"
               }`}
             >
               <span>{weekRangeText}</span>
@@ -188,8 +195,8 @@ export const HabitsView: React.FC<HabitsViewProps> = ({
       </div>
 
       {/* Main Matrix Container */}
-      <div className="flex-1 overflow-y-auto px-6 py-6">
-        <div className="max-w-5xl mx-auto space-y-4">
+      <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
+        <div className="max-w-6xl mx-auto space-y-4">
           {/* Habit Matrix Table */}
           <div className="rounded-2xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#131926] shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
@@ -205,12 +212,14 @@ export const HabitsView: React.FC<HabitsViewProps> = ({
                         key={d.dateStr}
                         className={`py-3.5 px-2 text-center font-mono font-medium w-14 ${
                           d.isToday
-                            ? 'bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 font-bold'
-                            : 'text-slate-500'
+                            ? "bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 font-bold"
+                            : "text-slate-500"
                         }`}
                       >
                         <div className="text-[11px] uppercase">{d.dayName}</div>
-                        <div className="text-xs tabular-nums mt-0.5">{d.dayNum}</div>
+                        <div className="text-xs tabular-nums mt-0.5">
+                          {d.dayNum}
+                        </div>
                       </th>
                     ))}
                     <th className="py-3.5 px-4 text-right font-mono text-xs font-semibold text-slate-500 w-24">
@@ -227,7 +236,8 @@ export const HabitsView: React.FC<HabitsViewProps> = ({
                         colSpan={9}
                         className="py-12 text-center text-xs text-slate-400"
                       >
-                        No habits defined yet. Click "+ New Habit" to establish your daily routines.
+                        No habits defined yet. Click "+ New Habit" to establish
+                        your daily routines.
                       </td>
                     </tr>
                   ) : (
@@ -269,12 +279,14 @@ export const HabitsView: React.FC<HabitsViewProps> = ({
 
                           {/* 7 Day Matrix Check Cells */}
                           {weekDays.map((d) => {
-                            const isCompleted = logDatesSet.has(`${habit.id}_${d.dateStr}`);
+                            const isCompleted = logDatesSet.has(
+                              `${habit.id}_${d.dateStr}`,
+                            );
                             return (
                               <td
                                 key={d.dateStr}
                                 className={`py-3.5 px-2 text-center ${
-                                  d.isToday ? 'bg-indigo-500/5' : ''
+                                  d.isToday ? "bg-indigo-500/5" : ""
                                 }`}
                               >
                                 <button
@@ -284,15 +296,19 @@ export const HabitsView: React.FC<HabitsViewProps> = ({
                                     await onToggleHabitDay(habit.id, d.dateStr);
                                   }}
                                   title={`${habit.title} on ${d.dateStr}: ${
-                                    isCompleted ? 'Completed (click to undo)' : 'Click to complete'
+                                    isCompleted
+                                      ? "Completed (click to undo)"
+                                      : "Click to complete"
                                   }`}
                                   className={`w-7 h-7 mx-auto rounded-lg flex items-center justify-center transition-all cursor-pointer ${
                                     isCompleted
-                                      ? 'shadow-xs text-white scale-105'
-                                      : 'border border-slate-200 dark:border-slate-700/80 hover:border-slate-400 dark:hover:border-slate-500 bg-white/40 dark:bg-slate-900/40 text-transparent hover:text-slate-300'
+                                      ? "shadow-xs text-white scale-105"
+                                      : "border border-slate-200 dark:border-slate-700/80 hover:border-slate-400 dark:hover:border-slate-500 bg-white/40 dark:bg-slate-900/40 text-transparent hover:text-slate-300"
                                   }`}
                                   style={{
-                                    backgroundColor: isCompleted ? habit.color : undefined,
+                                    backgroundColor: isCompleted
+                                      ? habit.color
+                                      : undefined,
                                   }}
                                 >
                                   <Check className="w-4 h-4 stroke-[2.5]" />

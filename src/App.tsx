@@ -10,7 +10,6 @@ import {
   CalendarEvent,
   CustomFocusTab,
   CustomList,
-  EntryPriority,
   Habit,
   HabitLog,
   ListItem,
@@ -34,6 +33,7 @@ import { EventsView } from "./views/EventsView";
 import { HabitsView } from "./views/HabitsView";
 import { ListsView } from "./views/ListsView";
 import { toLocalDateKey } from "./utils/date";
+import { applyNativeTheme } from "./utils/nativeTheme";
 
 export default function App() {
   // Navigation State
@@ -137,6 +137,7 @@ export default function App() {
     } else {
       document.documentElement.classList.remove("dark");
     }
+    applyNativeTheme(settings.theme);
   }, [settings.theme]);
 
   // Resolve "tl_<id>" or "<id>" to the Timeline entry that owns a note/event
@@ -186,7 +187,6 @@ export default function App() {
       status: entry.status || "pending",
       source: entry.source || "timeline",
       tags: entry.tags || [],
-      priority: entry.priority || "normal",
       tabId: entry.tabId,
       timeBlock: entry.timeBlock,
       metadata: entry.metadata,
@@ -543,24 +543,6 @@ export default function App() {
     }
   };
 
-  const handleContextMenuChangePriority = async (
-    item: any,
-    priority: EntryPriority,
-  ) => {
-    if (item.listId !== undefined) {
-      await appDb.put("list_items", { ...item, priority });
-    } else if (item.content !== undefined && !item.type) {
-      // Note
-      await appDb.put("notes", { ...item, priority });
-    } else if (item.startAt !== undefined) {
-      // Event
-      await appDb.put("events", { ...item, priority });
-    } else {
-      // Timeline entry / task
-      await appDb.put("entries", { ...item, priority });
-    }
-  };
-
   const handleContextMenuAddTag = async (item: any, newTag: string) => {
     const existingTags = item.tags || [];
     if (!existingTags.includes(newTag)) {
@@ -574,6 +556,19 @@ export default function App() {
       } else {
         await appDb.put("entries", { ...item, tags: updatedTags });
       }
+    }
+  };
+
+  const handleContextMenuRemoveTag = async (item: any, tag: string) => {
+    const updatedTags = (item.tags || []).filter((t: string) => t !== tag);
+    if (item.listId !== undefined) {
+      await appDb.put("list_items", { ...item, tags: updatedTags });
+    } else if (item.startAt !== undefined) {
+      await appDb.put("events", { ...item, tags: updatedTags });
+    } else if (item.content !== undefined && !item.type) {
+      await appDb.put("notes", { ...item, tags: updatedTags });
+    } else {
+      await appDb.put("entries", { ...item, tags: updatedTags });
     }
   };
 
@@ -614,11 +609,9 @@ export default function App() {
       title: item.title || "Untitled Item",
       subtitle: item.subtitle,
       status: item.status || "inbox",
-      priority: item.priority || "normal",
       tags: item.tags || [],
       notes: item.notes,
       dueDate: item.dueDate,
-      folderId: item.folderId,
       createdAt: new Date().toISOString(),
     });
   };
@@ -741,7 +734,7 @@ export default function App() {
   const timelineEvents = entries.filter((e) => e.type === "event");
 
   return (
-    <div className="flex flex-col h-screen w-full bg-slate-50 dark:bg-[#0B0F17] text-slate-900 dark:text-slate-100 antialiased overflow-hidden transition-colors selection:bg-indigo-500/30 selection:text-indigo-400">
+    <div className="flex flex-col h-[100dvh] w-full bg-slate-50 dark:bg-[#0B0F17] text-slate-900 dark:text-slate-100 antialiased overflow-hidden transition-colors selection:bg-indigo-500/30 selection:text-indigo-400">
       {/* 1. Global Header Navigation */}
       <Header
         activeView={activeView}
@@ -987,9 +980,9 @@ export default function App() {
         onEdit={handleContextMenuEdit}
         onDuplicate={handleContextMenuDuplicate}
         onReschedule={handleContextMenuReschedule}
-        onChangePriority={handleContextMenuChangePriority}
         onAddTag={handleContextMenuAddTag}
         onDelete={handleContextMenuDelete}
+        onRemoveTag={handleContextMenuRemoveTag}
       />
     </div>
   );

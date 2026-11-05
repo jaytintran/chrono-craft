@@ -28,18 +28,13 @@ import {
   LayoutGrid,
   LayoutList,
   AlignJustify,
-  FolderPlus,
-  ChevronRight,
-  ChevronDown,
-  Maximize2,
-  Minimize2,
   Pencil,
   MoreHorizontal,
+  RotateCcw,
 } from "lucide-react";
 import {
   CalendarEvent,
   CustomList,
-  ListFolder,
   ListItem,
   ListItemStatus,
   Note,
@@ -49,6 +44,8 @@ import { CreateListModal } from "../components/CreateListModal";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { StatusPickerPopover } from "../components/StatusPickerPopover";
 import { stripHtml } from "../components/RichTextEditor";
+import { FilterSelect } from "../components/FilterSelect";
+import { SearchBar } from "../components/SearchBar";
 
 interface ListsViewProps {
   lists: CustomList[];
@@ -127,9 +124,6 @@ export const ListsView: React.FC<ListsViewProps> = ({
 
   // New item draft
   const [newItemTitle, setNewItemTitle] = useState("");
-  const [newItemPriority, setNewItemPriority] = useState<
-    "normal" | "high" | "low"
-  >("normal");
   const [newItemInitialStatus, setNewItemInitialStatus] = useState<
     "inbox" | "in-progress" | "maybe-later"
   >("inbox");
@@ -148,18 +142,10 @@ export const ListsView: React.FC<ListsViewProps> = ({
   const [listMenuOpen, setListMenuOpen] = useState(false);
   const [isEditListOpen, setIsEditListOpen] = useState(false);
   const [isDeleteListOpen, setIsDeleteListOpen] = useState(false);
-  const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null);
-  const [folderMenuId, setFolderMenuId] = useState<string | null>(null);
-  const [expandedFolderId, setExpandedFolderId] = useState<string | null>(null);
-  const [draggingId, setDraggingId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!expandedFolderId) return;
-    const onKey = (e: KeyboardEvent) =>
-      e.key === "Escape" && setExpandedFolderId(null);
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [expandedFolderId]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedTagFilter, setSelectedTagFilter] = useState<string | null>(
+    null,
+  );
 
   if (!activeList) {
     return (
@@ -171,6 +157,13 @@ export const ListsView: React.FC<ListsViewProps> = ({
 
   // Items for this list
   const currentItems = listItems.filter((i) => i.listId === activeList.id);
+
+  // All distinct tags present on this list's items, alphabetically sorted.
+  // Computed from currentItems (not filteredItems) so the chip set stays
+  // stable while a filter is active — you can always click the same chip off.
+  const allTags = Array.from(
+    new Set(currentItems.flatMap((i) => i.tags || [])),
+  ).sort((a, b) => a.localeCompare(b));
 
   // Status breakdown metrics for the collection header card
   const inboxCount = currentItems.filter(
@@ -191,12 +184,50 @@ export const ListsView: React.FC<ListsViewProps> = ({
 
   // Filtered items
   const filteredItems = currentItems.filter((i) => {
-    if (filterStatus === "all") return true;
-    if (filterStatus === "inbox")
-      return i.status === "inbox" || i.status === "todo";
-    if (filterStatus === "completed")
-      return i.status === "completed" || i.status === "done";
-    return i.status === filterStatus;
+    // 1. Status Filter
+    if (filterStatus !== "all") {
+      if (
+        filterStatus === "inbox" &&
+        i.status !== "inbox" &&
+        i.status !== "todo"
+      )
+        return false;
+      if (
+        filterStatus === "completed" &&
+        i.status !== "completed" &&
+        i.status !== "done"
+      )
+        return false;
+      if (
+        filterStatus !== "inbox" &&
+        filterStatus !== "completed" &&
+        i.status !== filterStatus
+      )
+        return false;
+    }
+
+    // 2. Search Query Filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const haystack = [
+        i.title,
+        i.subtitle || "",
+        i.notes || "",
+        stripHtml(i.notes || ""),
+        (i.tags || []).join(" "),
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      if (!haystack.includes(q)) return false;
+    }
+
+    // 3. Tag filter (single-select)
+    if (selectedTagFilter && !(i.tags || []).includes(selectedTagFilter)) {
+      return false;
+    }
+
+    return true;
   });
 
   // Notes and events linked to this list
@@ -211,9 +242,7 @@ export const ListsView: React.FC<ListsViewProps> = ({
       listId: activeList.id,
       title: newItemTitle.trim(),
       status: newItemInitialStatus,
-      priority: newItemPriority,
       tags: [],
-      folderId: expandedFolderId ?? undefined,
     });
 
     setNewItemTitle("");
@@ -268,61 +297,6 @@ export const ListsView: React.FC<ListsViewProps> = ({
     }
   };
 
-  // ---------- Folders ----------
-  const folders: ListFolder[] = activeList.folders ?? [];
-  const folderIds = new Set(folders.map((f) => f.id));
-  const rootItems = filteredItems.filter(
-    (i) => !i.folderId || !folderIds.has(i.folderId),
-  );
-  const itemsInFolder = (fid: string) =>
-    filteredItems.filter((i) => i.folderId === fid);
-  const expandedFolder = folders.find((f) => f.id === expandedFolderId) || null;
-
-  const saveFolders = (next: ListFolder[]) =>
-    onUpdateList(activeList.id, { folders: next });
-
-  const handleCreateFolder = async () => {
-    const f: ListFolder = { id: "folder_" + Date.now(), name: "New Folder" };
-    await saveFolders([...folders, f]);
-    setRenamingFolderId(f.id);
-  };
-  const handleRenameFolder = (id: string, name: string) => {
-    saveFolders(
-      folders.map((f) =>
-        f.id === id ? { ...f, name: name.trim() || f.name } : f,
-      ),
-    );
-    setRenamingFolderId(null);
-  };
-  const handleToggleFolder = (id: string) =>
-    saveFolders(
-      folders.map((f) => (f.id === id ? { ...f, collapsed: !f.collapsed } : f)),
-    );
-
-  // Items go back to root, then the folder is removed
-  const handleDeleteFolder = async (id: string) => {
-    setFolderMenuId(null);
-    for (const it of listItems.filter((i) => i.folderId === id)) {
-      await onUpdateListItem(it.id, { folderId: undefined });
-    }
-    await saveFolders(folders.filter((f) => f.id !== id));
-    if (expandedFolderId === id) setExpandedFolderId(null);
-  };
-
-  const handleDropOnFolder = (folderId?: string) => {
-    if (draggingId) onUpdateListItem(draggingId, { folderId });
-    setDraggingId(null);
-  };
-
-  const dragProps = (item: ListItem) => ({
-    draggable: true,
-    onDragStart: (e: React.DragEvent) => {
-      e.dataTransfer.setData("text/plain", item.id);
-      setDraggingId(item.id);
-    },
-    onDragEnd: () => setDraggingId(null),
-  });
-
   const openStatusPicker = (e: React.MouseEvent, item: ListItem) => {
     e.stopPropagation();
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -333,214 +307,8 @@ export const ListsView: React.FC<ListsViewProps> = ({
     });
   };
 
-  const renderFolderNameInput = (folder: ListFolder) => (
-    <input
-      autoFocus
-      defaultValue={folder.name}
-      onFocus={(e) => e.currentTarget.select()}
-      onBlur={(e) => handleRenameFolder(folder.id, e.target.value)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") e.currentTarget.blur();
-        if (e.key === "Escape") {
-          e.currentTarget.value = folder.name;
-          e.currentTarget.blur();
-        }
-      }}
-      className="flex-1 min-w-0 px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-indigo-500 text-sm font-semibold text-slate-900 dark:text-slate-100 focus:outline-none"
-    />
-  );
-
-  // Uniform card for carousels (fixed width) and expanded view (fluid)
-  const renderCarouselCard = (item: ListItem, fluid = false) => {
-    const done = item.status === "completed" || item.status === "done";
-    const dropped = item.status === "dropped";
-    return (
-      <div
-        key={item.id}
-        {...dragProps(item)}
-        onClick={() => onOpenItemDetail?.(item)}
-        onContextMenu={(e) => {
-          e.preventDefault();
-          onOpenContextMenu?.(item, { x: e.clientX, y: e.clientY });
-        }}
-        className={`group snap-start ${fluid ? "" : "w-72 sm:w-80 xl:w-96 shrink-0"} p-4 rounded-2xl bg-white dark:bg-[#131926] border border-slate-200 dark:border-slate-800/80 hover:border-indigo-500/40 shadow-xs transition-all cursor-pointer flex flex-col gap-2`}
-      >
-        <div className="flex items-start gap-2">
-          <button
-            type="button"
-            onClick={(e) => openStatusPicker(e, item)}
-            title={`Status: ${getStatusLabel(item.status)}`}
-            className="p-1 -m-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-transform hover:scale-110 cursor-pointer shrink-0"
-          >
-            {getStatusIcon(item.status)}
-          </button>
-          <div className="min-w-0 flex-1">
-            <div
-              className={`text-sm font-semibold truncate ${done ? "line-through text-slate-400 dark:text-slate-500" : dropped ? "line-through text-rose-400/70" : "text-slate-900 dark:text-slate-100"}`}
-            >
-              {item.title}
-            </div>
-            {item.subtitle && (
-              <div className="text-xs text-slate-500 truncate">
-                {item.subtitle}
-              </div>
-            )}
-            {item.notes && (
-              <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
-                {stripHtml(item.notes)}
-              </p>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              const r = (
-                e.currentTarget as HTMLElement
-              ).getBoundingClientRect();
-              onOpenContextMenu?.(item, { x: r.left, y: r.bottom + 4 });
-            }}
-            className="p-0.5 text-slate-400 hover:text-slate-200 cursor-pointer"
-          >
-            <MoreVertical className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        <div className="flex items-center gap-2 text-[10px] font-mono text-slate-400 mt-auto">
-          <span className="uppercase">{getStatusLabel(item.status)}</span>
-          {item.priority === "high" && (
-            <span className="text-rose-500 font-bold">!HIGH</span>
-          )}
-          {item.dueDate && (
-            <span className="text-cyan-500">Due {item.dueDate}</span>
-          )}
-        </div>
-        {item.tags && item.tags.length > 0 && (
-          <div className="text-[10px] font-mono text-slate-400 truncate">
-            {item.tags.map((t) => `#${t}`).join(" ")}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const renderFolder = (folder: ListFolder) => {
-    const items = itemsInFolder(folder.id);
-    const total = listItems.filter((i) => i.folderId === folder.id).length;
-    return (
-      <section
-        key={folder.id}
-        onDragOver={(e) => draggingId && e.preventDefault()}
-        onDrop={(e) => {
-          e.preventDefault();
-          handleDropOnFolder(folder.id);
-        }}
-        className={`rounded-2xl border bg-slate-50/60 dark:bg-[#0E131E] transition-colors ${
-          draggingId
-            ? "border-dashed border-indigo-500/50"
-            : "border-slate-200 dark:border-slate-800/80"
-        }`}
-      >
-        <div className="flex items-center gap-2 px-3 py-2.5">
-          <button
-            type="button"
-            onClick={() => handleToggleFolder(folder.id)}
-            className="p-1 rounded-md text-slate-400 hover:text-slate-100 cursor-pointer"
-          >
-            {folder.collapsed ? (
-              <ChevronRight className="w-4 h-4" />
-            ) : (
-              <ChevronDown className="w-4 h-4" />
-            )}
-          </button>
-          <Folder className="w-4 h-4 text-indigo-400 shrink-0" />
-
-          {renamingFolderId === folder.id ? (
-            renderFolderNameInput(folder)
-          ) : (
-            <button
-              type="button"
-              onClick={() => handleToggleFolder(folder.id)}
-              onDoubleClick={() => setRenamingFolderId(folder.id)}
-              className="flex-1 min-w-0 text-left text-sm font-semibold truncate text-slate-900 dark:text-slate-100 cursor-pointer"
-            >
-              {folder.name}
-            </button>
-          )}
-
-          <span className="text-[11px] font-mono text-slate-400 tabular-nums">
-            {filterStatus === "all" ? total : `${items.length}/${total}`}
-          </span>
-          <button
-            type="button"
-            title="Expand to full canvas"
-            onClick={() => setExpandedFolderId(folder.id)}
-            className="p-1 rounded-md text-slate-400 hover:text-slate-100 cursor-pointer"
-          >
-            <Maximize2 className="w-3.5 h-3.5" />
-          </button>
-
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() =>
-                setFolderMenuId(folderMenuId === folder.id ? null : folder.id)
-              }
-              className="p-1 rounded-md text-slate-400 hover:text-slate-100 cursor-pointer"
-            >
-              <MoreHorizontal className="w-4 h-4" />
-            </button>
-            {folderMenuId === folder.id && (
-              <>
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setFolderMenuId(null)}
-                />
-                <div className="absolute right-0 top-full mt-1 z-20 w-44 p-1 rounded-xl bg-white dark:bg-[#111724] border border-slate-200 dark:border-slate-800 shadow-2xl text-xs">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFolderMenuId(null);
-                      setRenamingFolderId(folder.id);
-                    }}
-                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-                  >
-                    <Pencil className="w-3.5 h-3.5" /> Rename
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteFolder(folder.id)}
-                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-rose-400 hover:bg-rose-500/10 cursor-pointer"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" /> Delete folder
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-
-        {!folder.collapsed && (
-          <div className="px-3 pb-3">
-            {items.length === 0 ? (
-              <div className="py-5 text-center text-[11px] text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
-                {total === 0
-                  ? "Empty folder. Drag items here, or use the Folder field in an item’s detail sheet."
-                  : "No items match the current filter."}
-              </div>
-            ) : (
-              <div className="flex gap-3 overflow-x-auto snap-x pb-2">
-                {items.map((it) => renderCarouselCard(it))}
-              </div>
-            )}
-          </div>
-        )}
-      </section>
-    );
-  };
-
   const inputBar = (
-    <div className="sticky bottom-0 z-20 shrink-0 px-4 md:px-8 py-3.5 bg-white/95 dark:bg-[#0B0F17]/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800/80 shadow-xl">
+    <div className="sticky bottom-0 z-20 shrink-0 px-4 md:px-12 py-3.5 bg-white/95 dark:bg-[#0B0F17]/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800/80 shadow-xl">
       <form
         onSubmit={handleCreateItem}
         className="flex items-center gap-2 p-1.5 rounded-2xl bg-white dark:bg-[#131926] border border-slate-200 dark:border-slate-800 shadow-sm"
@@ -559,27 +327,9 @@ export const ListsView: React.FC<ListsViewProps> = ({
           type="text"
           value={newItemTitle}
           onChange={(e) => setNewItemTitle(e.target.value)}
-          placeholder={
-            expandedFolder
-              ? `Add to “${expandedFolder.name}”…`
-              : `Add new ${activeList.name.toLowerCase().replace(/s$/, "")}... (click card to add author/notes)`
-          }
+          placeholder={`Add new ${activeList.name.toLowerCase().replace(/s$/, "")}... (click card to add author/notes)`}
           className="flex-1 min-w-[180px] bg-transparent text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none px-2 py-1 font-sans"
         />
-
-        <button
-          type="button"
-          onClick={() =>
-            setNewItemPriority(newItemPriority === "high" ? "normal" : "high")
-          }
-          className={`px-2.5 py-1.5 rounded-xl text-xs font-mono font-semibold transition-all cursor-pointer ${
-            newItemPriority === "high"
-              ? "bg-rose-500 text-white shadow-xs"
-              : "bg-slate-100 dark:bg-slate-900 text-slate-500 hover:text-slate-200 border border-slate-200 dark:border-slate-800"
-          }`}
-        >
-          {newItemPriority === "high" ? "!HIGH" : "Normal"}
-        </button>
 
         <button
           type="submit"
@@ -634,7 +384,7 @@ export const ListsView: React.FC<ListsViewProps> = ({
       </div>
 
       {/* 2. Main Canvas */}
-      <div className="flex-1 overflow-y-auto px-4 md:px-8 pt-6 pb-28">
+      <div className="flex-1 overflow-y-auto px-4 md:px-12 pt-6 pb-28">
         <div className="w-full space-y-4">
           {/* Header Card (No self-progress bar; surfaces 5-status collection metrics) */}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 rounded-2xl bg-white dark:bg-[#131926] border border-slate-200 dark:border-slate-800/80 shadow-xs">
@@ -659,7 +409,7 @@ export const ListsView: React.FC<ListsViewProps> = ({
                   </span>
                 </div>
                 {activeList.description && (
-                  <p className="text-[11px] text-slate-500 truncate">
+                  <p className="text-[11px] text-slate-500 truncate max-md:hidden">
                     {activeList.description}
                   </p>
                 )}
@@ -739,6 +489,9 @@ export const ListsView: React.FC<ListsViewProps> = ({
             </div>
 
             {/* List options menu */}
+            <div className="relative"></div>
+
+            {/* List options menu */}
             <div className="relative">
               <button
                 type="button"
@@ -788,462 +541,576 @@ export const ListsView: React.FC<ListsViewProps> = ({
           </div>
 
           {/* Sub-Tabs: Items | Linked Notes | Linked Events */}
-          <div className="flex flex-wrap items-center justify-between border-b border-slate-200 dark:border-slate-800/80 pb-3 gap-3">
-            <div className="flex items-center gap-2 text-xs">
+          {/* Sub-Tabs Row (isolated — this is now the ONLY thing in this row) */}
+          <div className="flex items-center justify-between gap-3 pb-1">
+            {/* Desktop: Horizontal Sub-Tabs */}
+            <div className="hidden md:flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setActiveSubTab("items")}
-                className={`px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer whitespace-nowrap ${
                   activeSubTab === "items"
                     ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-semibold shadow-xs"
                     : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
                 }`}
               >
-                Tracked Items ({currentItems.length})
+                Tracked Items
+                <span className="ml-1.5 text-[10px] font-mono opacity-70">
+                  {currentItems.length}
+                </span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveSubTab("linked-notes")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer whitespace-nowrap ${
                   activeSubTab === "linked-notes"
                     ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-semibold shadow-xs"
                     : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
                 }`}
               >
                 <FileText className="w-3.5 h-3.5" />
-                <span>Linked Notes ({linkedNotes.length})</span>
+                Linked Notes
+                <span className="ml-0.5 text-[10px] font-mono opacity-70">
+                  {linkedNotes.length}
+                </span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveSubTab("linked-events")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer whitespace-nowrap ${
                   activeSubTab === "linked-events"
                     ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-semibold shadow-xs"
                     : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
                 }`}
               >
                 <CalendarDays className="w-3.5 h-3.5" />
-                <span>Linked Events ({linkedEvents.length})</span>
+                Linked Events
+                <span className="ml-0.5 text-[10px] font-mono opacity-70">
+                  {linkedEvents.length}
+                </span>
               </button>
             </div>
 
-            {/* Right: Status Filters & View Mode Switcher */}
-            {activeSubTab === "items" && (
-              <div className="flex items-center gap-3 overflow-x-auto pb-1 max-w-full">
-                {/* 5-Status Filter Selector */}
-                <div className="flex items-center gap-1 text-xs">
-                  {(
-                    [
-                      "all",
-                      "inbox",
-                      "in-progress",
-                      "completed",
-                      "dropped",
-                      "maybe-later",
-                    ] as const
-                  ).map((st) => (
+            {/* Mobile: Sub-Tab Dropdown */}
+            {/* <div className="flex md:hidden min-w-0">
+              <FilterSelect
+                icon={
+                  activeSubTab === "items" ? (
+                    <LayoutList className="w-3.5 h-3.5 text-indigo-400" />
+                  ) : activeSubTab === "linked-notes" ? (
+                    <FileText className="w-3.5 h-3.5 text-amber-400" />
+                  ) : (
+                    <CalendarDays className="w-3.5 h-3.5 text-rose-400" />
+                  )
+                }
+                value={activeSubTab}
+                onChange={(v) => setActiveSubTab(v as any)}
+                options={[
+                  {
+                    value: "items",
+                    label: `Tracked Items (${currentItems.length})`,
+                  },
+                  {
+                    value: "linked-notes",
+                    label: `Linked Notes (${linkedNotes.length})`,
+                  },
+                  {
+                    value: "linked-events",
+                    label: `Linked Events (${linkedEvents.length})`,
+                  },
+                ]}
+              />
+            </div> */}
+
+            <div className="flex max-sm:w-full max-md:justify-between gap-2">
+              <div className="flex gap-2">
+                {/* Status filter as FilterSelect (replaces inline chips) */}
+                <FilterSelect
+                  icon={
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        filterStatus === "all"
+                          ? "bg-slate-400"
+                          : filterStatus === "inbox"
+                            ? "bg-slate-400"
+                            : filterStatus === "in-progress"
+                              ? "bg-amber-400"
+                              : filterStatus === "completed"
+                                ? "bg-emerald-400"
+                                : filterStatus === "dropped"
+                                  ? "bg-rose-400"
+                                  : "bg-violet-400"
+                      }`}
+                    />
+                  }
+                  value={filterStatus}
+                  active={filterStatus !== "all"}
+                  onChange={(v) => setFilterStatus(v as FilterStatusType)}
+                  options={[
+                    { value: "all", label: "All Statuses" },
+                    { value: "inbox", label: "Inbox" },
+                    { value: "in-progress", label: "In Progress" },
+                    { value: "completed", label: "Completed" },
+                    { value: "dropped", label: "Dropped" },
+                    { value: "maybe-later", label: "Maybe Later" },
+                  ]}
+                />
+
+                {/* View mode toggle */}
+                <div className="flex items-center gap-2">
+                  {/* View Mode toggle — same shape/pattern as before, just relocated */}
+                  <div className="flex items-center gap-0.5 p-0.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shrink-0">
                     <button
-                      key={st}
                       type="button"
-                      onClick={() => setFilterStatus(st)}
-                      className={`px-2 py-0.5 rounded-md font-mono text-[11px] capitalize transition-colors cursor-pointer whitespace-nowrap ${
-                        filterStatus === st
-                          ? "bg-indigo-500/10 text-indigo-400 font-semibold border border-indigo-500/20"
+                      onClick={() => handleSetViewMode("stacked")}
+                      title="Stacked Cards"
+                      className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                        viewMode === "stacked"
+                          ? "bg-slate-900 dark:bg-slate-800 text-white dark:text-slate-100 shadow-xs"
                           : "text-slate-400 hover:text-slate-200"
                       }`}
                     >
-                      {st === "in-progress"
-                        ? "In Progress"
-                        : st === "maybe-later"
-                          ? "Later"
-                          : st}
+                      <LayoutList className="w-3.5 h-3.5" />
                     </button>
-                  ))}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleCreateFolder}
-                  title="Create a folder"
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 text-xs font-medium text-slate-500 hover:text-indigo-400 hover:border-indigo-500/50 transition-colors cursor-pointer shrink-0"
-                >
-                  <FolderPlus className="w-3.5 h-3.5" />
-                  <span>Folder</span>
-                </button>
-
-                {/* View Mode Switcher */}
-                <div className="flex items-center gap-0.5 p-0.5 bg-slate-100 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => handleSetViewMode("stacked")}
-                    title="Stacked 1-Column Cards"
-                    className={`p-1.5 rounded-md transition-colors cursor-pointer ${
-                      viewMode === "stacked"
-                        ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xs"
-                        : "text-slate-400 hover:text-slate-200"
-                    }`}
-                  >
-                    <LayoutList className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSetViewMode("grid")}
-                    title="2-Column Grid Cards"
-                    className={`p-1.5 rounded-md transition-colors cursor-pointer ${
-                      viewMode === "grid"
-                        ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xs"
-                        : "text-slate-400 hover:text-slate-200"
-                    }`}
-                  >
-                    <LayoutGrid className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSetViewMode("compact")}
-                    title="Compact Row View"
-                    className={`p-1.5 rounded-md transition-colors cursor-pointer ${
-                      viewMode === "compact"
-                        ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xs"
-                        : "text-slate-400 hover:text-slate-200"
-                    }`}
-                  >
-                    <AlignJustify className="w-3.5 h-3.5" />
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSetViewMode("grid")}
+                      title="Grid"
+                      className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                        viewMode === "grid"
+                          ? "bg-slate-900 dark:bg-slate-800 text-white dark:text-slate-100 shadow-xs"
+                          : "text-slate-400 hover:text-slate-200"
+                      }`}
+                    >
+                      <LayoutGrid className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSetViewMode("compact")}
+                      title="Compact Rows"
+                      className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                        viewMode === "compact"
+                          ? "bg-slate-900 dark:bg-slate-800 text-white dark:text-slate-100 shadow-xs"
+                          : "text-slate-400 hover:text-slate-200"
+                      }`}
+                    >
+                      <AlignJustify className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               </div>
-            )}
+
+              {/* Search Bar */}
+              <div className="md:max-w-sm">
+                <SearchBar
+                  value={searchQuery}
+                  onChange={setSearchQuery}
+                  placeholder="Search items..."
+                />
+              </div>
+            </div>
           </div>
 
-          {/* ================= SUB-TAB 1: ITEMS ================= */}
-          {activeSubTab === "items" && (
-            <div className="space-y-4">
-              {folders.length > 0 && (
-                <div className="space-y-3">{folders.map(renderFolder)}</div>
-              )}
-
-              {draggingId && (
-                <div
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    handleDropOnFolder(undefined);
-                  }}
-                  className="py-3 text-center text-[11px] text-slate-400 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl"
-                >
-                  Drop here to move to root
-                </div>
-              )}
-
-              {folders.length > 0 && rootItems.length > 0 && (
-                <div className="text-[11px] font-mono uppercase tracking-wider text-slate-400">
-                  Unsorted
-                </div>
-              )}
-
-              {/* Items Rendered according to View Mode */}
-              {rootItems.length === 0 ? (
-                folders.length > 0 ? null : (
-                  <div className="p-12 text-center rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 text-xs text-slate-400 bg-white/40 dark:bg-[#131926]/40">
-                    <p className="font-semibold text-slate-700 dark:text-slate-300">
-                      No items found for the selected status.
-                    </p>
-                    <p className="mt-1 text-[11px] text-slate-400">
-                      Add new entries using the bottom input bar, or adjust your
-                      filter.
-                    </p>
-                  </div>
-                )
-              ) : (
-                <div
-                  className={
-                    viewMode === "grid"
-                      ? "grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-3.5"
-                      : viewMode === "compact"
-                        ? "space-y-1.5"
-                        : "space-y-2.5"
-                  }
-                >
-                  {rootItems.map((item) => {
-                    const isCompleted =
-                      item.status === "completed" || item.status === "done";
-                    const isDropped = item.status === "dropped";
-
-                    const handleContextMenuTrigger = (e: React.MouseEvent) => {
-                      e.preventDefault();
-                      if (onOpenContextMenu) {
-                        onOpenContextMenu(item, { x: e.clientX, y: e.clientY });
-                      }
-                    };
-
-                    const handleThreeDotClick = (e: React.MouseEvent) => {
-                      e.stopPropagation();
-                      if (onOpenContextMenu) {
-                        const rect = (
-                          e.currentTarget as HTMLElement
-                        ).getBoundingClientRect();
-                        onOpenContextMenu(item, {
-                          x: rect.left,
-                          y: rect.bottom + 4,
-                        });
-                      }
-                    };
-
-                    // ============ VIEW MODE: COMPACT ROW ============
-                    if (viewMode === "compact") {
+          {/* Filter Band — matches the visual language of NotesView / EventsView */}
+          {activeSubTab === "items" && allTags.length > 1 && (
+            <div className="-mx-4 md:-mx-12 px-4 md:px-12 py-3 border-y border-slate-200 dark:border-slate-800/80 bg-slate-50/70 dark:bg-[#0E131E] flex flex-wrap items-center justify-between gap-3">
+              {/* Tag filter strip — visible only when Items sub-tab is active and >1 tag exists */}
+              {allTags.length > 1 && (
+                <div className="md:hidden -mx-4 px-4 py-2 border-slate-200 dark:border-slate-800/80 bg-slate-50/70 dark:bg-[#0E131E]">
+                  {/* Mobile: full-bleed horizontal scroller, sits directly under filter band */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTagFilter(null)}
+                      className={`shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer ${
+                        selectedTagFilter === null
+                          ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-semibold"
+                          : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
+                      }`}
+                    >
+                      All
+                    </button>
+                    {allTags.map((t) => {
+                      const on = selectedTagFilter === t;
                       return (
-                        <div
-                          key={item.id}
-                          onClick={() => onOpenItemDetail?.(item)}
-                          onContextMenu={handleContextMenuTrigger}
-                          className="group flex items-center justify-between px-3 py-2 rounded-xl bg-white dark:bg-[#131926] border border-slate-200 dark:border-slate-800/80 hover:border-indigo-500/40 shadow-2xs transition-all cursor-pointer"
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => setSelectedTagFilter(on ? null : t)}
+                          className={`shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer border ${
+                            on
+                              ? "bg-indigo-500/15 text-indigo-300 border-indigo-500/40 font-semibold"
+                              : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 border-transparent"
+                          }`}
                         >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            {/* Leftmost Status Icon Button (1-Click Status Popover) */}
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const rect = (
-                                  e.currentTarget as HTMLElement
-                                ).getBoundingClientRect();
-                                setActiveStatusPicker({
-                                  itemId: item.id,
-                                  status: item.status,
-                                  position: {
-                                    x: rect.left,
-                                    y: rect.bottom + 6,
-                                  },
-                                });
-                              }}
-                              title={`Status: ${getStatusLabel(item.status)} (click to change)`}
-                              className="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-all hover:scale-110 cursor-pointer shrink-0"
-                            >
-                              {getStatusIcon(item.status)}
-                            </button>
-
-                            <span
-                              className={`text-xs font-semibold truncate ${
-                                isCompleted
-                                  ? "line-through text-slate-400 dark:text-slate-500"
-                                  : isDropped
-                                    ? "line-through text-rose-400/70"
-                                    : "text-slate-900 dark:text-slate-100"
-                              }`}
-                            >
-                              {item.title}
-                            </span>
-
-                            {item.priority === "high" && (
-                              <span className="text-[9px] font-mono text-rose-500 font-bold uppercase shrink-0">
-                                !HIGH
-                              </span>
-                            )}
-
-                            {item.subtitle && (
-                              <span className="text-[11px] text-slate-400 truncate hidden sm:inline">
-                                · {item.subtitle}
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="flex items-center gap-2 shrink-0">
-                            {item.dueDate && (
-                              <span className="text-[10px] font-mono text-cyan-600 dark:text-cyan-400 hidden sm:inline">
-                                {item.dueDate}
-                              </span>
-                            )}
-
-                            {/* Status Clickable Text Badge */}
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const rect = (
-                                  e.currentTarget as HTMLElement
-                                ).getBoundingClientRect();
-                                setActiveStatusPicker({
-                                  itemId: item.id,
-                                  status: item.status,
-                                  position: {
-                                    x: rect.left - 40,
-                                    y: rect.bottom + 6,
-                                  },
-                                });
-                              }}
-                              className="text-[10px] font-mono uppercase text-slate-400 hover:text-indigo-400 transition-colors cursor-pointer"
-                            >
-                              {getStatusLabel(item.status)}
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={handleThreeDotClick}
-                              title="Item options"
-                              className="p-1 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
-                            >
-                              <MoreVertical className="w-3.5 h-3.5" />
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onDeleteListItem(item.id);
-                              }}
-                              className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-500 transition-opacity cursor-pointer"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </div>
+                          #{t}
+                        </button>
                       );
-                    }
+                    })}
+                  </div>
+                </div>
+              )}
 
-                    // ============ VIEW MODE: STACKED & GRID CARDS ============
+              {/* Tag filter strip — desktop: inline wrap, subtle, above sections */}
+              {allTags.length > 1 && (
+                <div className="hidden md:flex items-center gap-1.5 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedTagFilter(null)}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer ${
+                      selectedTagFilter === null
+                        ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-semibold"
+                        : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
+                    }`}
+                  >
+                    All
+                  </button>
+                  {allTags.map((t) => {
+                    const on = selectedTagFilter === t;
                     return (
-                      <div
-                        key={item.id}
-                        onClick={() => onOpenItemDetail?.(item)}
-                        onContextMenu={handleContextMenuTrigger}
-                        className={`group flex items-start justify-between p-4 rounded-2xl bg-white dark:bg-[#131926] border border-slate-200 dark:border-slate-800/80 hover:border-indigo-500/40 shadow-xs transition-all cursor-pointer ${
-                          viewMode === "grid" ? "flex-col gap-3" : "gap-4"
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setSelectedTagFilter(on ? null : t)}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer border ${
+                          on
+                            ? "bg-indigo-500/15 text-indigo-300 border-indigo-500/40 font-semibold"
+                            : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 border-transparent"
                         }`}
                       >
-                        <div className="flex items-start gap-3 min-w-0 w-full">
-                          {/* Leftmost Status Icon Button (1-Click Status Popover) */}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const rect = (
-                                e.currentTarget as HTMLElement
-                              ).getBoundingClientRect();
-                              setActiveStatusPicker({
-                                itemId: item.id,
-                                status: item.status,
-                                position: {
-                                  x: rect.left,
-                                  y: rect.bottom + 6,
-                                },
-                              });
-                            }}
-                            title={`Status: ${getStatusLabel(item.status)} (click to change)`}
-                            className="p-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-all hover:scale-110 cursor-pointer shrink-0 mt-0.5"
-                          >
-                            {getStatusIcon(item.status)}
-                          </button>
-
-                          {/* Content */}
-                          <div className="min-w-0 flex-1 space-y-1">
-                            <div className="flex items-center gap-2">
-                              <span
-                                className={`text-sm font-semibold truncate ${
-                                  isCompleted
-                                    ? "line-through text-slate-400 dark:text-slate-500"
-                                    : isDropped
-                                      ? "line-through text-rose-400/70"
-                                      : "text-slate-900 dark:text-slate-100"
-                                }`}
-                              >
-                                {item.title}
-                              </span>
-
-                              {item.priority === "high" && (
-                                <span className="text-[10px] font-mono text-rose-500 font-bold uppercase shrink-0">
-                                  !HIGH
-                                </span>
-                              )}
-                            </div>
-
-                            {item.subtitle && (
-                              <p className="text-xs text-slate-500 truncate">
-                                {item.subtitle}
-                              </p>
-                            )}
-
-                            {/* Tags or notes indicator */}
-                            <div className="flex items-center gap-2 pt-1 text-[10px] font-mono text-slate-400">
-                              {item.notes && (
-                                <span className="text-indigo-400 font-sans">
-                                  Has notes
-                                </span>
-                              )}
-                              {item.dueDate && (
-                                <>
-                                  {item.notes && <span>·</span>}
-                                  <span className="text-cyan-500">
-                                    Due {item.dueDate}
-                                  </span>
-                                </>
-                              )}
-                              {item.tags && item.tags.length > 0 && (
-                                <>
-                                  {(item.notes || item.dueDate) && (
-                                    <span>·</span>
-                                  )}
-                                  <span className="text-slate-400 truncate">
-                                    {item.tags.map((t) => `#${t}`).join(" ")}
-                                  </span>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Right/Bottom Actions: Status Badge, 3-Dot Trigger, Delete */}
-                        <div
-                          className={`flex items-center gap-2 shrink-0 ${viewMode === "grid" ? "w-full justify-between pt-2 border-t border-slate-100 dark:border-slate-800/60" : ""}`}
-                        >
-                          {/* Status Clickable Text Badge */}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const rect = (
-                                e.currentTarget as HTMLElement
-                              ).getBoundingClientRect();
-                              setActiveStatusPicker({
-                                itemId: item.id,
-                                status: item.status,
-                                position: {
-                                  x: rect.left - 40,
-                                  y: rect.bottom + 6,
-                                },
-                              });
-                            }}
-                            className="text-[11px] font-mono uppercase text-slate-400 hover:text-indigo-400 transition-colors cursor-pointer"
-                          >
-                            {getStatusLabel(item.status)}
-                          </button>
-
-                          <div className="flex items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={handleThreeDotClick}
-                              title="Item options"
-                              className="p-1 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
-                            >
-                              <MoreVertical className="w-3.5 h-3.5" />
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onDeleteListItem(item.id);
-                              }}
-                              className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-500 transition-opacity cursor-pointer"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
+                        #{t}
+                      </button>
                     );
                   })}
                 </div>
+              )}
+            </div>
+          )}
+
+          {/* ================= SUB-TAB 1: ITEMS ================= */}
+          {activeSubTab === "items" && (
+            <div className="space-y-8">
+              {filteredItems.length === 0 ? (
+                <div className="p-12 text-center rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 text-xs text-slate-400 bg-white/40 dark:bg-[#131926]/40">
+                  <p className="font-semibold text-slate-700 dark:text-slate-300">
+                    No items found for the selected status.
+                  </p>
+                  <p className="mt-1 text-[11px] text-slate-400">
+                    Add new entries using the bottom input bar, or adjust your
+                    filter.
+                  </p>
+                </div>
+              ) : (
+                (() => {
+                  // Group filtered items by their FIRST tag; untagged items go to "UNTAGGED".
+                  const groups: Record<string, ListItem[]> = {};
+                  for (const it of filteredItems) {
+                    const tag =
+                      it.tags && it.tags[0]
+                        ? it.tags[0].toLowerCase()
+                        : "__untagged__";
+                    (groups[tag] ??= []).push(it);
+                  }
+
+                  // Tagged sections sorted alphabetically; UNTAGGED always last.
+                  const tagKeys = Object.keys(groups)
+                    .filter((k) => k !== "__untagged__")
+                    .sort((a, b) => a.localeCompare(b));
+                  if (groups.__untagged__) tagKeys.push("__untagged__");
+
+                  return tagKeys.map((tagKey) => {
+                    const items = groups[tagKey];
+                    const isUntagged = tagKey === "__untagged__";
+                    const sectionTitle = isUntagged
+                      ? "UNTAGGED"
+                      : tagKey.toUpperCase();
+
+                    return (
+                      <section key={tagKey} className="space-y-3">
+                        {/* Section header — matches Tag chip language used across the app */}
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-[11px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">
+                            {sectionTitle}
+                          </h3>
+                          <span className="text-[10px] font-mono text-slate-400 tabular-nums">
+                            · {items.length}
+                          </span>
+                          <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800/80" />
+                        </div>
+
+                        {/* Grid / compact / stacked — same as before, minus folder logic */}
+                        <div
+                          className={
+                            viewMode === "grid"
+                              ? "grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-3.5"
+                              : viewMode === "compact"
+                                ? "space-y-1.5"
+                                : "space-y-2.5"
+                          }
+                        >
+                          {items.map((item) => {
+                            const isCompleted =
+                              item.status === "completed" ||
+                              item.status === "done";
+                            const isDropped = item.status === "dropped";
+
+                            const handleContextMenuTrigger = (
+                              e: React.MouseEvent,
+                            ) => {
+                              e.preventDefault();
+                              if (onOpenContextMenu) {
+                                onOpenContextMenu(item, {
+                                  x: e.clientX,
+                                  y: e.clientY,
+                                });
+                              }
+                            };
+
+                            const handleThreeDotClick = (
+                              e: React.MouseEvent,
+                            ) => {
+                              e.stopPropagation();
+                              if (onOpenContextMenu) {
+                                const rect = (
+                                  e.currentTarget as HTMLElement
+                                ).getBoundingClientRect();
+                                onOpenContextMenu(item, {
+                                  x: rect.left,
+                                  y: rect.bottom + 4,
+                                });
+                              }
+                            };
+
+                            // ============ VIEW MODE: COMPACT ROW ============
+                            if (viewMode === "compact") {
+                              return (
+                                <div
+                                  key={item.id}
+                                  onClick={() => onOpenItemDetail?.(item)}
+                                  onContextMenu={handleContextMenuTrigger}
+                                  className="group flex items-center justify-between px-3 py-2 rounded-xl bg-white dark:bg-[#131926] border border-slate-200 dark:border-slate-800/80 hover:border-indigo-500/40 shadow-2xs transition-all cursor-pointer"
+                                >
+                                  <div className="flex items-center gap-2.5 min-w-0">
+                                    {/* Leftmost Status Icon Button (1-Click Status Popover) */}
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const rect = (
+                                          e.currentTarget as HTMLElement
+                                        ).getBoundingClientRect();
+                                        setActiveStatusPicker({
+                                          itemId: item.id,
+                                          status: item.status,
+                                          position: {
+                                            x: rect.left,
+                                            y: rect.bottom + 6,
+                                          },
+                                        });
+                                      }}
+                                      title={`Status: ${getStatusLabel(item.status)} (click to change)`}
+                                      className="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-all hover:scale-110 cursor-pointer shrink-0"
+                                    >
+                                      {getStatusIcon(item.status)}
+                                    </button>
+
+                                    <span
+                                      className={`text-xs font-semibold truncate ${
+                                        isCompleted
+                                          ? "line-through text-slate-400 dark:text-slate-500"
+                                          : isDropped
+                                            ? "line-through text-rose-400/70"
+                                            : "text-slate-900 dark:text-slate-100"
+                                      }`}
+                                    >
+                                      {item.title}
+                                    </span>
+
+                                    {item.subtitle && (
+                                      <span className="text-[11px] text-slate-400 truncate hidden sm:inline">
+                                        · {item.subtitle}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    {item.dueDate && (
+                                      <span className="text-[10px] font-mono text-cyan-600 dark:text-cyan-400 hidden sm:inline">
+                                        {item.dueDate}
+                                      </span>
+                                    )}
+
+                                    {/* Status Clickable Text Badge */}
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const rect = (
+                                          e.currentTarget as HTMLElement
+                                        ).getBoundingClientRect();
+                                        setActiveStatusPicker({
+                                          itemId: item.id,
+                                          status: item.status,
+                                          position: {
+                                            x: rect.left - 40,
+                                            y: rect.bottom + 6,
+                                          },
+                                        });
+                                      }}
+                                      className="text-[10px] font-mono uppercase text-slate-400 hover:text-indigo-400 transition-colors cursor-pointer"
+                                    >
+                                      {getStatusLabel(item.status)}
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={handleThreeDotClick}
+                                      title="Item options"
+                                      className="p-1 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+                                    >
+                                      <MoreVertical className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            }
+
+                            // ============ VIEW MODE: STACKED & GRID CARDS ============
+                            return (
+                              <div
+                                key={item.id}
+                                onClick={() => onOpenItemDetail?.(item)}
+                                onContextMenu={handleContextMenuTrigger}
+                                className={`group flex items-start justify-between p-4 rounded-2xl bg-white dark:bg-[#131926] border border-slate-200 dark:border-slate-800/80 hover:border-indigo-500/40 shadow-xs transition-all cursor-pointer ${
+                                  viewMode === "grid"
+                                    ? "flex-col gap-3"
+                                    : "gap-4"
+                                }`}
+                              >
+                                <div className="flex items-start gap-3 min-w-0 w-full">
+                                  {/* Leftmost Status Icon Button (1-Click Status Popover) */}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const rect = (
+                                        e.currentTarget as HTMLElement
+                                      ).getBoundingClientRect();
+                                      setActiveStatusPicker({
+                                        itemId: item.id,
+                                        status: item.status,
+                                        position: {
+                                          x: rect.left,
+                                          y: rect.bottom + 6,
+                                        },
+                                      });
+                                    }}
+                                    title={`Status: ${getStatusLabel(item.status)} (click to change)`}
+                                    className="p-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-all hover:scale-110 cursor-pointer shrink-0 mt-0.5"
+                                  >
+                                    {getStatusIcon(item.status)}
+                                  </button>
+
+                                  {/* Content */}
+                                  <div className="min-w-0 flex-1 space-y-1">
+                                    <div className="flex items-center gap-2">
+                                      <span
+                                        className={`text-sm font-semibold truncate ${
+                                          isCompleted
+                                            ? "line-through text-slate-400 dark:text-slate-500"
+                                            : isDropped
+                                              ? "line-through text-rose-400/70"
+                                              : "text-slate-900 dark:text-slate-100"
+                                        }`}
+                                      >
+                                        {item.title}
+                                      </span>
+                                    </div>
+
+                                    {item.subtitle && (
+                                      <p className="text-xs text-slate-500 truncate">
+                                        {item.subtitle}
+                                      </p>
+                                    )}
+
+                                    {/* Tags or notes indicator */}
+                                    <div className="flex items-center gap-2 pt-1 text-[10px] font-mono text-slate-400">
+                                      {/* {item.notes && (
+                                        <span className="text-indigo-400 font-sans">
+                                          Has notes
+                                        </span>
+                                      )} */}
+                                      {item.dueDate && (
+                                        <>
+                                          {item.notes && <span>·</span>}
+                                          <span className="text-cyan-500">
+                                            Due {item.dueDate}
+                                          </span>
+                                        </>
+                                      )}
+                                      {item.tags && item.tags.length > 0 && (
+                                        <>
+                                          {/* {(item.notes || item.dueDate) && (
+                                            <span>·</span>
+                                          )} */}
+                                          <span className="text-slate-400 truncate">
+                                            {item.tags
+                                              .map((t) => `#${t}`)
+                                              .join(" ")}
+                                          </span>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Right/Bottom Actions: Status Badge, 3-Dot Trigger, Delete */}
+                                <div
+                                  className={`flex items-center gap-2 shrink-0 ${viewMode === "grid" ? "w-full justify-between pt-2 border-t border-slate-100 dark:border-slate-800/60" : ""}`}
+                                >
+                                  {/* Status Clickable Text Badge */}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const rect = (
+                                        e.currentTarget as HTMLElement
+                                      ).getBoundingClientRect();
+                                      setActiveStatusPicker({
+                                        itemId: item.id,
+                                        status: item.status,
+                                        position: {
+                                          x: rect.left - 40,
+                                          y: rect.bottom + 6,
+                                        },
+                                      });
+                                    }}
+                                    className="text-[11px] font-mono uppercase text-slate-400 hover:text-indigo-400 transition-colors cursor-pointer"
+                                  >
+                                    {getStatusLabel(item.status)}
+                                  </button>
+
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={handleThreeDotClick}
+                                      title="Item options"
+                                      className="p-1 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+                                    >
+                                      <MoreVertical className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </section>
+                    );
+                  });
+                })()
               )}
             </div>
           )}
@@ -1333,66 +1200,6 @@ export const ListsView: React.FC<ListsViewProps> = ({
           }}
           onClose={() => setActiveStatusPicker(null)}
         />
-      )}
-
-      {expandedFolder && (
-        <div className="absolute inset-0 z-30 flex flex-col bg-white dark:bg-[#0B0F17]">
-          <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800/80 flex items-center gap-3 shrink-0">
-            <button
-              type="button"
-              onClick={() => setExpandedFolderId(null)}
-              title="Back to list (Esc)"
-              className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-slate-100 cursor-pointer"
-            >
-              <Minimize2 className="w-4 h-4" />
-            </button>
-            <Folder className="w-5 h-5 text-indigo-400 shrink-0" />
-            {renamingFolderId === expandedFolder.id ? (
-              renderFolderNameInput(expandedFolder)
-            ) : (
-              <div className="min-w-0">
-                <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 truncate">
-                  {expandedFolder.name}
-                </h2>
-                <div className="text-[11px] font-mono text-slate-400">
-                  {activeList.name} · {itemsInFolder(expandedFolder.id).length}{" "}
-                  items
-                </div>
-              </div>
-            )}
-            <div className="flex-1" />
-            <button
-              type="button"
-              onClick={() => setRenamingFolderId(expandedFolder.id)}
-              title="Rename folder"
-              className="p-1.5 text-slate-400 hover:text-slate-100 cursor-pointer"
-            >
-              <Pencil className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => handleDeleteFolder(expandedFolder.id)}
-              title="Delete folder (items return to root)"
-              className="p-1.5 text-slate-400 hover:text-rose-400 cursor-pointer"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
-            {itemsInFolder(expandedFolder.id).length === 0 ? (
-              <div className="py-16 text-center text-xs text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">
-                Nothing here yet. Add the first item below.
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3.5">
-                {itemsInFolder(expandedFolder.id).map((it) =>
-                  renderCarouselCard(it, true),
-                )}
-              </div>
-            )}
-          </div>
-          {inputBar}
-        </div>
       )}
 
       <CreateListModal

@@ -185,14 +185,11 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
   const [itemTitle, setItemTitle] = useState("");
   const [itemSubtitle, setItemSubtitle] = useState("");
   const [itemStatus, setItemStatus] = useState<ListItemStatus>("inbox");
-  const [itemPriority, setItemPriority] = useState<"normal" | "high" | "low">(
-    "normal",
-  );
+
   const [itemNotes, setItemNotes] = useState("");
   const [itemDueDate, setItemDueDate] = useState("");
   const [itemTags, setItemTags] = useState<string[]>([]);
   const [itemListId, setItemListId] = useState("");
-  const [itemFolderId, setItemFolderId] = useState("");
 
   // Synchronize when sheetMode changes
   useEffect(() => {
@@ -234,12 +231,10 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
       setItemTitle(sheetMode.data.title || "");
       setItemSubtitle(sheetMode.data.subtitle || "");
       setItemStatus(sheetMode.data.status || "inbox");
-      setItemPriority(sheetMode.data.priority || "normal");
       setItemNotes(sheetMode.data.notes || "");
       setItemDueDate(sheetMode.data.dueDate || "");
       setItemTags(sheetMode.data.tags || []);
       setItemListId(sheetMode.data.listId || availableLists[0]?.id || "");
-      setItemFolderId(sheetMode.data.folderId || "");
     }
   }, [sheetMode, availableLists]);
 
@@ -542,11 +537,9 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
         title: itemTitle.trim() || "Untitled Item",
         subtitle: itemSubtitle.trim() || undefined,
         status: itemStatus,
-        priority: itemPriority,
         notes: itemNotes.trim() || undefined,
         dueDate: itemDueDate || undefined,
         tags: itemTags,
-        folderId: itemFolderId || undefined,
       });
     }
     onClose();
@@ -554,7 +547,6 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
 
   const itemList = availableLists.find((l) => l.id === itemListId);
   const itemMeta = ITEM_META[itemList?.type ?? "custom"] ?? ITEM_META.custom;
-  const itemFolders = itemList?.folders ?? [];
   const activeItemStatus =
     itemStatus === "todo"
       ? "inbox"
@@ -1068,31 +1060,6 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
 
               {/* Properties card */}
               <div className="rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 divide-y divide-slate-200 dark:divide-slate-800">
-                {/* Priority */}
-                <div className="flex items-center gap-3 px-4 py-3">
-                  <span className="w-20 shrink-0 text-[11px] font-mono uppercase text-slate-400">
-                    Priority
-                  </span>
-                  <div className="inline-flex p-0.5 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                    {(["low", "normal", "high"] as const).map((p) => (
-                      <button
-                        key={p}
-                        type="button"
-                        onClick={() => setItemPriority(p)}
-                        className={`px-3 py-1 rounded-[10px] text-xs font-mono capitalize transition-colors cursor-pointer ${
-                          itemPriority === p
-                            ? p === "high"
-                              ? "bg-rose-500 text-white font-bold"
-                              : "bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-semibold"
-                            : "text-slate-500 hover:text-slate-200"
-                        }`}
-                      >
-                        {p === "high" ? "!High" : p}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
                 {/* Due date */}
                 <div className="flex flex-wrap items-center gap-3 px-4 py-3">
                   <span className="w-20 shrink-0 text-[11px] font-mono uppercase text-slate-400">
@@ -1140,7 +1107,6 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                     value={itemListId}
                     onChange={(v) => {
                       setItemListId(v);
-                      setItemFolderId("");
                     }}
                     options={availableLists.map((l) => ({
                       value: l.id,
@@ -1148,28 +1114,6 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                     }))}
                   />
                 </div>
-
-                {/* Folder (only when the list has folders) */}
-                {itemFolders.length > 0 && (
-                  <div className="flex items-center gap-3 px-4 py-3">
-                    <span className="w-20 shrink-0 text-[11px] font-mono uppercase text-slate-400">
-                      Folder
-                    </span>
-                    <FilterSelect
-                      icon={<Folder className="w-3.5 h-3.5 text-amber-400" />}
-                      value={itemFolderId}
-                      active={!!itemFolderId}
-                      onChange={setItemFolderId}
-                      options={[
-                        { value: "", label: "No folder" },
-                        ...itemFolders.map((f) => ({
-                          value: f.id,
-                          label: f.name,
-                        })),
-                      ]}
-                    />
-                  </div>
-                )}
               </div>
 
               {/* Tags */}

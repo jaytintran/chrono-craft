@@ -5,7 +5,7 @@
  * Full action suite: Edit, Duplicate, Reschedule, Change Priority, Manage Tags, Delete.
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from "react";
 import {
   Edit3,
   Copy,
@@ -17,12 +17,12 @@ import {
   Check,
   Clock,
   Sparkles,
-} from 'lucide-react';
-import { EntryPriority, TimelineEntry } from '../types';
+} from "lucide-react";
+import { TimelineEntry } from "../types";
 
 export interface ContextMenuTarget {
   item: TimelineEntry | any;
-  type: 'timeline' | 'note' | 'event' | 'focus' | 'list';
+  type: "timeline" | "note" | "event" | "focus" | "list";
 }
 
 interface ContextMenuProps {
@@ -33,9 +33,9 @@ interface ContextMenuProps {
   onEdit: (item: any) => void;
   onDuplicate: (item: any) => void;
   onReschedule: (item: any, date: Date) => void;
-  onChangePriority: (item: any, priority: EntryPriority) => void;
   onAddTag: (item: any, tag: string) => void;
   onDelete: (item: any) => void;
+  onRemoveTag?: (item: any, tag: string) => void;
 }
 
 export const ContextMenu: React.FC<ContextMenuProps> = ({
@@ -46,16 +46,16 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   onEdit,
   onDuplicate,
   onReschedule,
-  onChangePriority,
   onAddTag,
   onDelete,
+  onRemoveTag,
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [isRescheduleOpen, setIsRescheduleOpen] = useState(false);
-  const [isPriorityOpen, setIsPriorityOpen] = useState(false);
   const [isTagPromptOpen, setIsTagPromptOpen] = useState(false);
-  const [tagInput, setTagInput] = useState('');
+  const [tagInput, setTagInput] = useState("");
+  const [currentTags, setCurrentTags] = useState<string[]>([]);
 
   // Check mobile on mount/resize
   useEffect(() => {
@@ -63,8 +63,8 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
       setIsMobile(window.innerWidth < 768);
     };
     checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
   // Close on outside click
@@ -75,10 +75,10 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
       }
     };
     if (isOpen) {
-      document.addEventListener('mousedown', handleOutsideClick);
+      document.addEventListener("mousedown", handleOutsideClick);
     }
     return () => {
-      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener("mousedown", handleOutsideClick);
     };
   }, [isOpen, onClose]);
 
@@ -86,20 +86,22 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   useEffect(() => {
     if (!isOpen) {
       setIsRescheduleOpen(false);
-      setIsPriorityOpen(false);
       setIsTagPromptOpen(false);
-      setTagInput('');
+      setTagInput("");
+      setCurrentTags([]);
+    } else if (target?.item) {
+      setCurrentTags(target.item.tags || []);
     }
-  }, [isOpen]);
+  }, [isOpen, target]);
 
   if (!isOpen || !target) return null;
 
   const item = target.item;
-  const itemTitle = item.title || 'Untitled Item';
+  const itemTitle = item.title || "Untitled Item";
 
   // Desktop positioning calculation to keep menu within viewport
   const getDesktopStyle = (): React.CSSProperties => {
-    if (!position) return { top: '50%', left: '50%' };
+    if (!position) return { top: "50%", left: "50%" };
 
     const menuWidth = 240;
     const menuHeight = 320;
@@ -130,11 +132,16 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
 
   const handleSaveTag = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!tagInput.trim()) return;
-    onAddTag(item, tagInput.trim().replace(/^#/, ''));
-    setTagInput('');
-    setIsTagPromptOpen(false);
-    onClose();
+    const clean = tagInput.trim().replace(/^#/, "").toLowerCase();
+    if (!clean || currentTags.includes(clean)) return;
+    onAddTag(item, clean);
+    setCurrentTags((prev) => [...prev, clean]);
+    setTagInput("");
+  };
+
+  const handleRemoveTag = (tag: string) => {
+    onRemoveTag?.(item, tag);
+    setCurrentTags((prev) => prev.filter((t) => t !== tag));
   };
 
   return (
@@ -143,7 +150,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
       <div
         onClick={onClose}
         className={`fixed inset-0 transition-opacity ${
-          isMobile ? 'bg-slate-900/60 backdrop-blur-xs' : 'bg-transparent'
+          isMobile ? "bg-slate-900/60 backdrop-blur-xs" : "bg-transparent"
         }`}
       />
 
@@ -231,58 +238,54 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
               </div>
             </div>
 
-            {/* 4. Priority */}
+            {/* 4. Tags */}
             <div className="py-2 px-2">
               <div className="flex items-center justify-between text-xs font-medium text-slate-500 mb-2">
                 <span className="flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-rose-400" />
-                  <span>Priority</span>
+                  <Tag className="w-4 h-4 text-amber-400" />
+                  <span>Tags</span>
+                </span>
+                <span className="text-[10px] font-mono">
+                  {currentTags.length}
                 </span>
               </div>
-              <div className="grid grid-cols-3 gap-2">
+
+              {currentTags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {currentTags.map((t) => (
+                    <span
+                      key={t}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-mono bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
+                    >
+                      #{t}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveTag(t)}
+                        className="text-slate-400 hover:text-rose-400"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <form onSubmit={handleSaveTag} className="flex gap-1.5">
+                <input
+                  type="text"
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  placeholder="add new tag…"
+                  className="flex-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:outline-none"
+                />
                 <button
-                  type="button"
-                  onClick={() => {
-                    onChangePriority(item, 'high');
-                    onClose();
-                  }}
-                  className={`py-1.5 px-2 rounded-lg text-xs font-mono font-semibold transition-colors ${
-                    item.priority === 'high'
-                      ? 'bg-rose-600 text-white'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
-                  }`}
+                  type="submit"
+                  disabled={!tagInput.trim()}
+                  className="px-3 rounded-lg bg-indigo-600 text-white text-xs font-semibold disabled:opacity-40"
                 >
-                  !HIGH
+                  Add
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onChangePriority(item, 'normal');
-                    onClose();
-                  }}
-                  className={`py-1.5 px-2 rounded-lg text-xs font-mono font-semibold transition-colors ${
-                    item.priority === 'normal' || !item.priority
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
-                  }`}
-                >
-                  NORMAL
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onChangePriority(item, 'low');
-                    onClose();
-                  }}
-                  className={`py-1.5 px-2 rounded-lg text-xs font-mono font-semibold transition-colors ${
-                    item.priority === 'low'
-                      ? 'bg-cyan-600 text-white'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
-                  }`}
-                >
-                  LOW
-                </button>
-              </div>
+              </form>
             </div>
 
             {/* 5. Delete */}
@@ -380,90 +383,69 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
             )}
           </div>
 
-          {/* 4. Change Priority */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setIsPriorityOpen(!isPriorityOpen)}
-              className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer text-slate-700 dark:text-slate-200 font-medium"
-            >
-              <div className="flex items-center gap-2.5">
-                <AlertCircle className="w-3.5 h-3.5 text-rose-400" />
-                <span>Priority</span>
-              </div>
-              <span className="text-[10px] uppercase font-mono text-slate-400">
-                {item.priority || 'Normal'} ›
-              </span>
-            </button>
-
-            {isPriorityOpen && (
-              <div className="p-1.5 mt-1 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1 animate-fadeIn font-mono">
-                <button
-                  type="button"
-                  onClick={() => {
-                    onChangePriority(item, 'high');
-                    onClose();
-                  }}
-                  className="w-full text-left px-2.5 py-1 rounded-md text-[11px] text-rose-400 hover:bg-rose-500 hover:text-white transition-colors font-bold"
-                >
-                  !HIGH Priority
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onChangePriority(item, 'normal');
-                    onClose();
-                  }}
-                  className="w-full text-left px-2.5 py-1 rounded-md text-[11px] hover:bg-indigo-600 hover:text-white transition-colors"
-                >
-                  Normal Priority
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onChangePriority(item, 'low');
-                    onClose();
-                  }}
-                  className="w-full text-left px-2.5 py-1 rounded-md text-[11px] text-cyan-400 hover:bg-cyan-600 hover:text-white transition-colors"
-                >
-                  Low Priority
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* 5. Add Tag */}
+          {/* 5. Manage Tags */}
           <div className="relative">
             <button
               type="button"
               onClick={() => setIsTagPromptOpen(!isTagPromptOpen)}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer text-slate-700 dark:text-slate-200 font-medium"
+              className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer text-slate-700 dark:text-slate-200 font-medium"
             >
-              <Tag className="w-3.5 h-3.5 text-amber-400" />
-              <span>Add #Tag</span>
+              <div className="flex items-center gap-2.5">
+                <Tag className="w-3.5 h-3.5 text-amber-400" />
+                <span>Tags</span>
+              </div>
+              <span className="text-[10px] font-mono text-slate-400">
+                {currentTags.length}
+              </span>
             </button>
 
             {isTagPromptOpen && (
-              <form
-                onSubmit={handleSaveTag}
-                className="p-2 mt-1 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 flex gap-1 animate-fadeIn"
-              >
-                <input
-                  type="text"
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  placeholder="tag name"
-                  autoFocus
-                  className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md px-2 py-0.5 text-[11px] text-slate-900 dark:text-slate-100 focus:outline-none"
-                />
-                <button
-                  type="submit"
-                  disabled={!tagInput.trim()}
-                  className="p-1 rounded-md bg-indigo-600 text-white disabled:opacity-40"
-                >
-                  <Check className="w-3 h-3" />
-                </button>
-              </form>
+              <div className="p-2 mt-1 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1.5 animate-fadeIn">
+                {/* Existing tags */}
+                {currentTags.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {currentTags.map((t) => (
+                      <span
+                        key={t}
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-mono bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
+                      >
+                        #{t}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveTag(t)}
+                          className="text-slate-400 hover:text-rose-400 transition-colors"
+                          title={`Remove #${t}`}
+                        >
+                          <X className="w-2.5 h-2.5" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[10px] text-slate-400 italic px-1">
+                    No tags yet
+                  </p>
+                )}
+
+                {/* Add new tag form */}
+                <form onSubmit={handleSaveTag} className="flex gap-1">
+                  <input
+                    type="text"
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    placeholder="add tag…"
+                    autoFocus
+                    className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md px-2 py-0.5 text-[11px] text-slate-900 dark:text-slate-100 focus:outline-none"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!tagInput.trim()}
+                    className="p-1 rounded-md bg-indigo-600 text-white disabled:opacity-40"
+                  >
+                    <Check className="w-3 h-3" />
+                  </button>
+                </form>
+              </div>
             )}
           </div>
 

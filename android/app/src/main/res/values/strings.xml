@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Chrono Focus</string>
+    <string name="title_activity_main">Chrono Focus</string>
+    <string name="package_name">com.chronofocus.app</string>
+    <string name="custom_url_scheme">com.chronofocus.app</string>
+</resources>

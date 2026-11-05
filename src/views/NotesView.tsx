@@ -11,7 +11,6 @@ import {
   Search,
   Folder,
   Pin,
-  Trash2,
   ArrowUpDown,
   SlidersHorizontal,
   RotateCcw,
@@ -273,7 +272,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
       </div>
 
       {/* Notes Grid */}
-      <div className="flex-1 overflow-y-auto px-6 py-6">
+      <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
         <div className="max-w-6xl mx-auto">
           {filteredNotes.length === 0 ? (
             <div className="p-12 text-center rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 text-xs text-slate-400">
@@ -352,16 +351,6 @@ export const NotesView: React.FC<NotesViewProps> = ({
                         className="p-1 text-slate-400 hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
                       >
                         <MoreVertical className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDeleteNote(note.id);
-                        }}
-                        className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-500 transition-opacity cursor-pointer"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>

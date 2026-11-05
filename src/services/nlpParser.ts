@@ -4,7 +4,7 @@
  * and Time Blocks (e.g. "from 1pm to 3pm", "from 1pm30 to 2pm", "from 8:30am to 10:45am", "for 2h30m", or with <...>)
  */
 
-import { EntryPriority, EntryType, ParsedNLPResult, TimeBlockInfo } from '../types';
+import { EntryType, ParsedNLPResult, TimeBlockInfo } from "../types";
 
 /**
  * Parses flexible time token string into hours (0-23) and minutes (0-59).
@@ -14,8 +14,10 @@ import { EntryPriority, EntryType, ParsedNLPResult, TimeBlockInfo } from '../typ
  * - "1pm30", "4pm45", "11am15"
  * - "14:30", "09:00"
  */
-function parseTimeToken(token: string): { hours: number; minutes: number } | null {
-  const clean = token.trim().toLowerCase().replace(/\s+/g, '');
+function parseTimeToken(
+  token: string,
+): { hours: number; minutes: number } | null {
+  const clean = token.trim().toLowerCase().replace(/\s+/g, "");
   if (!clean) return null;
 
   // Pattern 1: 1pm30, 4pm45, 11am15 (hours + am/pm + minutes)
@@ -24,8 +26,8 @@ function parseTimeToken(token: string): { hours: number; minutes: number } | nul
     let h = parseInt(irregularMatch[1], 10);
     const mer = irregularMatch[2];
     const m = parseInt(irregularMatch[3], 10);
-    if (mer === 'pm' && h < 12) h += 12;
-    if (mer === 'am' && h === 12) h = 0;
+    if (mer === "pm" && h < 12) h += 12;
+    if (mer === "am" && h === 12) h = 0;
     return { hours: h, minutes: m };
   }
 
@@ -35,8 +37,8 @@ function parseTimeToken(token: string): { hours: number; minutes: number } | nul
     let h = parseInt(standardMatch[1], 10);
     const m = standardMatch[2] ? parseInt(standardMatch[2], 10) : 0;
     const mer = standardMatch[3];
-    if (mer === 'pm' && h < 12) h += 12;
-    if (mer === 'am' && h === 12) h = 0;
+    if (mer === "pm" && h < 12) h += 12;
+    if (mer === "am" && h === 12) h = 0;
     return { hours: h, minutes: m };
   }
 
@@ -45,13 +47,13 @@ function parseTimeToken(token: string): { hours: number; minutes: number } | nul
 
 export function parseNaturalLanguageInput(
   rawInput: string,
-  defaultType: EntryType = 'task',
-  baseDate: Date = new Date()
+  defaultType: EntryType = "task",
+  baseDate: Date = new Date(),
 ): ParsedNLPResult {
   let text = rawInput.trim();
   if (!text) {
     return {
-      cleanTitle: '',
+      cleanTitle: "",
       type: defaultType,
       tags: [],
       rawMatches: [],
@@ -59,9 +61,8 @@ export function parseNaturalLanguageInput(
     };
   }
 
-  const rawMatches: ParsedNLPResult['rawMatches'] = [];
+  const rawMatches: ParsedNLPResult["rawMatches"] = [];
   let parsedType: EntryType = defaultType;
-  let parsedPriority: EntryPriority = 'normal';
   const parsedTags: string[] = [];
 
   let targetDate: Date | null = null;
@@ -80,10 +81,10 @@ export function parseNaturalLanguageInput(
     parsedType = typeMatch[1].toLowerCase() as EntryType;
     rawMatches.push({
       label: `Type: ${parsedType.toUpperCase()}`,
-      type: 'type',
+      type: "type",
       raw: typeMatch[0].trim(),
     });
-    text = text.replace(typeMatch[0], ' ');
+    text = text.replace(typeMatch[0], " ");
   }
 
   // 2. TIME BLOCK PARSING (supports both bare "from 1pm to 3pm", "from 1pm30 to 2pm", "for 2h30m", or with <...>)
@@ -91,8 +92,8 @@ export function parseNaturalLanguageInput(
   const bracketRegex = /<([^>]+)>/i;
   const bracketMatch = text.match(bracketRegex);
 
-  let blockCandidate = '';
-  let matchedBlockSubstring = '';
+  let blockCandidate = "";
+  let matchedBlockSubstring = "";
 
   if (bracketMatch) {
     blockCandidate = bracketMatch[1].trim();
@@ -100,10 +101,16 @@ export function parseNaturalLanguageInput(
   } else {
     // Check bare patterns in text:
     // Pattern A: from X to Y (e.g. "from 1pm to 3pm", "from 1pm30 to 2pm", "from 8:30am to 10:45am")
-    const bareRangeMatch = text.match(/\bfrom\s+([0-9:apm\s]+?)\s+to\s+([0-9:apm\s]+?)(?=\s+!|\s+#|$)/i);
+    const bareRangeMatch = text.match(
+      /\bfrom\s+([0-9:apm\s]+?)\s+to\s+([0-9:apm\s]+?)(?=\s+!|\s+#|$)/i,
+    );
     // Pattern B: for X duration (e.g. "for 2h30m", "for 2 hours 30m", "for 1h", "for 45m")
-    const bareDurationMatch = text.match(/\bfor\s+(\d+)\s*(?:h|hrs?|hours?)(?:\s*(\d+)?\s*(?:m|mins?|minutes?)?)?(?=\s+!|\s+#|$)/i);
-    const bareDurationMinOnlyMatch = text.match(/\bfor\s+(\d+)\s*(?:m|mins?|minutes?)(?=\s+!|\s+#|$)/i);
+    const bareDurationMatch = text.match(
+      /\bfor\s+(\d+)\s*(?:h|hrs?|hours?)(?:\s*(\d+)?\s*(?:m|mins?|minutes?)?)?(?=\s+!|\s+#|$)/i,
+    );
+    const bareDurationMinOnlyMatch = text.match(
+      /\bfor\s+(\d+)\s*(?:m|mins?|minutes?)(?=\s+!|\s+#|$)/i,
+    );
 
     if (bareRangeMatch) {
       blockCandidate = bareRangeMatch[0].trim();
@@ -118,9 +125,15 @@ export function parseNaturalLanguageInput(
   }
 
   if (blockCandidate) {
-    const rangeMatch = blockCandidate.match(/^(?:from\s+)?([0-9:apm\s]+?)\s+to\s+([0-9:apm\s]+)$/i);
-    const durationMatch = blockCandidate.match(/^(?:for\s+)?(\d+)\s*(?:h|hrs?|hours?)(?:\s*(\d+)?\s*(?:m|mins?|minutes?)?)?$/i);
-    const durationMinOnlyMatch = blockCandidate.match(/^(?:for\s+)?(\d+)\s*(?:m|mins?|minutes?)$/i);
+    const rangeMatch = blockCandidate.match(
+      /^(?:from\s+)?([0-9:apm\s]+?)\s+to\s+([0-9:apm\s]+)$/i,
+    );
+    const durationMatch = blockCandidate.match(
+      /^(?:for\s+)?(\d+)\s*(?:h|hrs?|hours?)(?:\s*(\d+)?\s*(?:m|mins?|minutes?)?)?$/i,
+    );
+    const durationMinOnlyMatch = blockCandidate.match(
+      /^(?:for\s+)?(\d+)\s*(?:m|mins?|minutes?)$/i,
+    );
     const singleTimeMatch = blockCandidate.match(/^(?:at\s+)?([0-9:apm\s]+)$/i);
 
     const nowBase = new Date(baseDate);
@@ -139,7 +152,9 @@ export function parseNaturalLanguageInput(
           endD.setDate(endD.getDate() + 1);
         }
 
-        const durationMinutes = Math.round((endD.getTime() - startD.getTime()) / 60000);
+        const durationMinutes = Math.round(
+          (endD.getTime() - startD.getTime()) / 60000,
+        );
         timeBlockInfo = {
           startIso: startD.toISOString(),
           endIso: endD.toISOString(),
@@ -150,17 +165,20 @@ export function parseNaturalLanguageInput(
         targetHours = startTime.hours;
         targetMinutes = startTime.minutes;
         hasSpecificTime = true;
-        parsedType = parsedType === 'task' && defaultType === 'timeblock' ? 'timeblock' : parsedType;
+        parsedType =
+          parsedType === "task" && defaultType === "timeblock"
+            ? "timeblock"
+            : parsedType;
 
-        const startDisp = `${startTime.hours % 12 || 12}:${startTime.minutes.toString().padStart(2, '0')} ${startTime.hours >= 12 ? 'PM' : 'AM'}`;
-        const endDisp = `${endTime.hours % 12 || 12}:${endTime.minutes.toString().padStart(2, '0')} ${endTime.hours >= 12 ? 'PM' : 'AM'}`;
+        const startDisp = `${startTime.hours % 12 || 12}:${startTime.minutes.toString().padStart(2, "0")} ${startTime.hours >= 12 ? "PM" : "AM"}`;
+        const endDisp = `${endTime.hours % 12 || 12}:${endTime.minutes.toString().padStart(2, "0")} ${endTime.hours >= 12 ? "PM" : "AM"}`;
         rawMatches.push({
           label: `Block: ${startDisp} → ${endDisp}`,
-          type: 'time',
+          type: "time",
           raw: matchedBlockSubstring,
         });
 
-        text = text.replace(matchedBlockSubstring, ' ');
+        text = text.replace(matchedBlockSubstring, " ");
       }
     } else if (durationMatch) {
       const hours = parseInt(durationMatch[1], 10);
@@ -181,15 +199,15 @@ export function parseNaturalLanguageInput(
       targetHours = startD.getHours();
       targetMinutes = startD.getMinutes();
       hasSpecificTime = true;
-      if (defaultType === 'timeblock') parsedType = 'timeblock';
+      if (defaultType === "timeblock") parsedType = "timeblock";
 
       rawMatches.push({
-        label: `Block: ${hours}h ${minutes ? minutes + 'm' : ''} duration`,
-        type: 'time',
+        label: `Block: ${hours}h ${minutes ? minutes + "m" : ""} duration`,
+        type: "time",
         raw: matchedBlockSubstring,
       });
 
-      text = text.replace(matchedBlockSubstring, ' ');
+      text = text.replace(matchedBlockSubstring, " ");
     } else if (durationMinOnlyMatch) {
       const minutes = parseInt(durationMinOnlyMatch[1], 10);
       const startD = new Date(nowBase);
@@ -206,16 +224,19 @@ export function parseNaturalLanguageInput(
       targetHours = startD.getHours();
       targetMinutes = startD.getMinutes();
       hasSpecificTime = true;
-      if (defaultType === 'timeblock') parsedType = 'timeblock';
+      if (defaultType === "timeblock") parsedType = "timeblock";
 
       rawMatches.push({
         label: `Block: ${minutes}m duration`,
-        type: 'time',
+        type: "time",
         raw: matchedBlockSubstring,
       });
 
-      text = text.replace(matchedBlockSubstring, ' ');
-    } else if (singleTimeMatch && (parsedType === 'timeblock' || bracketMatch)) {
+      text = text.replace(matchedBlockSubstring, " ");
+    } else if (
+      singleTimeMatch &&
+      (parsedType === "timeblock" || bracketMatch)
+    ) {
       const timeParsed = parseTimeToken(singleTimeMatch[1]);
       if (timeParsed) {
         const startD = new Date(nowBase);
@@ -234,64 +255,27 @@ export function parseNaturalLanguageInput(
 
         rawMatches.push({
           label: `Block: Starts at ${singleTimeMatch[1].trim()} (1h)`,
-          type: 'time',
+          type: "time",
           raw: matchedBlockSubstring,
         });
 
-        text = text.replace(matchedBlockSubstring, ' ');
+        text = text.replace(matchedBlockSubstring, " ");
       }
     }
   }
 
   // If entry type is explicitly timeblock, validate whether time info was found
-  if (parsedType === 'timeblock') {
+  if (parsedType === "timeblock") {
     if (!timeBlockInfo) {
       isTimeBlockValid = false;
-      timeBlockError = 'Include a range like "from 1pm to 3pm", "from 1pm30 to 2pm", or "for 2h30m"';
+      timeBlockError =
+        'Include a range like "from 1pm to 3pm", "from 1pm30 to 2pm", or "for 2h30m"';
     } else {
       isTimeBlockValid = true;
     }
   }
 
-  // 3. Priority Flags: !high, !p1, !urgent, !low, !p3
-  const priorityHighRegex = /(?:^|\s)!(high|p1|urgent)\b/i;
-  const priorityLowRegex = /(?:^|\s)!(low|p3)\b/i;
-  const priorityNormalRegex = /(?:^|\s)!(medium|normal|p2)\b/i;
-
-  const highMatch = text.match(priorityHighRegex);
-  if (highMatch) {
-    parsedPriority = 'high';
-    rawMatches.push({
-      label: 'High Priority',
-      type: 'priority',
-      raw: highMatch[0].trim(),
-    });
-    text = text.replace(highMatch[0], ' ');
-  } else {
-    const lowMatch = text.match(priorityLowRegex);
-    if (lowMatch) {
-      parsedPriority = 'low';
-      rawMatches.push({
-        label: 'Low Priority',
-        type: 'priority',
-        raw: lowMatch[0].trim(),
-      });
-      text = text.replace(lowMatch[0], ' ');
-    } else {
-      const normalMatch = text.match(priorityNormalRegex);
-      if (normalMatch) {
-        parsedPriority = 'normal';
-        rawMatches.push({
-          label: 'Normal Priority',
-          type: 'priority',
-          raw: normalMatch[0].trim(),
-        });
-        text = text.replace(normalMatch[0], ' ');
-      }
-    }
-  }
-
-  // 4. Detect Hashtags: #tag
+  // 3. Detect Hashtags: #tag
   const tagRegex = /(?:^|\s)#([a-zA-Z0-9_\-]+)/g;
   let tagMatch: RegExpExecArray | null;
   while ((tagMatch = tagRegex.exec(text)) !== null) {
@@ -300,16 +284,17 @@ export function parseNaturalLanguageInput(
       parsedTags.push(tag);
       rawMatches.push({
         label: `#${tag}`,
-        type: 'tag',
+        type: "tag",
         raw: tagMatch[0].trim(),
       });
     }
   }
-  text = text.replace(tagRegex, ' ');
+  text = text.replace(tagRegex, " ");
 
-  // 5. Standard Time Detection (if not consumed by Time Block)
+  // 4. Standard Time Detection (if not consumed by Time Block)
   if (!timeBlockInfo) {
-    const timeRegex = /(?:(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b|(?:at\s+)(\d{1,2}):(\d{2})\b|(?:at\s+)(noon|midnight)\b|(?:at\s+)(\d{1,2})(am|pm)(\d{1,2})\b)/i;
+    const timeRegex =
+      /(?:(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b|(?:at\s+)(\d{1,2}):(\d{2})\b|(?:at\s+)(noon|midnight)\b|(?:at\s+)(\d{1,2})(am|pm)(\d{1,2})\b)/i;
     const timeMatch = text.match(timeRegex);
 
     if (timeMatch) {
@@ -318,11 +303,11 @@ export function parseNaturalLanguageInput(
 
       if (timeMatch[6]) {
         const word = timeMatch[6].toLowerCase();
-        targetHours = word === 'noon' ? 12 : 0;
+        targetHours = word === "noon" ? 12 : 0;
         targetMinutes = 0;
         rawMatches.push({
-          label: word === 'noon' ? '12:00 PM' : '12:00 AM',
-          type: 'time',
+          label: word === "noon" ? "12:00 PM" : "12:00 AM",
+          type: "time",
           raw: rawTimeStr,
         });
       } else if (timeMatch[7] && timeMatch[8] && timeMatch[9]) {
@@ -330,56 +315,58 @@ export function parseNaturalLanguageInput(
         let h = parseInt(timeMatch[7], 10);
         const mer = timeMatch[8].toLowerCase();
         const m = parseInt(timeMatch[9], 10);
-        if (mer === 'pm' && h < 12) h += 12;
-        if (mer === 'am' && h === 12) h = 0;
+        if (mer === "pm" && h < 12) h += 12;
+        if (mer === "am" && h === 12) h = 0;
         targetHours = h;
         targetMinutes = m;
         const displayHours = h % 12 || 12;
-        const displayMin = m.toString().padStart(2, '0');
+        const displayMin = m.toString().padStart(2, "0");
         rawMatches.push({
           label: `${displayHours}:${displayMin} ${mer.toUpperCase()}`,
-          type: 'time',
+          type: "time",
           raw: rawTimeStr,
         });
       } else if (timeMatch[4] && timeMatch[5]) {
         targetHours = parseInt(timeMatch[4], 10);
         targetMinutes = parseInt(timeMatch[5], 10);
-        const ampm = targetHours >= 12 ? 'PM' : 'AM';
+        const ampm = targetHours >= 12 ? "PM" : "AM";
         const displayHours = targetHours % 12 || 12;
-        const displayMin = targetMinutes.toString().padStart(2, '0');
+        const displayMin = targetMinutes.toString().padStart(2, "0");
         rawMatches.push({
           label: `${displayHours}:${displayMin} ${ampm}`,
-          type: 'time',
+          type: "time",
           raw: rawTimeStr,
         });
       } else if (timeMatch[1]) {
         let h = parseInt(timeMatch[1], 10);
         const m = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
-        const mer = (timeMatch[3] || '').toLowerCase();
-        if (mer === 'pm' && h < 12) h += 12;
-        if (mer === 'am' && h === 12) h = 0;
+        const mer = (timeMatch[3] || "").toLowerCase();
+        if (mer === "pm" && h < 12) h += 12;
+        if (mer === "am" && h === 12) h = 0;
         targetHours = h;
         targetMinutes = m;
         const displayHours = h % 12 || 12;
-        const displayMin = m.toString().padStart(2, '0');
+        const displayMin = m.toString().padStart(2, "0");
         rawMatches.push({
           label: `${displayHours}:${displayMin} ${mer.toUpperCase()}`,
-          type: 'time',
+          type: "time",
           raw: rawTimeStr,
         });
       }
 
-      text = text.replace(timeMatch[0], ' ');
+      text = text.replace(timeMatch[0], " ");
     }
   }
 
-  // 6. Detect Relative & Explicit Dates
+  // 5. Detect Relative & Explicit Dates
   const todayRegex = /\b(today|tonight)\b/i;
   const tomorrowRegex = /\b(tomorrow|tmrw)\b/i;
   const inDaysRegex = /\bin\s+(\d+)\s+(day|days|week|weeks)\b/i;
-  const dayOfWeekRegex = /\b(?:(next|this|on)\s+)?(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i;
+  const dayOfWeekRegex =
+    /\b(?:(next|this|on)\s+)?(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i;
   const explicitDateRegex = /\b(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?\b/;
-  const monthNameRegex = /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{1,2})(?:st|nd|rd|th)?\b/i;
+  const monthNameRegex =
+    /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{1,2})(?:st|nd|rd|th)?\b/i;
 
   const todayMatch = text.match(todayRegex);
   const tomorrowMatch = text.match(tomorrowRegex);
@@ -391,44 +378,44 @@ export function parseNaturalLanguageInput(
   if (todayMatch) {
     targetDate = new Date(baseDate);
     rawMatches.push({
-      label: todayMatch[1].toLowerCase() === 'tonight' ? 'Tonight' : 'Today',
-      type: 'date',
+      label: todayMatch[1].toLowerCase() === "tonight" ? "Tonight" : "Today",
+      type: "date",
       raw: todayMatch[0].trim(),
     });
-    if (todayMatch[1].toLowerCase() === 'tonight' && !hasSpecificTime) {
+    if (todayMatch[1].toLowerCase() === "tonight" && !hasSpecificTime) {
       targetHours = 20;
       hasSpecificTime = true;
     }
-    text = text.replace(todayMatch[0], ' ');
+    text = text.replace(todayMatch[0], " ");
   } else if (tomorrowMatch) {
     targetDate = new Date(baseDate);
     targetDate.setDate(targetDate.getDate() + 1);
     rawMatches.push({
-      label: 'Tomorrow',
-      type: 'date',
+      label: "Tomorrow",
+      type: "date",
       raw: tomorrowMatch[0].trim(),
     });
-    text = text.replace(tomorrowMatch[0], ' ');
+    text = text.replace(tomorrowMatch[0], " ");
   } else if (inDaysMatch) {
     const amount = parseInt(inDaysMatch[1], 10);
     const unit = inDaysMatch[2].toLowerCase();
     targetDate = new Date(baseDate);
-    if (unit.startsWith('week')) {
+    if (unit.startsWith("week")) {
       targetDate.setDate(targetDate.getDate() + amount * 7);
       rawMatches.push({
-        label: `In ${amount} week${amount > 1 ? 's' : ''}`,
-        type: 'date',
+        label: `In ${amount} week${amount > 1 ? "s" : ""}`,
+        type: "date",
         raw: inDaysMatch[0].trim(),
       });
     } else {
       targetDate.setDate(targetDate.getDate() + amount);
       rawMatches.push({
-        label: `In ${amount} day${amount > 1 ? 's' : ''}`,
-        type: 'date',
+        label: `In ${amount} day${amount > 1 ? "s" : ""}`,
+        type: "date",
         raw: inDaysMatch[0].trim(),
       });
     }
-    text = text.replace(inDaysMatch[0], ' ');
+    text = text.replace(inDaysMatch[0], " ");
   } else if (dayOfWeekMatch) {
     const daysMap: Record<string, number> = {
       sunday: 0,
@@ -443,32 +430,51 @@ export function parseNaturalLanguageInput(
     const currentDayIndex = baseDate.getDay();
     let diff = targetDayIndex - currentDayIndex;
     if (diff <= 0) diff += 7;
-    if (dayOfWeekMatch[1]?.toLowerCase() === 'next') diff += 7;
+    if (dayOfWeekMatch[1]?.toLowerCase() === "next") diff += 7;
 
     targetDate = new Date(baseDate);
     targetDate.setDate(targetDate.getDate() + diff);
 
-    const dayName = dayOfWeekMatch[2].charAt(0).toUpperCase() + dayOfWeekMatch[2].slice(1).toLowerCase();
+    const dayName =
+      dayOfWeekMatch[2].charAt(0).toUpperCase() +
+      dayOfWeekMatch[2].slice(1).toLowerCase();
     rawMatches.push({
       label: `Next ${dayName}`,
-      type: 'date',
+      type: "date",
       raw: dayOfWeekMatch[0].trim(),
     });
-    text = text.replace(dayOfWeekMatch[0], ' ');
+    text = text.replace(dayOfWeekMatch[0], " ");
   } else if (explicitMatch) {
     const d = parseInt(explicitMatch[1], 10);
     const m = parseInt(explicitMatch[2], 10) - 1;
-    const y = explicitMatch[3] ? parseInt(explicitMatch[3], 10) : baseDate.getFullYear();
+    const y = explicitMatch[3]
+      ? parseInt(explicitMatch[3], 10)
+      : baseDate.getFullYear();
     targetDate = new Date(y, m, d);
     rawMatches.push({
-      label: `${d.toString().padStart(2, '0')}/${(m + 1).toString().padStart(2, '0')}`,
-      type: 'date',
+      label: `${d.toString().padStart(2, "0")}/${(m + 1).toString().padStart(2, "0")}`,
+      type: "date",
       raw: explicitMatch[0].trim(),
     });
-    text = text.replace(explicitMatch[0], ' ');
+    text = text.replace(explicitMatch[0], " ");
   } else if (monthNameMatch) {
-    const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
-    const monthIndex = months.indexOf(monthNameMatch[1].toLowerCase().slice(0, 3));
+    const months = [
+      "jan",
+      "feb",
+      "mar",
+      "apr",
+      "may",
+      "jun",
+      "jul",
+      "aug",
+      "sep",
+      "oct",
+      "nov",
+      "dec",
+    ];
+    const monthIndex = months.indexOf(
+      monthNameMatch[1].toLowerCase().slice(0, 3),
+    );
     const day = parseInt(monthNameMatch[2], 10);
     if (monthIndex !== -1) {
       targetDate = new Date(baseDate.getFullYear(), monthIndex, day);
@@ -477,10 +483,10 @@ export function parseNaturalLanguageInput(
       }
       rawMatches.push({
         label: `${monthNameMatch[1]} ${day}`,
-        type: 'date',
+        type: "date",
         raw: monthNameMatch[0].trim(),
       });
-      text = text.replace(monthNameMatch[0], ' ');
+      text = text.replace(monthNameMatch[0], " ");
     }
   }
 
@@ -496,23 +502,24 @@ export function parseNaturalLanguageInput(
     scheduledAt = targetDate.toISOString();
 
     const dateOptions: Intl.DateTimeFormatOptions = {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
+      weekday: "short",
+      month: "short",
+      day: "numeric",
     };
     const timeOptions: Intl.DateTimeFormatOptions = {
-      hour: 'numeric',
-      minute: '2-digit',
+      hour: "numeric",
+      minute: "2-digit",
     };
 
     const isToday = targetDate.toDateString() === baseDate.toDateString();
     const tomorrowCheck = new Date(baseDate);
     tomorrowCheck.setDate(tomorrowCheck.getDate() + 1);
-    const isTomorrow = targetDate.toDateString() === tomorrowCheck.toDateString();
+    const isTomorrow =
+      targetDate.toDateString() === tomorrowCheck.toDateString();
 
     let datePrefix = targetDate.toLocaleDateString(undefined, dateOptions);
-    if (isToday) datePrefix = 'Today';
-    else if (isTomorrow) datePrefix = 'Tomorrow';
+    if (isToday) datePrefix = "Today";
+    else if (isTomorrow) datePrefix = "Tomorrow";
 
     if (hasSpecificTime) {
       scheduledDisplay = `${datePrefix} at ${targetDate.toLocaleTimeString(undefined, timeOptions)}`;
@@ -521,7 +528,7 @@ export function parseNaturalLanguageInput(
     }
   }
 
-  const cleanTitle = text.replace(/\s+/g, ' ').trim();
+  const cleanTitle = text.replace(/\s+/g, " ").trim();
 
   return {
     cleanTitle: cleanTitle || rawInput.trim(),
@@ -529,7 +536,6 @@ export function parseNaturalLanguageInput(
     scheduledAt,
     scheduledDisplay,
     tags: parsedTags,
-    priority: parsedPriority,
     timeBlock: timeBlockInfo,
     isTimeBlockValid,
     timeBlockError,

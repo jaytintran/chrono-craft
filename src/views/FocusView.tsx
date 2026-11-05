@@ -23,11 +23,11 @@ import {
   Palette,
   ArrowRight,
   MoreVertical,
+  Pencil,
 } from "lucide-react";
 import {
   AppSettings,
   CustomFocusTab,
-  EntryPriority,
   EntryType,
   ScratchpadCard,
   TimelineEntry,
@@ -229,7 +229,7 @@ export const FocusView: React.FC<FocusViewProps> = ({
                     setEditingTab(tab);
                   }}
                   title="Configure Custom Tab"
-                  className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-slate-100 transition-opacity ml-[-8px] mr-1"
+                  className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-slate-100 transition-opacity -ml-2 mr-1"
                 >
                   <Edit2 className="w-3 h-3" />
                 </button>
@@ -241,7 +241,7 @@ export const FocusView: React.FC<FocusViewProps> = ({
           <button
             type="button"
             onClick={() => setIsCreatingTab(true)}
-            className="flex items-center gap-1 px-3 py-2 text-xs font-medium text-slate-400 hover:text-indigo-400 transition-colors whitespace-nowrap shrink-0 border border-dashed border-slate-200 dark:border-slate-800 rounded-lg hover:border-indigo-500/40"
+            className="flex items-center gap-2 px-4 pb-3 py-2.5 pl-0 text-xs font-semibold text-slate-400 hover:text-indigo-400 transition-colors whitespace-nowrap shrink-0 border-slate-200 dark:border-slate-800 rounded-lg hover:border-indigo-500/40"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Custom Tab</span>
@@ -250,10 +250,10 @@ export const FocusView: React.FC<FocusViewProps> = ({
       </div>
 
       {/* 2. Main Tab Body Viewport */}
-      <div className="flex-1 overflow-y-auto px-6 py-6">
+      <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
         {/* ================= TAB 1: TODAY ================= */}
         {activeTab === "today" && (
-          <div className="max-w-4xl mx-auto space-y-8 animate-fadeIn">
+          <div className="max-w-6xl mx-auto space-y-8 animate-fadeIn">
             {/* Section 1: Anchors (Scheduled Entries) */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -282,7 +282,6 @@ export const FocusView: React.FC<FocusViewProps> = ({
                     status: "pending",
                     source: "focus-anchor",
                     tags: parsed.tags,
-                    priority: parsed.priority || "high",
                   });
                 }}
               />
@@ -428,7 +427,6 @@ export const FocusView: React.FC<FocusViewProps> = ({
                     status: "active",
                     source: "focus-active",
                     tags: parsed.tags,
-                    priority: parsed.priority || "normal",
                   });
                 }}
               />
@@ -472,11 +470,6 @@ export const FocusView: React.FC<FocusViewProps> = ({
                             <span className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
                               {task.title}
                             </span>
-                            {task.priority === "high" && (
-                              <span className="text-[10px] font-mono text-rose-400 uppercase tracking-wider">
-                                !HIGH
-                              </span>
-                            )}
                           </div>
                           {task.tags.length > 0 && (
                             <div className="text-xs text-slate-500 mt-0.5">
@@ -603,7 +596,7 @@ export const FocusView: React.FC<FocusViewProps> = ({
 
         {/* ================= TAB 2: SCRATCHPAD (KEEP-STYLE CARDS) ================= */}
         {activeTab === "scratchpad" && (
-          <div className="max-w-5xl mx-auto space-y-6 animate-fadeIn">
+          <div className="max-w-6xl mx-auto space-y-6 animate-fadeIn">
             {/* Quick Note Input Bar */}
             <form
               onSubmit={handleAddScratchpadSubmit}
@@ -669,7 +662,7 @@ export const FocusView: React.FC<FocusViewProps> = ({
                 >
                   <div className="space-y-2">
                     <div className="flex items-start justify-between gap-2">
-                      <h4 className="font-semibold text-sm leading-snug break-words">
+                      <h4 className="font-semibold text-sm leading-snug wrap-break-word">
                         {card.title}
                       </h4>
                       <button
@@ -724,7 +717,7 @@ export const FocusView: React.FC<FocusViewProps> = ({
         {activeTab !== "today" &&
           activeTab !== "scratchpad" &&
           currentCustomTab && (
-            <div className="max-w-4xl mx-auto space-y-6 animate-fadeIn">
+            <div className="max-w-6xl mx-auto space-y-6 animate-fadeIn">
               {/* Custom Tab Banner Header */}
               <div
                 className="p-6 rounded-2xl text-white shadow-lg flex items-center justify-between"
@@ -742,9 +735,9 @@ export const FocusView: React.FC<FocusViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setEditingTab(currentCustomTab)}
-                    className="px-3 py-1.5 rounded-lg bg-black/20 hover:bg-black/40 text-xs font-medium text-white transition-colors"
+                    className="p-1.5 rounded-lg bg-black/20 hover:bg-black/40 font-medium text-white transition-colors"
                   >
-                    Rename & Color
+                    <Pencil className="w-3.5 h-3.5" />
                   </button>
                   <button
                     type="button"
@@ -778,7 +771,6 @@ export const FocusView: React.FC<FocusViewProps> = ({
                     source: "custom-tab",
                     tabId: currentCustomTab.id,
                     tags: parsed.tags,
-                    priority: parsed.priority || "normal",
                   });
                 }}
               />
