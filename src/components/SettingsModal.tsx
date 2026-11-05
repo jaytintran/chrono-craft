@@ -188,12 +188,43 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               controls.
             </p>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Quick theme toggle — promoted from the Preferences tab */}
+            {/* <div className="flex items-center gap-0.5 p-0.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => onUpdateSettings({ theme: "light" })}
+                title="Light mode"
+                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                  settings.theme === "light"
+                    ? "bg-slate-900 dark:bg-slate-800 text-white dark:text-slate-100 shadow-xs"
+                    : "text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                }`}
+              >
+                <Sun className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => onUpdateSettings({ theme: "dark" })}
+                title="Dark mode"
+                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                  settings.theme === "dark"
+                    ? "bg-slate-900 dark:bg-slate-800 text-white dark:text-slate-100 shadow-xs"
+                    : "text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                }`}
+              >
+                <Moon className="w-3.5 h-3.5" />
+              </button>
+            </div> */}
+
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Modern Segmented Navigation Tabs */}
@@ -243,6 +274,44 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           {/* ================= TAB 1: PREFERENCES ================= */}
           {activeTab === "preferences" && (
             <div className="space-y-4">
+              {/* Theme Preference */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                    Visual Aesthetic Theme
+                  </h4>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Switch between Obsidian Dark and Clean Slate Light styling.
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 p-1 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+                  <button
+                    type="button"
+                    onClick={() => onUpdateSettings({ theme: "dark" })}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                      settings.theme === "dark"
+                        ? "bg-indigo-600 text-white font-semibold shadow-xs"
+                        : "text-slate-500 hover:text-slate-200"
+                    }`}
+                  >
+                    <Moon className="w-3.5 h-3.5" />
+                    <span>Dark</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onUpdateSettings({ theme: "light" })}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                      settings.theme === "light"
+                        ? "bg-indigo-600 text-white font-semibold shadow-xs"
+                        : "text-slate-500 hover:text-slate-200"
+                    }`}
+                  >
+                    <Sun className="w-3.5 h-3.5" />
+                    <span>Light</span>
+                  </button>
+                </div>
+              </div>
+
               {/* Feature: Show Entry Content in Timeline Toggle */}
               <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 transition-all">
                 <div className="flex items-center justify-between gap-4">
@@ -377,44 +446,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       <span className="text-[10px] text-slate-400">{hint}</span>
                     </button>
                   ))}
-                </div>
-              </div>
-
-              {/* Theme Preference */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
-                    Visual Aesthetic Theme
-                  </h4>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Switch between Obsidian Dark and Clean Slate Light styling.
-                  </p>
-                </div>
-                <div className="flex items-center gap-1.5 p-1 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
-                  <button
-                    type="button"
-                    onClick={() => onUpdateSettings({ theme: "dark" })}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                      settings.theme === "dark"
-                        ? "bg-indigo-600 text-white font-semibold shadow-xs"
-                        : "text-slate-500 hover:text-slate-200"
-                    }`}
-                  >
-                    <Moon className="w-3.5 h-3.5" />
-                    <span>Dark</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onUpdateSettings({ theme: "light" })}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                      settings.theme === "light"
-                        ? "bg-indigo-600 text-white font-semibold shadow-xs"
-                        : "text-slate-500 hover:text-slate-200"
-                    }`}
-                  >
-                    <Sun className="w-3.5 h-3.5" />
-                    <span>Light</span>
-                  </button>
                 </div>
               </div>
 

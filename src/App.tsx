@@ -742,7 +742,6 @@ export default function App() {
           setActiveView(v);
         }}
         settings={settings}
-        onToggleTheme={handleToggleTheme}
         onOpenSettings={() => setIsSettingsOpen(true)}
         activeTaskCount={activeFocusCount}
         completedTodayCount={completedTodayCount}

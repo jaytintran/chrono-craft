@@ -6,8 +6,6 @@
 import React from "react";
 import {
   Sparkles,
-  Sun,
-  Moon,
   Sliders,
   Calendar,
   CheckCircle2,
@@ -23,7 +21,6 @@ interface HeaderProps {
   activeView: ActiveView;
   onSelectView: (view: ActiveView) => void;
   settings: AppSettings;
-  onToggleTheme: () => void;
   onOpenSettings: () => void;
   activeTaskCount: number;
   completedTodayCount: number;
@@ -33,7 +30,6 @@ export const Header: React.FC<HeaderProps> = ({
   activeView,
   onSelectView,
   settings,
-  onToggleTheme,
   onOpenSettings,
   activeTaskCount,
   completedTodayCount,
@@ -113,8 +109,12 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Mobile view switcher: full-width segmented control */}
-        <nav aria-label="Workspace views" className="md:hidden py-2">
-          <div role="tablist" className="flex gap-3">
+        {/* Mobile view switcher: full-width, 7 tabs distributed evenly */}
+        <nav
+          aria-label="Workspace views"
+          className="md:hidden py-2 flex-1 min-w-0"
+        >
+          <div role="tablist" className="flex w-full items-stretch">
             {viewOptions.map((opt) => {
               const isActive = activeView === opt.id;
               return (
@@ -124,7 +124,7 @@ export const Header: React.FC<HeaderProps> = ({
                   role="tab"
                   aria-selected={isActive}
                   onClick={() => onSelectView(opt.id)}
-                  className={`w-14 h-12 flex flex-col items-center justify-center gap-0.5 p-2 px-3 rounded-lg text-[10px] font-semibold transition-all cursor-pointer ${
+                  className={`flex-1 min-w-0 h-12 flex flex-col items-center justify-center gap-0.5 rounded-lg text-[9px] sm:text-[10px] font-semibold transition-all cursor-pointer ${
                     isActive
                       ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xs"
                       : "text-slate-500 dark:text-slate-400 active:bg-slate-200/60 dark:active:bg-slate-800/60"
@@ -133,18 +133,27 @@ export const Header: React.FC<HeaderProps> = ({
                   <span className={isActive ? "" : "opacity-60"}>
                     {opt.icon}
                   </span>
-                  <span>{opt.label}</span>
+                  <span className="truncate max-w-full px-0.5">
+                    {opt.label}
+                  </span>
                 </button>
               );
             })}
+
+            {/* Settings tab — opens modal, never marked active */}
+            <button
+              type="button"
+              onClick={onOpenSettings}
+              aria-label="Open settings"
+              className="flex-1 min-w-0 h-12 flex flex-col items-center justify-center gap-0.5 rounded-lg text-[9px] sm:text-[10px] font-semibold text-slate-500 dark:text-slate-400 active:bg-slate-200/60 dark:active:bg-slate-800/60 transition-all cursor-pointer"
+            >
+              <span className="opacity-60">
+                <Sliders className="w-4 h-4 text-slate-400" />
+              </span>
+              <span className="truncate max-w-full px-0.5">Settings</span>
+            </button>
           </div>
         </nav>
-
-        {/* Vertical Divider between Tab Group and Action Group */}
-        <div
-          aria-hidden="true"
-          className="w-px h-7 bg-slate-200 dark:bg-slate-800 shrink-0 md:hidden"
-        />
 
         {/* Zone 2: Date & Executive Progress Overview */}
         <div className="hidden lg:flex items-center gap-4 text-xs font-mono text-slate-500 dark:text-slate-400">
@@ -177,30 +186,25 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Zone 3: Actions (Theme Toggle & Settings) */}
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={onToggleTheme}
-            title={
-              settings.theme === "dark"
-                ? "Switch to Light Mode"
-                : "Switch to Dark Mode"
-            }
-            className="p-2 rounded-xl text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-          >
-            {settings.theme === "dark" ? (
-              <Sun className="w-4 h-4 text-amber-400" />
-            ) : (
-              <Moon className="w-4 h-4 text-slate-700" />
-            )}
-          </button>
-
+        {/* Zone 3: Settings) */}
+        <div className="flex items-center gap-2 shrink-0 max-md:hidden">
+          {/* Desktop: full view-button; Mobile: icon-only (Settings lives in mobile tab strip) */}
           <button
             type="button"
             onClick={onOpenSettings}
             title="Workspace Settings & Database"
-            className="p-2 rounded-xl text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+          >
+            <Sliders className="w-4 h-4 text-indigo-400" />
+            <span>Settings</span>
+          </button>
+
+          {/* Mobile fallback: keep a compact icon just in case the tab strip is scrolled off */}
+          <button
+            type="button"
+            onClick={onOpenSettings}
+            title="Workspace Settings & Database"
+            className="md:hidden p-2 rounded-xl text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <Sliders className="w-4 h-4" />
           </button>

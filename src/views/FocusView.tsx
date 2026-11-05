@@ -54,6 +54,21 @@ interface FocusViewProps {
   onOpenContextMenu?: (item: any, pos: { x: number; y: number }) => void;
 }
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(max-width: 767px)").matches,
+  );
+  React.useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+  return isMobile;
+}
+
 export const FocusView: React.FC<FocusViewProps> = ({
   entries,
   customTabs,
@@ -82,6 +97,8 @@ export const FocusView: React.FC<FocusViewProps> = ({
   // Edit custom tab state
   const [editingTab, setEditingTab] = useState<CustomFocusTab | null>(null);
 
+  const [mobileTabsOpen, setMobileTabsOpen] = useState(false);
+
   // Scratchpad quick draft
   const [scratchTitle, setScratchTitle] = useState("");
   const [scratchBody, setScratchBody] = useState("");
@@ -89,6 +106,9 @@ export const FocusView: React.FC<FocusViewProps> = ({
 
   // Filter entries for Today
   const todayDateStr = new Date().toISOString().split("T")[0];
+
+  // Determine if on mobile
+  const isMobile = useIsMobile();
 
   // Anchors: scheduled entries
   const anchorEntries = entries.filter(
@@ -164,9 +184,9 @@ export const FocusView: React.FC<FocusViewProps> = ({
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
       {/* 1. Horizontal Tab Strip */}
-      <div className="px-6 pt-4 border-b border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#0B0F17] shrink-0">
-        <div className="flex items-center gap-2 overflow-x-auto pb-px">
-          {/* Default Tab: Today */}
+      <div className="px-4 md:px-6 pt-4 border-b border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#0B0F17] shrink-0">
+        {/* Desktop: original scrolling strip */}
+        <div className="hidden md:flex items-center gap-2 overflow-x-auto pb-px">
           <button
             type="button"
             onClick={() => setActiveTab("today")}
@@ -183,7 +203,6 @@ export const FocusView: React.FC<FocusViewProps> = ({
             </span>
           </button>
 
-          {/* Default Tab: Scratchpad */}
           <button
             type="button"
             onClick={() => setActiveTab("scratchpad")}
@@ -200,7 +219,6 @@ export const FocusView: React.FC<FocusViewProps> = ({
             </span>
           </button>
 
-          {/* Dynamic Custom Tabs */}
           {customTabs.map((tab) => {
             const isTabActive = activeTab === tab.id;
             return (
@@ -221,7 +239,6 @@ export const FocusView: React.FC<FocusViewProps> = ({
                   <span>{tab.name}</span>
                 </button>
 
-                {/* Edit / Delete Tab Affordance */}
                 <button
                   type="button"
                   onClick={(e) => {
@@ -229,7 +246,8 @@ export const FocusView: React.FC<FocusViewProps> = ({
                     setEditingTab(tab);
                   }}
                   title="Configure Custom Tab"
-                  className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-slate-100 transition-opacity -ml-2 mr-1"
+                  className="opacity-60 md:opacity-0 md:group-hover:opacity-100
+ p-1 text-slate-400 hover:text-slate-100 transition-opacity -ml-2 mr-1"
                 >
                   <Edit2 className="w-3 h-3" />
                 </button>
@@ -237,7 +255,6 @@ export const FocusView: React.FC<FocusViewProps> = ({
             );
           })}
 
-          {/* Action: [+ Custom Tab] */}
           <button
             type="button"
             onClick={() => setIsCreatingTab(true)}
@@ -245,6 +262,56 @@ export const FocusView: React.FC<FocusViewProps> = ({
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Custom Tab</span>
+          </button>
+        </div>
+
+        {/* Mobile: fixed 2 tabs + overflow menu for custom tabs */}
+        <div className="md:hidden flex items-stretch">
+          <button
+            type="button"
+            onClick={() => setActiveTab("today")}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-semibold border-b-2 transition-all ${
+              activeTab === "today"
+                ? "border-indigo-600 text-indigo-600 dark:text-indigo-400 font-bold"
+                : "border-transparent text-slate-500"
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5" />
+            <span>Today</span>
+            <span className="font-mono text-[10px] opacity-70">
+              {activeEntries.length}/{settings.xActiveLimit}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("scratchpad")}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-semibold border-b-2 transition-all ${
+              activeTab === "scratchpad"
+                ? "border-indigo-600 text-indigo-600 dark:text-indigo-400 font-bold"
+                : "border-transparent text-slate-500"
+            }`}
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>Scratchpad</span>
+            <span className="font-mono text-[10px] opacity-70">
+              {scratchpadCards.length}
+            </span>
+          </button>
+
+          {/* More button — opens the mobile tab picker */}
+          <button
+            type="button"
+            onClick={() => setMobileTabsOpen((o) => !o)}
+            aria-expanded={mobileTabsOpen}
+            aria-label="More focus tabs"
+            className={`w-12 flex items-center justify-center border-b-2 transition-all ${
+              currentCustomTab
+                ? "border-indigo-600 text-indigo-600 dark:text-indigo-400"
+                : "border-transparent text-slate-500"
+            }`}
+          >
+            <MoreVertical className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -274,6 +341,7 @@ export const FocusView: React.FC<FocusViewProps> = ({
                 defaultType="event"
                 showTypeSwitcher={false}
                 buttonLabel="Schedule Anchor"
+                compact={isMobile}
                 onSubmit={(parsed) => {
                   onAddEntry({
                     type: parsed.type || "event",
@@ -361,7 +429,8 @@ export const FocusView: React.FC<FocusViewProps> = ({
                         <button
                           type="button"
                           onClick={() => onDeleteEntry(anchor.id)}
-                          className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-rose-500 transition-opacity"
+                          className="opacity-60 md:opacity-0 md:group-hover:opacity-100
+ p-1.5 text-slate-400 hover:text-rose-500 transition-opacity"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -412,6 +481,7 @@ export const FocusView: React.FC<FocusViewProps> = ({
                 }
                 defaultType="task"
                 showTypeSwitcher={false}
+                compact={isMobile}
                 buttonLabel="Engage Task"
                 onSubmit={(parsed) => {
                   if (isEngineAtCapacity) {
@@ -501,7 +571,8 @@ export const FocusView: React.FC<FocusViewProps> = ({
                         <button
                           type="button"
                           onClick={() => onDeleteEntry(task.id)}
-                          className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-rose-500 transition-opacity"
+                          className="opacity-60 md:opacity-0 md:group-hover:opacity-100
+ p-1.5 text-slate-400 hover:text-rose-500 transition-opacity"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -531,6 +602,7 @@ export const FocusView: React.FC<FocusViewProps> = ({
                 placeholder='Quick-log completed item (e.g., "Shipped PR for NLP tokenizer at 11am")'
                 defaultType="log"
                 showTypeSwitcher={false}
+                compact={isMobile}
                 buttonLabel="Log Done"
                 onSubmit={(parsed) => {
                   const now = new Date().toISOString();
@@ -582,7 +654,8 @@ export const FocusView: React.FC<FocusViewProps> = ({
                       <button
                         type="button"
                         onClick={() => onDeleteEntry(done.id)}
-                        className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-rose-500 transition-opacity"
+                        className="opacity-60 md:opacity-0 md:group-hover:opacity-100
+ p-1.5 text-slate-400 hover:text-rose-500 transition-opacity"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -702,7 +775,8 @@ export const FocusView: React.FC<FocusViewProps> = ({
                     <button
                       type="button"
                       onClick={() => onDeleteScratchpad(card.id)}
-                      className="opacity-0 group-hover:opacity-100 p-1 text-white/50 hover:text-rose-400 transition-opacity"
+                      className="opacity-60 md:opacity-0 md:group-hover:opacity-100
+ p-1 text-white/50 hover:text-rose-400 transition-opacity"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -762,6 +836,7 @@ export const FocusView: React.FC<FocusViewProps> = ({
                 defaultType="task"
                 showTypeSwitcher={false}
                 buttonLabel="Add to Queue"
+                compact={isMobile}
                 onSubmit={(parsed) => {
                   onAddEntry({
                     type: "task",
@@ -814,7 +889,8 @@ export const FocusView: React.FC<FocusViewProps> = ({
                       <button
                         type="button"
                         onClick={() => onDeleteEntry(item.id)}
-                        className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-rose-500 transition-opacity"
+                        className="opacity-60 md:opacity-0 md:group-hover:opacity-100
+ p-1.5 text-slate-400 hover:text-rose-500 transition-opacity"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -977,6 +1053,101 @@ export const FocusView: React.FC<FocusViewProps> = ({
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* Mobile: Focus Tab Picker (bottom sheet) */}
+      {mobileTabsOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div
+            onClick={() => setMobileTabsOpen(false)}
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs"
+          />
+          <div className="fixed bottom-0 inset-x-0 bg-white dark:bg-[#111724] border-t border-slate-200 dark:border-slate-800 rounded-t-3xl shadow-2xl p-5 pb-8 space-y-3 animate-slideInBottom">
+            <div className="flex flex-col items-center space-y-2">
+              <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700" />
+              <div className="w-full flex items-center justify-between pt-1">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 font-mono">
+                  Focus Tabs
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setMobileTabsOpen(false)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-slate-200"
+                >
+                  <Plus className="w-4 h-4 rotate-45" />
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              {customTabs.length === 0 ? (
+                <p className="text-xs text-slate-400 italic px-2 py-3">
+                  No custom tabs yet.
+                </p>
+              ) : (
+                customTabs.map((tab) => {
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <div
+                      key={tab.id}
+                      className={`flex items-center gap-2 px-3 py-2.5 rounded-xl transition-colors ${
+                        isActive
+                          ? "bg-indigo-500/10 border border-indigo-500/30"
+                          : "hover:bg-slate-100 dark:hover:bg-slate-800/60"
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveTab(tab.id);
+                          setMobileTabsOpen(false);
+                        }}
+                        className="flex-1 flex items-center gap-2.5 text-left min-w-0"
+                      >
+                        <span
+                          className="w-2.5 h-2.5 rounded-full shrink-0"
+                          style={{ backgroundColor: tab.bgColor }}
+                        />
+                        <span
+                          className={`text-sm truncate ${
+                            isActive
+                              ? "font-semibold text-indigo-600 dark:text-indigo-400"
+                              : "text-slate-900 dark:text-slate-100"
+                          }`}
+                        >
+                          {tab.name}
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMobileTabsOpen(false);
+                          setEditingTab(tab);
+                        }}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-slate-100"
+                        title="Edit tab"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setMobileTabsOpen(false);
+                setIsCreatingTab(true);
+              }}
+              className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>New Custom Tab</span>
+            </button>
+          </div>
         </div>
       )}
     </div>
