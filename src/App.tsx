@@ -976,6 +976,20 @@ export default function App() {
               onUpdateList={handleUpdateList}
               onDeleteList={handleDeleteList}
               onUpdateListItem={handleUpdateListItem}
+              onCreateLinkedNote={(listId) =>
+                setSheetMode({
+                  type: "note",
+                  data: { listIds: [listId] },
+                  isNew: true,
+                })
+              }
+              onCreateLinkedEvent={(listId) =>
+                setSheetMode({
+                  type: "event",
+                  data: { listIds: [listId] },
+                  isNew: true,
+                })
+              }
             />
           )}
         </main>

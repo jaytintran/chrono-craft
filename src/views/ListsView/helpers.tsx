@@ -57,3 +57,14 @@ export const replaceActiveTagToken = (
   const next = `${before}${inserted}${after}`;
   return { value: next, caret: before.length + inserted.length };
 };
+
+export const formatCreatedDate = (iso: string) => {
+  const d = new Date(iso);
+  const now = new Date();
+  const isSameYear = d.getFullYear() === now.getFullYear();
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    ...(isSameYear ? {} : { year: "numeric" }),
+  });
+};

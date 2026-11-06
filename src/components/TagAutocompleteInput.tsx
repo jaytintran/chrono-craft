@@ -117,7 +117,7 @@ export const TagAutocompleteInput: React.FC<TagAutocompleteInputProps> = ({
   };
 
   return (
-    <div className="relative flex-1 min-w-0">
+    <div className="relative flex-1 min-w-0 w-fit">
       <input
         ref={inputRef}
         type="text"

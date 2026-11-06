@@ -72,11 +72,18 @@ interface ListsViewProps {
   onUpdateList: (listId: string, patch: Partial<CustomList>) => Promise<void>;
   onDeleteList: (listId: string) => Promise<void>;
   onUpdateListItem: (itemId: string, patch: Partial<ListItem>) => Promise<void>;
+  onCreateLinkedNote: (listId: string) => void;
+  onCreateLinkedEvent: (listId: string) => void;
 }
 
 import { MultiGroupFilterPopover } from "../components/MultiGroupFilterPopover";
-import { getGroupPillClasses, parseTagsFromTitle } from "./ListsView/helpers";
+import {
+  formatCreatedDate,
+  getGroupPillClasses,
+  parseTagsFromTitle,
+} from "./ListsView/helpers";
 import { TagAutocompleteInput } from "../components/TagAutocompleteInput";
+import { LinkedCreateCard } from "./ListsView/LinkedCreateCard";
 
 export const ListsView: React.FC<ListsViewProps> = ({
   lists,
@@ -97,6 +104,8 @@ export const ListsView: React.FC<ListsViewProps> = ({
   onUpdateList,
   onDeleteList,
   onUpdateListItem,
+  onCreateLinkedNote,
+  onCreateLinkedEvent,
 }) => {
   // Current active list
   const activeList =
@@ -369,22 +378,12 @@ export const ListsView: React.FC<ListsViewProps> = ({
         onSubmit={handleCreateItem}
         className="flex items-center gap-2 p-1.5 rounded-2xl bg-white dark:bg-[#131926] border border-slate-200 dark:border-slate-800 shadow-sm"
       >
-        <select
-          value={newItemInitialStatus}
-          onChange={(e) => setNewItemInitialStatus(e.target.value as any)}
-          className="px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono text-slate-700 dark:text-slate-300 cursor-pointer"
-        >
-          <option value="inbox">Inbox</option>
-          <option value="in-progress">In Progress</option>
-          <option value="maybe-later">Maybe Later</option>
-        </select>
-
         <TagAutocompleteInput
           value={newItemTitle}
           onChange={setNewItemTitle}
           availableTags={allTags}
           placeholder={`Add new ${activeList.name.toLowerCase().replace(/s$/, "")}... use #tag to tag it`}
-          className="flex-1 min-w-[180px] bg-transparent text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none px-2 py-1 font-sans"
+          className="flex-1 min-w-[180px] w-full bg-transparent text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none px-2 py-1 font-sans"
         />
 
         <button
@@ -789,40 +788,40 @@ export const ListsView: React.FC<ListsViewProps> = ({
                     label: "Inbox",
                     count: inboxCount,
                     icon: Inbox,
-                    color: "text-slate-400",
-                    on: "bg-slate-500/15 border-slate-400/50",
+                    color: "text-slate-500 dark:text-slate-400",
+                    on: "bg-slate-500/15 border-slate-400/50 text-slate-700 dark:text-slate-300",
                   },
                   {
                     id: "in-progress",
                     label: "Active",
                     count: inProgressCount,
                     icon: PlayCircle,
-                    color: "text-amber-400",
-                    on: "bg-amber-500/15 border-amber-400/50",
+                    color: "text-amber-500 dark:text-amber-400",
+                    on: "bg-amber-500/15 border-amber-400/50 text-amber-700 dark:text-amber-300",
                   },
                   {
                     id: "completed",
                     label: "Done",
                     count: completedCount,
                     icon: CheckCircle2,
-                    color: "text-emerald-400",
-                    on: "bg-emerald-500/15 border-emerald-400/50",
+                    color: "text-emerald-500 dark:text-emerald-400",
+                    on: "bg-emerald-500/15 border-emerald-400/50 text-emerald-700 dark:text-emerald-300",
                   },
                   {
                     id: "dropped",
                     label: "Dropped",
                     count: droppedCount,
                     icon: MinusCircle,
-                    color: "text-rose-400",
-                    on: "bg-rose-500/15 border-rose-400/50",
+                    color: "text-rose-500 dark:text-rose-400",
+                    on: "bg-rose-500/15 border-rose-400/50 text-rose-700 dark:text-rose-300",
                   },
                   {
                     id: "maybe-later",
                     label: "Later",
                     count: maybeLaterCount,
                     icon: Bookmark,
-                    color: "text-violet-400",
-                    on: "bg-violet-500/15 border-violet-400/50",
+                    color: "text-violet-500 dark:text-violet-400",
+                    on: "bg-violet-500/15 border-violet-400/50 text-violet-700 dark:text-violet-300",
                   },
                 ] as const
               ).map((m) => {
@@ -837,11 +836,11 @@ export const ListsView: React.FC<ListsViewProps> = ({
                     className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border text-xs transition-colors cursor-pointer shrink-0 ${
                       on
                         ? m.on
-                        : "border-transparent hover:bg-slate-100 dark:hover:bg-slate-800/60"
+                        : "border-transparent text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-200"
                     }`}
                   >
                     <Icon className={`w-3.5 h-3.5 ${m.color}`} />
-                    <span className="font-mono font-semibold tabular-nums text-slate-900 dark:text-slate-100">
+                    <span className="font-mono font-semibold tabular-nums">
                       {m.count}
                     </span>
                     <span className="text-[11px] text-slate-500">
@@ -860,10 +859,10 @@ export const ListsView: React.FC<ListsViewProps> = ({
               <button
                 type="button"
                 onClick={() => setActiveSubTab("items")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer whitespace-nowrap ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer whitespace-nowrap border ${
                   activeSubTab === "items"
-                    ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-semibold shadow-xs"
-                    : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
+                    ? "bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border-indigo-500/40 font-semibold shadow-xs"
+                    : "border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
                 }`}
               >
                 Tracked Items
@@ -875,10 +874,10 @@ export const ListsView: React.FC<ListsViewProps> = ({
               <button
                 type="button"
                 onClick={() => setActiveSubTab("linked-notes")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer whitespace-nowrap ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer whitespace-nowrap border ${
                   activeSubTab === "linked-notes"
-                    ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-semibold shadow-xs"
-                    : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
+                    ? "bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-500/40 font-semibold shadow-xs"
+                    : "border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
                 }`}
               >
                 <FileText className="w-3.5 h-3.5" />
@@ -891,10 +890,10 @@ export const ListsView: React.FC<ListsViewProps> = ({
               <button
                 type="button"
                 onClick={() => setActiveSubTab("linked-events")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer whitespace-nowrap ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer whitespace-nowrap border ${
                   activeSubTab === "linked-events"
-                    ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-semibold shadow-xs"
-                    : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
+                    ? "bg-rose-500/15 text-rose-600 dark:text-rose-300 border-rose-500/40 font-semibold shadow-xs"
+                    : "border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
                 }`}
               >
                 <CalendarDays className="w-3.5 h-3.5" />
@@ -983,10 +982,10 @@ export const ListsView: React.FC<ListsViewProps> = ({
                     <button
                       type="button"
                       onClick={() => setSelectedTagFilter(null)}
-                      className={`shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer ${
+                      className={`shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer border ${
                         selectedTagFilter === null
-                          ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-semibold"
-                          : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
+                          ? "bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border-indigo-500/40 font-semibold"
+                          : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 border-transparent"
                       }`}
                     >
                       All
@@ -1000,7 +999,7 @@ export const ListsView: React.FC<ListsViewProps> = ({
                           onClick={() => setSelectedTagFilter(on ? null : t)}
                           className={`shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer border ${
                             on
-                              ? "bg-indigo-500/15 text-indigo-300 border-indigo-500/40 font-semibold"
+                              ? "bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border-indigo-500/40 font-semibold"
                               : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 border-transparent"
                           }`}
                         >
@@ -1018,10 +1017,10 @@ export const ListsView: React.FC<ListsViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setSelectedTagFilter(null)}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer ${
+                    className={`shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer border ${
                       selectedTagFilter === null
-                        ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-semibold"
-                        : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
+                        ? "bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border-indigo-500/40 font-semibold"
+                        : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 border-transparent"
                     }`}
                   >
                     All
@@ -1033,9 +1032,9 @@ export const ListsView: React.FC<ListsViewProps> = ({
                         key={t}
                         type="button"
                         onClick={() => setSelectedTagFilter(on ? null : t)}
-                        className={`px-2.5 py-1 rounded-lg text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer border ${
+                        className={`shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer border ${
                           on
-                            ? "bg-indigo-500/15 text-indigo-300 border-indigo-500/40 font-semibold"
+                            ? "bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border-indigo-500/40 font-semibold"
                             : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 border-transparent"
                         }`}
                       >
@@ -1155,19 +1154,20 @@ export const ListsView: React.FC<ListsViewProps> = ({
           {/* ================= SUB-TAB 2: LINKED NOTES ================= */}
           {activeSubTab === "linked-notes" && (
             <div className="space-y-3">
-              {linkedNotes.length === 0 ? (
-                <div className="p-8 text-center rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-xs text-slate-400">
-                  No notes assigned to "{activeList.name}" yet. Open any note in
-                  Notes View to link it.
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {linkedNotes.map((note) => (
-                    <div
-                      key={note.id}
-                      onClick={() => onOpenEditNote(note)}
-                      className="p-4 rounded-xl bg-white dark:bg-[#131926] border border-slate-200 dark:border-slate-800/80 hover:border-indigo-500/40 shadow-xs cursor-pointer space-y-2 transition-all"
-                    >
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                <LinkedCreateCard
+                  label="New Note"
+                  sublabel={`Add to "${activeList.name}"`}
+                  onClick={() => onCreateLinkedNote(activeList.id)}
+                />
+
+                {linkedNotes.map((note) => (
+                  <div
+                    key={note.id}
+                    onClick={() => onOpenEditNote(note)}
+                    className="p-4 rounded-xl bg-white dark:bg-[#131926] border border-slate-200 dark:border-slate-800/80 hover:border-indigo-500/40 shadow-xs cursor-pointer space-y-2 transition-all flex flex-col justify-between"
+                  >
+                    <div className="space-y-2">
                       <h4 className="font-semibold text-sm text-slate-900 dark:text-slate-100 line-clamp-1">
                         {note.title}
                       </h4>
@@ -1175,8 +1175,24 @@ export const ListsView: React.FC<ListsViewProps> = ({
                         {stripHtml(note.content)}
                       </p>
                     </div>
-                  ))}
-                </div>
+
+                    <div className="pt-2 mt-1 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between gap-2 text-[10px] font-mono text-slate-400">
+                      <span>Created {formatCreatedDate(note.createdAt)}</span>
+                      {note.tags.length > 0 && (
+                        <span className="text-slate-400 truncate max-w-[50%] text-right">
+                          {note.tags.map((t) => `#${t}`).join(" ")}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {linkedNotes.length === 0 && (
+                <p className="text-center text-[11px] text-slate-400 italic">
+                  No notes linked to this list yet — click the card above to add
+                  one.
+                </p>
               )}
             </div>
           )}
@@ -1184,34 +1200,59 @@ export const ListsView: React.FC<ListsViewProps> = ({
           {/* ================= SUB-TAB 3: LINKED EVENTS ================= */}
           {activeSubTab === "linked-events" && (
             <div className="space-y-3">
-              {linkedEvents.length === 0 ? (
-                <div className="p-8 text-center rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-xs text-slate-400">
-                  No events assigned to "{activeList.name}" yet.
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {linkedEvents.map((event) => (
-                    <div
-                      key={event.id}
-                      onClick={() => onOpenEditEvent(event)}
-                      className="p-3.5 rounded-xl bg-white dark:bg-[#131926] border border-slate-200 dark:border-slate-800/80 hover:border-rose-500/40 shadow-xs cursor-pointer flex items-center justify-between gap-4 transition-all"
-                    >
-                      <div>
-                        <h4 className="font-semibold text-sm text-slate-900 dark:text-slate-100">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                <LinkedCreateCard
+                  label="New Event"
+                  sublabel={`Schedule for "${activeList.name}"`}
+                  onClick={() => onCreateLinkedEvent(activeList.id)}
+                />
+
+                {linkedEvents.map((event) => (
+                  <div
+                    key={event.id}
+                    onClick={() => onOpenEditEvent(event)}
+                    className="p-3.5 rounded-xl bg-white dark:bg-[#131926] border border-slate-200 dark:border-slate-800/80 hover:border-rose-500/40 shadow-xs cursor-pointer flex flex-col gap-2 transition-all"
+                  >
+                    <div className="flex flex-col h-full items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h4 className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate">
                           {event.title}
                         </h4>
-                        <div className="text-xs font-mono text-cyan-600 dark:text-cyan-400 mt-0.5">
+                      </div>
+
+                      <div className="pt-2 mt-1 w-full border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between gap-2 text-[10px] font-mono text-slate-400">
+                        <span className="text-xs font-mono text-cyan-600 dark:text-cyan-400 mt-0.5">
                           {new Date(event.startAt).toLocaleString([], {
                             month: "short",
                             day: "numeric",
                             hour: "numeric",
                             minute: "2-digit",
                           })}
-                        </div>
+                        </span>
+                        {event.category && (
+                          <span
+                            className={`${
+                              event.category === "official"
+                                ? "text-white dark:text-white bg-indigo-500"
+                                : "text-white dark:text-white bg-rose-500"
+                            } p-0.5 rounded px-1`}
+                          >
+                            {event.category === "official"
+                              ? "Official"
+                              : "Personal"}
+                          </span>
+                        )}
                       </div>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
+              </div>
+
+              {linkedEvents.length === 0 && (
+                <p className="text-center text-[11px] text-slate-400 italic">
+                  No events linked to this list yet — click the card above to
+                  schedule one.
+                </p>
               )}
             </div>
           )}
