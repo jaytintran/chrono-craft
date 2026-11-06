@@ -337,7 +337,7 @@ export const FocusView: React.FC<FocusViewProps> = ({
 
               {/* Dedicated NLP Input Bar for Anchors */}
               <NLPInputBar
-                placeholder='Add an anchor (e.g., "Executive Architecture Review at 2pm !high #review")'
+                placeholder="Join the board meeting at 2pm..."
                 defaultType="event"
                 showTypeSwitcher={false}
                 buttonLabel="Schedule Anchor"
@@ -477,7 +477,7 @@ export const FocusView: React.FC<FocusViewProps> = ({
                 placeholder={
                   isEngineAtCapacity
                     ? `Capacity full (${settings.xActiveLimit}/${settings.xActiveLimit})! Complete a task or raise limit in settings.`
-                    : 'Add immediate task to active queue (e.g., "Draft architecture doc !high #core")'
+                    : "Add immediate task to active queue..."
                 }
                 defaultType="task"
                 showTypeSwitcher={false}
@@ -534,9 +534,6 @@ export const FocusView: React.FC<FocusViewProps> = ({
                         </button>
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="text-[11px] font-mono text-slate-400">
-                              0{idx + 1}.
-                            </span>
                             <span className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
                               {task.title}
                             </span>
@@ -599,7 +596,7 @@ export const FocusView: React.FC<FocusViewProps> = ({
 
               {/* Dedicated NLP Input Bar to directly log completed work */}
               <NLPInputBar
-                placeholder='Quick-log completed item (e.g., "Shipped PR for NLP tokenizer at 11am")'
+                placeholder="Log completed actions here for gratitude..."
                 defaultType="log"
                 showTypeSwitcher={false}
                 compact={isMobile}

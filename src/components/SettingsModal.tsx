@@ -167,17 +167,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div
-        onClick={onClose}
-        className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity duration-200"
-      />
-
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4">
       {/* Modal Dialog Box */}
-      <div className="relative w-full max-w-xl bg-white dark:bg-[#111724] rounded-2xl shadow-2xl z-10 border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-150">
+      <div className="relative w-full md:max-w-xl h-[100dvh] md:h-auto bg-white dark:bg-[#111724] rounded-t-3xl md:rounded-2xl shadow-2xl z-10 border-t md:border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-none md:max-h-[90vh] animate-slideInBottom md:animate-scaleUp">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-[#0E131E]">
+        <div className="flex items-center justify-between px-6 py-3 md:py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-[#0E131E]">
           <div>
             <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
               <SlidersHorizontal className="w-4 h-4 text-indigo-500" />
@@ -226,7 +220,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </button>
           </div>
         </div>
-
         {/* Modern Segmented Navigation Tabs */}
         <div className="flex items-center gap-2 px-6 pt-3 pb-2 border-b border-slate-200 dark:border-slate-800/80 bg-slate-100/40 dark:bg-slate-900/40">
           <button
@@ -268,7 +261,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <span>Storage & System</span>
           </button>
         </div>
-
         {/* Scrollable Tab Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-5">
           {/* ================= TAB 1: PREFERENCES ================= */}
@@ -652,7 +644,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           )}
         </div>
-
         {/* Footer Actions */}
         <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-[#0E131E]">
           <button

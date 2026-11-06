@@ -22,6 +22,7 @@ import {
   CheckCircle2,
   MinusCircle,
   Bookmark,
+  Trophy,
 } from "lucide-react";
 import {
   CalendarEvent,
@@ -170,6 +171,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
   );
   const [eventTags, setEventTags] = useState<string[]>([]);
   const [eventListIds, setEventListIds] = useState<string[]>([]);
+  const [eventIsAchievement, setEventIsAchievement] = useState(false);
 
   // Local state for Habit
   const [habitTitle, setHabitTitle] = useState("");
@@ -208,6 +210,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
       setEventListIds(sheetMode.data.listIds || []);
       setEventAllDay(sheetMode.data.allDay || false);
       setEventCategory(sheetMode.data.category || "personal");
+      setEventIsAchievement(sheetMode.data.isAchievement || false);
 
       const defaultStart = sheetMode.data.startAt
         ? new Date(sheetMode.data.startAt)
@@ -514,7 +517,8 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
         allDay: eventAllDay,
         category: eventCategory,
         tags: eventTags,
-        listIds: eventListIds,
+        listIds: eventIsAchievement ? [] : eventListIds,
+        isAchievement: eventIsAchievement,
       });
     } else if (sheetMode.type === "habit" && onSaveHabit) {
       onSaveHabit({
@@ -606,6 +610,21 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                 <Pin className="w-4 h-4" />
               </button>
             )}
+            {sheetMode.type === "event" && sheetMode.data.completedAt && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 text-[10px] font-mono uppercase tracking-wider">
+                <Check className="w-3 h-3" /> Attended
+              </span>
+            )}
+            {sheetMode.type === "event" && sheetMode.data.missedAt && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-500 border border-rose-500/30 text-[10px] font-mono uppercase tracking-wider">
+                Missed
+              </span>
+            )}
+            {sheetMode.type === "event" && eventIsAchievement && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/30 text-[10px] font-mono uppercase tracking-wider">
+                <Trophy className="w-3 h-3" /> Achievement
+              </span>
+            )}
             <button
               onClick={onClose}
               className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
@@ -638,7 +657,8 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
               />
 
               {/* Unified compact meta row: lists + tags */}
-              {renderMetaRow("note", noteTags, noteListIds)}
+              {!eventIsAchievement &&
+                renderMetaRow("event", eventTags, eventListIds)}
 
               {/* Seamless content: grows as long as you write */}
               <RichTextEditor
@@ -781,39 +801,51 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
                         className={`${dtInput} w-28 ${endInvalid ? "!border-rose-500" : ""}`}
                       />
                     </div>
-                    <div className="flex items-center gap-1.5 px-4 pb-3 pl-[4.25rem] text-[11px] font-mono">
-                      {endInvalid ? (
-                        <span className="text-rose-400">
-                          End is before start
-                        </span>
-                      ) : (
-                        <span className="text-slate-400 flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {durLabel || "—"}
-                        </span>
-                      )}
-                      <span className="flex-1" />
-                      {[30, 60, 120].map((m) => (
-                        <button
-                          key={m}
-                          type="button"
-                          onClick={() => setDuration(m)}
-                          className={`px-2 py-0.5 rounded-md border transition-colors cursor-pointer ${
-                            durMins === m
-                              ? "bg-indigo-500/15 border-indigo-500/40 text-indigo-300"
-                              : "border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-500"
-                          }`}
-                        >
-                          {m < 60 ? `${m}m` : `${m / 60}h`}
-                        </button>
-                      ))}
+                    <div className="px-4 pb-3 space-y-1.5">
+                      <div className="flex items-center gap-1.5 text-[11px] font-mono pl-[4.25rem]">
+                        {endInvalid ? (
+                          <span className="text-rose-400">
+                            End is before start
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {durLabel || "—"}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1 pl-[4.25rem]">
+                        {[5, 10, 15, 20, 30, 45, 60, 90, 120, 180].map((m) => {
+                          const label =
+                            m < 60
+                              ? `${m}m`
+                              : m % 60 === 0
+                                ? `${m / 60}h`
+                                : `${Math.floor(m / 60)}h ${m % 60}m`;
+                          return (
+                            <button
+                              key={m}
+                              type="button"
+                              onClick={() => setDuration(m)}
+                              className={`px-2 py-0.5 rounded-md border text-[11px] font-mono transition-colors cursor-pointer ${
+                                durMins === m
+                                  ? "bg-indigo-500/15 border-indigo-500/40 text-indigo-300"
+                                  : "border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-500"
+                              }`}
+                            >
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 )}
               </div>
 
               {/* Lists + tags */}
-              {renderMetaRow("event", eventTags, eventListIds)}
+              {!eventIsAchievement &&
+                renderMetaRow("event", eventTags, eventListIds)}
 
               {/* Description & Context: seamless */}
               <div>

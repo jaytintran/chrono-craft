@@ -23,6 +23,8 @@ import {
   ProcessedTimelineItem,
 } from "../components/TimelineEntryRow";
 
+import { Keyboard } from "@capacitor/keyboard";
+
 interface TimelineViewProps {
   entries: TimelineEntry[];
   showEntryContent?: boolean;
@@ -74,6 +76,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   const [timePickerTarget, setTimePickerTarget] = useState<{
     entryId: string;
@@ -202,6 +205,15 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [isSearching]);
+
+  useEffect(() => {
+    Keyboard.addListener("keyboardWillShow", (info) => {
+      setKeyboardHeight(info.keyboardHeight);
+    });
+    Keyboard.addListener("keyboardWillHide", () => {
+      setKeyboardHeight(0);
+    });
+  }, []);
 
   const openTimePicker = (
     entryId: string,
@@ -417,7 +429,10 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
 
       {/* Sticky input bar (only in normal mode) */}
       {!isSearching && (
-        <div className="shrink-0 px-4 md:px-8 py-3.5 bg-white/95 dark:bg-[#0B0F17]/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800/80 shadow-xl">
+        <div
+          style={{ paddingBottom: `${keyboardHeight + 12}px` }}
+          className="shrink-0 px-4 md:px-8 py-3.5 bg-white/95 dark:bg-[#0B0F17]/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800/80 shadow-xl"
+        >
           <div className="max-w-6xl mx-auto">
             <NLPInputBar
               placeholder='Add entry... e.g. "Architecture Review from 1pm to 3pm", or "/note Tech spec"'

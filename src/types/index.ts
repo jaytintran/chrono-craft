@@ -65,6 +65,9 @@ export interface CalendarEvent {
   tags: string[];
   listIds: string[];
   createdAt: string;
+  isAchievement?: boolean;
+  completedAt?: string; // attended
+  missedAt?: string; // didn't attend
 }
 
 export type HabitScheduleType =

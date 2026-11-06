@@ -17,6 +17,9 @@ import {
   Check,
   Clock,
   Sparkles,
+  Trophy,
+  CheckCircle2,
+  MinusCircle,
 } from "lucide-react";
 import { TimelineEntry } from "../types";
 
@@ -36,6 +39,11 @@ interface ContextMenuProps {
   onAddTag: (item: any, tag: string) => void;
   onDelete: (item: any) => void;
   onRemoveTag?: (item: any, tag: string) => void;
+  onMarkAchievement?: (item: any) => void;
+  onResolveEvent?: (
+    id: string,
+    outcome: "attended" | "missed" | "clear",
+  ) => void;
 }
 
 export const ContextMenu: React.FC<ContextMenuProps> = ({
@@ -49,6 +57,8 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   onAddTag,
   onDelete,
   onRemoveTag,
+  onMarkAchievement,
+  onResolveEvent,
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
   const [isMobile, setIsMobile] = useState(false);
@@ -98,6 +108,17 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
 
   const item = target.item;
   const itemTitle = item.title || "Untitled Item";
+  const canBeAchievement =
+    item.type === "log" ||
+    item.type === "event" ||
+    (item.type === "task" && item.status === "completed");
+
+  const canEditDetails =
+    item.type === "note" || item.type === "event" || item.startAt !== undefined; // plain CalendarEvent from Events view
+
+  const isEventItem = item.startAt !== undefined; // CalendarEvent
+  const evDone = isEventItem && !!item.completedAt;
+  const evMissed = isEventItem && !!item.missedAt;
 
   // Desktop positioning calculation to keep menu within viewport
   const getDesktopStyle = (): React.CSSProperties => {
@@ -180,17 +201,19 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
           {/* Action List Rows */}
           <div className="divide-y divide-slate-100 dark:divide-slate-800/80">
             {/* 1. Edit */}
-            <button
-              type="button"
-              onClick={() => {
-                onEdit(item);
-                onClose();
-              }}
-              className="w-full flex items-center gap-3 py-3 px-2 text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-800/60 rounded-xl transition-colors"
-            >
-              <Edit3 className="w-4 h-4 text-indigo-400" />
-              <span>Edit Details</span>
-            </button>
+            {canEditDetails && (
+              <button
+                type="button"
+                onClick={() => {
+                  onEdit(item);
+                  onClose();
+                }}
+                className="w-full flex items-center gap-3 py-3 px-2 text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-800/60 rounded-xl transition-colors"
+              >
+                <Edit3 className="w-4 h-4 text-indigo-400" />
+                <span>Edit Details</span>
+              </button>
+            )}
 
             {/* 2. Duplicate */}
             <button
@@ -204,6 +227,53 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
               <Copy className="w-4 h-4 text-cyan-400" />
               <span>Duplicate Item</span>
             </button>
+
+            {/* Mark as Achievement */}
+            {canBeAchievement && onMarkAchievement && (
+              <button
+                type="button"
+                onClick={() => {
+                  onMarkAchievement(item);
+                  onClose();
+                }}
+                className="w-full flex items-center gap-3 py-3 px-2 text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-800/60 rounded-xl transition-colors"
+              >
+                <Trophy className="w-4 h-4 text-amber-400" />
+                <span>Mark as Achievement</span>
+              </button>
+            )}
+
+            {/* Mark the status of Events */}
+            {isEventItem && onResolveEvent && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onResolveEvent(item.id, evDone ? "clear" : "attended");
+                    onClose();
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer text-slate-700 dark:text-slate-200 font-medium"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>
+                    {evDone ? "Mark as not attended" : "Mark as attended"}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onResolveEvent(item.id, evMissed ? "clear" : "missed");
+                    onClose();
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer text-slate-700 dark:text-slate-200 font-medium"
+                >
+                  <MinusCircle className="w-3.5 h-3.5 text-rose-400" />
+                  <span>
+                    {evMissed ? "Clear missed status" : "Mark as missed"}
+                  </span>
+                </button>
+              </>
+            )}
 
             {/* 3. Reschedule */}
             <div className="py-2 px-2">
@@ -328,6 +398,21 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
             <Edit3 className="w-3.5 h-3.5 text-indigo-400" />
             <span>Edit Details</span>
           </button>
+
+          {/* Mark as Achievement */}
+          {canBeAchievement && onMarkAchievement && (
+            <button
+              type="button"
+              onClick={() => {
+                onMarkAchievement(item);
+                onClose();
+              }}
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer text-slate-700 dark:text-slate-200 font-medium"
+            >
+              <Trophy className="w-3.5 h-3.5 text-amber-400" />
+              <span>Mark as Achievement</span>
+            </button>
+          )}
 
           {/* 2. Duplicate */}
           <button

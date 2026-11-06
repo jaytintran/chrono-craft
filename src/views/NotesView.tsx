@@ -13,12 +13,10 @@ import {
   Pin,
   ArrowUpDown,
   SlidersHorizontal,
-  RotateCcw,
   Tag,
-  Check,
   MoreVertical,
 } from "lucide-react";
-import { CustomList, Note, TimelineEntry } from "../types";
+import { Note, TimelineEntry } from "../types";
 import { stripHtml } from "../components/RichTextEditor";
 import { RichContent } from "../components/RichContent";
 import { FilterSelect } from "../components/FilterSelect";
@@ -26,7 +24,6 @@ import { FilterSelect } from "../components/FilterSelect";
 interface NotesViewProps {
   notes: Note[];
   timelineNotes: TimelineEntry[];
-  lists: CustomList[];
   onOpenCreateNote: () => void;
   onOpenEditNote: (note: Note) => void;
   onDeleteNote: (id: string) => Promise<void>;
@@ -42,7 +39,6 @@ type NoteSortOption =
 interface NotesFilterStorage {
   sortBy: NoteSortOption;
   selectedTag: string | null;
-  selectedListId: string | null;
 }
 
 const STORAGE_KEY = "chronocraft_notes_filter_options";
@@ -50,7 +46,6 @@ const STORAGE_KEY = "chronocraft_notes_filter_options";
 export const NotesView: React.FC<NotesViewProps> = ({
   notes,
   timelineNotes,
-  lists,
   onOpenCreateNote,
   onOpenEditNote,
   onDeleteNote,
@@ -71,7 +66,6 @@ export const NotesView: React.FC<NotesViewProps> = ({
     return {
       sortBy: "pinned-first",
       selectedTag: null,
-      selectedListId: null,
     };
   });
 
@@ -110,10 +104,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
       const matchesTag =
         !filterOptions.selectedTag ||
         note.tags.includes(filterOptions.selectedTag);
-      const matchesList =
-        !filterOptions.selectedListId ||
-        note.listIds.includes(filterOptions.selectedListId);
-      return matchesSearch && matchesTag && matchesList;
+      return matchesSearch && matchesTag;
     })
     .sort((a, b) => {
       if (filterOptions.sortBy === "pinned-first") {
@@ -139,28 +130,13 @@ export const NotesView: React.FC<NotesViewProps> = ({
       return 0;
     });
 
-  const getListName = (id: string) => {
-    return lists.find((l) => l.id === id)?.name || "List";
-  };
-
   const formatDate = (isoString: string) => {
     const d = new Date(isoString);
     return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
-  const handleResetFilters = () => {
-    setFilterOptions({
-      sortBy: "pinned-first",
-      selectedTag: null,
-      selectedListId: null,
-    });
-    setSearchQuery("");
-  };
-
   const hasActiveFilters =
-    filterOptions.selectedTag !== null ||
-    filterOptions.selectedListId !== null ||
-    searchQuery.trim().length > 0;
+    filterOptions.selectedTag !== null || searchQuery.trim().length > 0;
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
@@ -196,7 +172,7 @@ export const NotesView: React.FC<NotesViewProps> = ({
           <button
             type="button"
             onClick={onOpenCreateNote}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>New Note</span>
@@ -222,20 +198,6 @@ export const NotesView: React.FC<NotesViewProps> = ({
             ]}
           />
 
-          {/* List Selector Dropdown */}
-          <FilterSelect
-            icon={<Folder className="w-3.5 h-3.5 text-indigo-400" />}
-            value={filterOptions.selectedListId || ""}
-            active={!!filterOptions.selectedListId}
-            onChange={(v) =>
-              setFilterOptions((p) => ({ ...p, selectedListId: v || null }))
-            }
-            options={[
-              { value: "", label: "All Lists" },
-              ...lists.map((l) => ({ value: l.id, label: l.name })),
-            ]}
-          />
-
           {/* Tag Selector Dropdown */}
           {allTags.length > 0 && (
             <FilterSelect
@@ -250,18 +212,6 @@ export const NotesView: React.FC<NotesViewProps> = ({
                 ...allTags.map((t) => ({ value: t, label: `#${t}` })),
               ]}
             />
-          )}
-
-          {/* Reset button if active */}
-          {hasActiveFilters && (
-            <button
-              type="button"
-              onClick={handleResetFilters}
-              className="flex items-center gap-1 px-2 py-1 text-xs text-slate-400 hover:text-rose-400 transition-colors"
-            >
-              <RotateCcw className="w-3 h-3" />
-              <span>Reset</span>
-            </button>
           )}
         </div>
 
@@ -313,15 +263,6 @@ export const NotesView: React.FC<NotesViewProps> = ({
                   <div className="pt-2 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between text-xs text-slate-400 font-mono">
                     <div className="flex flex-wrap items-center gap-1.5 min-w-0">
                       <span>{formatDate(note.updatedAt)}</span>
-                      {note.listIds.length > 0 && (
-                        <>
-                          <span>·</span>
-                          <span className="flex items-center gap-1 text-indigo-400">
-                            <Folder className="w-3 h-3" />
-                            {getListName(note.listIds[0])}
-                          </span>
-                        </>
-                      )}
                       {note.tags.length > 0 && (
                         <>
                           <span>·</span>

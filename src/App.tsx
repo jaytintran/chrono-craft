@@ -392,6 +392,7 @@ export default function App() {
       tags: eventData.tags || [],
       listIds: eventData.listIds || [],
       createdAt: now,
+      isAchievement: eventData.isAchievement ?? false,
     });
   };
 
@@ -399,6 +400,20 @@ export default function App() {
     const linked = findLinkedEntry(id, "event");
     if (linked) await appDb.delete("entries", linked.id);
     else await appDb.delete("events", id);
+  };
+
+  const handleResolveEvent = async (
+    id: string,
+    outcome: "attended" | "missed" | "clear",
+  ) => {
+    const ev = events.find((e) => e.id === id);
+    if (!ev) return;
+    await appDb.put("events", {
+      ...ev,
+      completedAt:
+        outcome === "attended" ? new Date().toISOString() : undefined,
+      missedAt: outcome === "missed" ? new Date().toISOString() : undefined,
+    });
   };
 
   // Habits
@@ -582,6 +597,33 @@ export default function App() {
     } else {
       await handleDeleteEntry(item.id);
     }
+  };
+
+  const handleMarkAchievement = (item: any) => {
+    // Build the pre-filled CalendarEvent draft
+    const draft: Partial<CalendarEvent> = {
+      title: item.title,
+      description:
+        item.metadata?.notes || item.description || item.content || "",
+      startAt:
+        item.scheduledAt ||
+        item.startAt ||
+        item.createdAt ||
+        new Date().toISOString(),
+      endAt:
+        item.completedAt ||
+        item.endAt ||
+        item.metadata?.endAt ||
+        new Date().toISOString(),
+      allDay: false,
+      category: "personal",
+      tags: item.tags || [],
+      listIds: [],
+      isAchievement: true,
+    };
+
+    // Open the DetailSheet in event mode, new=true
+    setSheetMode({ type: "event", data: draft, isNew: true });
   };
 
   // Lists & List Items
@@ -827,7 +869,6 @@ export default function App() {
             <NotesView
               notes={notes}
               timelineNotes={timelineNotes}
-              lists={lists}
               onOpenCreateNote={() =>
                 setSheetMode({
                   type: "note",
@@ -853,7 +894,6 @@ export default function App() {
             <EventsView
               events={events}
               timelineEvents={timelineEvents}
-              lists={lists}
               onOpenCreateEvent={() =>
                 setSheetMode({
                   type: "event",
@@ -872,6 +912,7 @@ export default function App() {
               onOpenContextMenu={(event, pos) =>
                 handleOpenContextMenu(event, "event", pos)
               }
+              onResolveEvent={handleResolveEvent}
             />
           )}
 
@@ -982,6 +1023,8 @@ export default function App() {
         onAddTag={handleContextMenuAddTag}
         onDelete={handleContextMenuDelete}
         onRemoveTag={handleContextMenuRemoveTag}
+        onMarkAchievement={handleMarkAchievement}
+        onResolveEvent={handleResolveEvent}
       />
     </div>
   );

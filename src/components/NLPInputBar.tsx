@@ -141,7 +141,7 @@ export const NLPInputBar: React.FC<NLPInputBarProps> = ({
         <div
           role="tablist"
           aria-label="Entry type"
-          className="flex w-fit max-sm:w-full max-sm:justify-between max-sm:bg-[#0B0F17]/95! max-sm:border-none items-center gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 overflow-x-auto scrollbar-none"
+          className="flex w-fit max-sm:w-fit max-sm:justify-between max-sm:bg-[#0B0F17]/95! max-sm:border-none items-center gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 overflow-x-auto scrollbar-none"
         >
           {availableTypes.map((type) => {
             const cfg = typeConfig[type];
@@ -162,7 +162,7 @@ export const NLPInputBar: React.FC<NLPInputBarProps> = ({
                 }`}
               >
                 {cfg.icon}
-                <span className="inline">
+                <span className="inline max-sm:hidden text-center">
                   {cfg.label !== "Time Block" ? cfg.label : "Block"}
                 </span>
               </button>

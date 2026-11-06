@@ -7,6 +7,11 @@ const STATUS_BAR_COLORS = {
   dark: "#0B0F17",
 } as const;
 
+const NAV_BAR_COLORS = {
+  light: "#ffffff",
+  dark: "#0B0F17", // Matches your app's dark background
+} as const;
+
 export async function applyNativeTheme(theme: "light" | "dark") {
   if (!Capacitor.isNativePlatform()) return;
 
@@ -16,6 +21,11 @@ export async function applyNativeTheme(theme: "light" | "dark") {
     // 1. Set the background first
     await EdgeToEdge.setStatusBarColor({
       color: STATUS_BAR_COLORS[theme],
+    });
+
+    // NEW: Set the navigation bar to match
+    await EdgeToEdge.setNavigationBarColor({
+      color: NAV_BAR_COLORS[theme],
     });
 
     // 2. Then set the icon style AFTER the background,

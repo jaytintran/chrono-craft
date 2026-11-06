@@ -25,12 +25,8 @@ import {
   FileText,
   CalendarDays,
   MoreVertical,
-  LayoutGrid,
-  LayoutList,
-  AlignJustify,
   Pencil,
-  MoreHorizontal,
-  RotateCcw,
+  ChevronDown,
 } from "lucide-react";
 import {
   CalendarEvent,
@@ -44,8 +40,15 @@ import { CreateListModal } from "../components/CreateListModal";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { StatusPickerPopover } from "../components/StatusPickerPopover";
 import { stripHtml } from "../components/RichTextEditor";
-import { FilterSelect } from "../components/FilterSelect";
 import { SearchBar } from "../components/SearchBar";
+
+import {
+  LISTS_FILTER_GROUPS,
+  FilterStatusType,
+  GroupBy,
+  SubGroupBy,
+  CANONICAL_STATUS_ORDER,
+} from "./ListsView/constants";
 
 interface ListsViewProps {
   lists: CustomList[];
@@ -71,13 +74,9 @@ interface ListsViewProps {
   onUpdateListItem: (itemId: string, patch: Partial<ListItem>) => Promise<void>;
 }
 
-type FilterStatusType =
-  | "all"
-  | "inbox"
-  | "in-progress"
-  | "completed"
-  | "dropped"
-  | "maybe-later";
+import { MultiGroupFilterPopover } from "../components/MultiGroupFilterPopover";
+import { getGroupPillClasses, parseTagsFromTitle } from "./ListsView/helpers";
+import { TagAutocompleteInput } from "../components/TagAutocompleteInput";
 
 export const ListsView: React.FC<ListsViewProps> = ({
   lists,
@@ -103,6 +102,11 @@ export const ListsView: React.FC<ListsViewProps> = ({
   const activeList =
     lists.find((l) => l.id === selectedListId) || lists[0] || null;
 
+  const orderedLists = [
+    ...lists.filter((l) => l.type !== "custom"),
+    ...lists.filter((l) => l.type === "custom"),
+  ];
+
   // View Mode: stacked (default), grid (2 cols), or compact (dense rows)
   const [viewMode, setViewMode] = useState<"stacked" | "grid" | "compact">(
     () => {
@@ -115,6 +119,38 @@ export const ListsView: React.FC<ListsViewProps> = ({
     },
   );
 
+  // Goup By Options
+
+  const [groupBy, setGroupBy] = useState<GroupBy>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("chronocraft_lists_group_by");
+      if (saved === "tag" || saved === "status" || saved === "none")
+        return saved;
+    }
+    return "tag";
+  });
+
+  const handleSetGroupBy = (g: GroupBy) => {
+    setGroupBy(g);
+    if (typeof window !== "undefined")
+      localStorage.setItem("chronocraft_lists_group_by", g);
+  };
+
+  // Sub-Group Options
+  const [subGroupBy, setSubGroupBy] = useState<SubGroupBy>(() => {
+    if (typeof window !== "undefined") {
+      const v = localStorage.getItem("chronocraft_lists_subgroup_by");
+      if (v === "none" || v === "tag" || v === "status") return v;
+    }
+    return "none";
+  });
+
+  const handleSetSubGroupBy = (g: SubGroupBy) => {
+    setSubGroupBy(g);
+    localStorage.setItem("chronocraft_lists_subgroup_by", g);
+  };
+
+  // View Mode Options
   const handleSetViewMode = (mode: "stacked" | "grid" | "compact") => {
     setViewMode(mode);
     if (typeof window !== "undefined") {
@@ -132,6 +168,11 @@ export const ListsView: React.FC<ListsViewProps> = ({
     "items" | "linked-notes" | "linked-events"
   >("items");
 
+  const parsedNewItem = React.useMemo(
+    () => parseTagsFromTitle(newItemTitle),
+    [newItemTitle],
+  );
+
   // Status picker popover state
   const [activeStatusPicker, setActiveStatusPicker] = useState<{
     itemId: string;
@@ -139,7 +180,6 @@ export const ListsView: React.FC<ListsViewProps> = ({
     position: { x: number; y: number };
   } | null>(null);
 
-  const [listMenuOpen, setListMenuOpen] = useState(false);
   const [isEditListOpen, setIsEditListOpen] = useState(false);
   const [isDeleteListOpen, setIsDeleteListOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -236,13 +276,15 @@ export const ListsView: React.FC<ListsViewProps> = ({
 
   const handleCreateItem = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newItemTitle.trim()) return;
+
+    const { cleanTitle, tags } = parsedNewItem;
+    if (!cleanTitle) return;
 
     await onAddListItem({
       listId: activeList.id,
-      title: newItemTitle.trim(),
+      title: cleanTitle,
       status: newItemInitialStatus,
-      tags: [],
+      tags,
     });
 
     setNewItemTitle("");
@@ -297,13 +339,27 @@ export const ListsView: React.FC<ListsViewProps> = ({
     }
   };
 
-  const openStatusPicker = (e: React.MouseEvent, item: ListItem) => {
-    e.stopPropagation();
-    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    setActiveStatusPicker({
-      itemId: item.id,
-      status: item.status,
-      position: { x: r.left, y: r.bottom + 6 },
+  // Collapsible group sections (keyed by group key)
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => {
+    if (typeof window === "undefined") return new Set();
+    try {
+      const raw = localStorage.getItem("chronocraft_lists_collapsed_groups");
+      if (raw) return new Set(JSON.parse(raw) as string[]);
+    } catch {}
+    return new Set();
+  });
+
+  const toggleCollapsedGroup = (key: string) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      try {
+        localStorage.setItem(
+          "chronocraft_lists_collapsed_groups",
+          JSON.stringify(Array.from(next)),
+        );
+      } catch {}
+      return next;
     });
   };
 
@@ -323,11 +379,11 @@ export const ListsView: React.FC<ListsViewProps> = ({
           <option value="maybe-later">Maybe Later</option>
         </select>
 
-        <input
-          type="text"
+        <TagAutocompleteInput
           value={newItemTitle}
-          onChange={(e) => setNewItemTitle(e.target.value)}
-          placeholder={`Add new ${activeList.name.toLowerCase().replace(/s$/, "")}... (click card to add author/notes)`}
+          onChange={setNewItemTitle}
+          availableTags={allTags}
+          placeholder={`Add new ${activeList.name.toLowerCase().replace(/s$/, "")}... use #tag to tag it`}
           className="flex-1 min-w-[180px] bg-transparent text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none px-2 py-1 font-sans"
         />
 
@@ -340,33 +396,305 @@ export const ListsView: React.FC<ListsViewProps> = ({
           <span>Add</span>
         </button>
       </form>
+
+      {parsedNewItem.tags.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 mt-2 px-1 text-[10px] font-mono">
+          <span className="text-slate-400 uppercase tracking-wider">Tags:</span>
+          {parsedNewItem.tags.map((t) => (
+            <span
+              key={t}
+              className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-indigo-500/15 text-indigo-500 dark:text-indigo-300 border border-indigo-500/30"
+            >
+              #{t}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
+
+  // ---- renderItem: extracted per-item card (compact / stacked / grid) ----
+  const renderItem = (item: ListItem) => {
+    const isCompleted = item.status === "completed" || item.status === "done";
+    const isDropped = item.status === "dropped";
+
+    const handleContextMenuTrigger = (e: React.MouseEvent) => {
+      e.preventDefault();
+      if (onOpenContextMenu) {
+        onOpenContextMenu(item, { x: e.clientX, y: e.clientY });
+      }
+    };
+
+    const handleThreeDotClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (onOpenContextMenu) {
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        onOpenContextMenu(item, { x: rect.left, y: rect.bottom + 4 });
+      }
+    };
+
+    // ============ VIEW MODE: COMPACT ROW ============
+    if (viewMode === "compact") {
+      return (
+        <div
+          key={item.id}
+          onClick={() => onOpenItemDetail?.(item)}
+          onContextMenu={handleContextMenuTrigger}
+          className="group flex items-center justify-between px-3 py-2 rounded-xl bg-white dark:bg-[#131926] border border-slate-200 dark:border-slate-800/80 hover:border-indigo-500/40 shadow-2xs transition-all cursor-pointer"
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                const rect = (
+                  e.currentTarget as HTMLElement
+                ).getBoundingClientRect();
+                setActiveStatusPicker({
+                  itemId: item.id,
+                  status: item.status,
+                  position: { x: rect.left, y: rect.bottom + 6 },
+                });
+              }}
+              title={`Status: ${getStatusLabel(item.status)} (click to change)`}
+              className="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-all hover:scale-110 cursor-pointer shrink-0"
+            >
+              {getStatusIcon(item.status)}
+            </button>
+
+            <span
+              className={`text-xs font-semibold truncate ${
+                isCompleted
+                  ? "line-through text-slate-400 dark:text-slate-500"
+                  : isDropped
+                    ? "line-through text-rose-400/70"
+                    : "text-slate-900 dark:text-slate-100"
+              }`}
+            >
+              {item.title}
+            </span>
+
+            {item.subtitle && (
+              <span className="text-[11px] text-slate-400 truncate hidden sm:inline">
+                · {item.subtitle}
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {item.dueDate && (
+              <span className="text-[10px] font-mono text-cyan-600 dark:text-cyan-400 hidden sm:inline">
+                {item.dueDate}
+              </span>
+            )}
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                const rect = (
+                  e.currentTarget as HTMLElement
+                ).getBoundingClientRect();
+                setActiveStatusPicker({
+                  itemId: item.id,
+                  status: item.status,
+                  position: { x: rect.left - 40, y: rect.bottom + 6 },
+                });
+              }}
+              className="text-[10px] font-mono uppercase text-slate-400 hover:text-indigo-400 transition-colors cursor-pointer"
+            >
+              {getStatusLabel(item.status)}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleThreeDotClick}
+              title="Item options"
+              className="p-1 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+            >
+              <MoreVertical className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // ============ VIEW MODE: STACKED & GRID CARDS ============
+    return (
+      <div
+        key={item.id}
+        onClick={() => onOpenItemDetail?.(item)}
+        onContextMenu={handleContextMenuTrigger}
+        className={`group flex items-start justify-between p-4 rounded-2xl bg-white dark:bg-[#131926] border border-slate-200 dark:border-slate-800/80 hover:border-indigo-500/40 shadow-xs transition-all cursor-pointer ${
+          viewMode === "grid" ? "flex-col gap-3" : "gap-4"
+        }`}
+      >
+        <div className="flex items-start gap-3 min-w-0 w-full">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              const rect = (
+                e.currentTarget as HTMLElement
+              ).getBoundingClientRect();
+              setActiveStatusPicker({
+                itemId: item.id,
+                status: item.status,
+                position: { x: rect.left, y: rect.bottom + 6 },
+              });
+            }}
+            title={`Status: ${getStatusLabel(item.status)} (click to change)`}
+            className="p-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-all hover:scale-110 cursor-pointer shrink-0 mt-0.5"
+          >
+            {getStatusIcon(item.status)}
+          </button>
+
+          <div className="min-w-0 flex-1 space-y-1">
+            <div className="flex items-center justify-between gap-2">
+              <span
+                className={`text-sm font-semibold truncate ${
+                  isCompleted
+                    ? "line-through text-slate-400 dark:text-slate-500"
+                    : isDropped
+                      ? "line-through text-rose-400/70"
+                      : "text-slate-900 dark:text-slate-100"
+                }`}
+              >
+                {item.title}
+              </span>
+
+              <button
+                type="button"
+                onClick={handleThreeDotClick}
+                title="Item options"
+                className="p-1 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+              >
+                <MoreVertical className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {item.subtitle && (
+              <p className="text-xs text-slate-500 truncate">{item.subtitle}</p>
+            )}
+
+            <div className="flex items-center gap-2 pt-1 text-[10px] font-mono text-slate-400">
+              {item.dueDate && (
+                <span className="text-cyan-500">Due {item.dueDate}</span>
+              )}
+              {item.tags && item.tags.length > 0 && (
+                <span className="text-slate-400 truncate">
+                  {item.tags.map((t) => `#${t}`).join(" ")}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ---- renderItemsGrid: wrapper that lays out renderItem()s ----
+  const renderItemsGrid = (items: ListItem[]) => (
+    <div
+      className={
+        viewMode === "grid"
+          ? "grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-3.5"
+          : viewMode === "compact"
+            ? "space-y-1.5"
+            : "space-y-2.5"
+      }
+    >
+      {items.map(renderItem)}
+    </div>
+  );
+
+  // ---- renderItemsFlat: alias for the "none" group branch ----
+  const renderItemsFlat = (items: ListItem[]) => renderItemsGrid(items);
+
+  // ---- renderSubGroups ---
+  const renderSubGroups = (items: ListItem[], keyBy: "tag" | "status") => {
+    const sub: Record<string, ListItem[]> = {};
+    for (const it of items) {
+      const k =
+        keyBy === "tag"
+          ? it.tags?.[0]?.toLowerCase() || "__none__"
+          : it.status === "todo"
+            ? "inbox"
+            : it.status === "done"
+              ? "completed"
+              : it.status;
+      (sub[k] ??= []).push(it);
+    }
+
+    let keys: string[];
+    if (keyBy === "tag") {
+      keys = Object.keys(sub)
+        .filter((k) => k !== "__none__")
+        .sort((a, b) => a.localeCompare(b));
+    } else {
+      keys = [
+        "inbox",
+        "in-progress",
+        "completed",
+        "dropped",
+        "maybe-later",
+      ].filter((k) => sub[k]);
+    }
+    if (sub.__none__) keys.push("__none__");
+
+    return keys.map((k) => {
+      const list = sub[k];
+      const isNone = k === "__none__";
+      const label = isNone
+        ? keyBy === "tag"
+          ? "UNTAGGED"
+          : "NO STATUS"
+        : keyBy === "tag"
+          ? `#${k}`
+          : getStatusLabel(k as ListItemStatus);
+
+      return (
+        <div key={k} className="space-y-1.5">
+          <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-slate-400">
+            <span>{label}</span>
+            <span className="tabular-nums">· {list.length}</span>
+          </div>
+          {renderItemsGrid(list)}
+        </div>
+      );
+    });
+  };
 
   return (
     <div className="relative flex-1 flex flex-col h-full overflow-hidden">
       {/* 1. Mobile-Only Horizontal List Switcher Tabs (Hidden on Desktop) */}
-      <div className="px-4 pt-3 border-b border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#0B0F17] shrink-0 flex md:hidden">
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-          {lists.map((list) => {
+      <div className="px-3 pt-3 pb-2 border-b border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#0B0F17] shrink-0 flex md:hidden">
+        <div className="flex items-stretch w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900/60 p-0.5 overflow-x-auto scrollbar-none">
+          {orderedLists.map((list) => {
             const isCurrent = list.id === activeList.id;
             return (
               <button
                 key={list.id}
                 type="button"
                 onClick={() => onSelectList(list.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-all ${
                   isCurrent
-                    ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs"
-                    : "bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400"
+                    ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xs"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
                 }`}
               >
-                <span style={{ color: isCurrent ? undefined : list.color }}>
-                  {getListIcon(list.icon)}
-                </span>
+                <span
+                  className="w-1.5 h-1.5 rounded-full shrink-0"
+                  style={{
+                    backgroundColor: isCurrent
+                      ? (list.color ?? "#6366F1")
+                      : "currentColor",
+                    opacity: isCurrent ? 1 : 0.5,
+                  }}
+                />
                 <span>{list.name}</span>
-                <span className="text-[10px] font-mono opacity-70">
-                  ({listItems.filter((i) => i.listId === list.id).length})
+                <span className="text-[9px] font-mono opacity-60">
+                  {listItems.filter((i) => i.listId === list.id).length}
                 </span>
               </button>
             );
@@ -375,10 +703,11 @@ export const ListsView: React.FC<ListsViewProps> = ({
           <button
             type="button"
             onClick={onOpenCreateList}
-            className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-slate-400 hover:text-indigo-400 transition-colors whitespace-nowrap shrink-0 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl"
+            className="shrink-0 flex items-center justify-center px-2.5 py-1.5 rounded-lg text-slate-500 hover:text-indigo-500 transition-colors"
+            title="New list"
+            aria-label="New list"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>New List</span>
           </button>
         </div>
       </div>
@@ -386,10 +715,10 @@ export const ListsView: React.FC<ListsViewProps> = ({
       {/* 2. Main Canvas */}
       <div className="flex-1 overflow-y-auto px-4 md:px-12 pt-6 pb-28">
         <div className="w-full space-y-4">
-          {/* Header Card (No self-progress bar; surfaces 5-status collection metrics) */}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 rounded-2xl bg-white dark:bg-[#131926] border border-slate-200 dark:border-slate-800/80 shadow-xs">
-            {/* Identity */}
-            <div className="flex items-center gap-3 min-w-0 flex-1">
+          {/* Header Card — Option B layout */}
+          <div className="rounded-2xl bg-white dark:bg-[#131926] border border-slate-200 dark:border-slate-800/80 shadow-xs overflow-hidden">
+            {/* Row 1: Identity + options menu */}
+            <div className="flex items-center gap-3 px-4 py-3">
               <div
                 className="p-2 rounded-xl shrink-0"
                 style={{
@@ -399,7 +728,8 @@ export const ListsView: React.FC<ListsViewProps> = ({
               >
                 {getListIcon(activeList.icon)}
               </div>
-              <div className="min-w-0">
+
+              <div className="min-w-0 flex-1">
                 <div className="flex items-baseline gap-2">
                   <h2 className="text-base font-bold tracking-tight text-slate-900 dark:text-slate-100 truncate">
                     {activeList.name}
@@ -409,15 +739,49 @@ export const ListsView: React.FC<ListsViewProps> = ({
                   </span>
                 </div>
                 {activeList.description && (
-                  <p className="text-[11px] text-slate-500 truncate max-md:hidden">
+                  <p className="text-[11px] text-slate-500 truncate">
                     {activeList.description}
                   </p>
                 )}
               </div>
+
+              {/* List options menu */}
+              {activeList.type === "custom" && (
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    type="button"
+                    disabled={activeList.type !== "custom"}
+                    onClick={() => setIsEditListOpen(true)}
+                    title={
+                      activeList.type !== "custom"
+                        ? "Default lists can't be edited"
+                        : "Edit list"
+                    }
+                    aria-label="Edit list"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={activeList.type !== "custom"}
+                    title={
+                      activeList.type !== "custom"
+                        ? "Default lists can't be deleted"
+                        : "Delete list"
+                    }
+                    aria-label="Delete list"
+                    onClick={() => setIsDeleteListOpen(true)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 transition-colors cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
             </div>
 
-            {/* Status metrics as filter chips */}
-            <div className="flex items-center gap-1 overflow-x-auto">
+            {/* Row 2: Status metrics strip */}
+            <div className="flex items-center gap-1 px-3 py-2 border-t border-slate-100 dark:border-slate-800/60 overflow-x-auto">
               {(
                 [
                   {
@@ -480,68 +844,16 @@ export const ListsView: React.FC<ListsViewProps> = ({
                     <span className="font-mono font-semibold tabular-nums text-slate-900 dark:text-slate-100">
                       {m.count}
                     </span>
-                    <span className="hidden sm:inline text-[11px] text-slate-500">
+                    <span className="text-[11px] text-slate-500">
                       {m.label}
                     </span>
                   </button>
                 );
               })}
             </div>
-
-            {/* List options menu */}
-            <div className="relative"></div>
-
-            {/* List options menu */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setListMenuOpen((o) => !o)}
-                title="List options"
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-              >
-                <MoreHorizontal className="w-4 h-4" />
-              </button>
-              {listMenuOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 z-10"
-                    onClick={() => setListMenuOpen(false)}
-                  />
-                  <div className="absolute right-0 top-full mt-1.5 z-20 w-48 p-1 rounded-xl bg-white dark:bg-[#111724] border border-slate-200 dark:border-slate-800 shadow-2xl text-xs">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setListMenuOpen(false);
-                        setIsEditListOpen(true);
-                      }}
-                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-                    >
-                      <Pencil className="w-3.5 h-3.5" /> Rename / edit list
-                    </button>
-                    <button
-                      type="button"
-                      disabled={activeList.type !== "custom"}
-                      title={
-                        activeList.type !== "custom"
-                          ? "Default lists can’t be deleted"
-                          : undefined
-                      }
-                      onClick={() => {
-                        setListMenuOpen(false);
-                        setIsDeleteListOpen(true);
-                      }}
-                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-rose-400 hover:bg-rose-500/10 disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer disabled:cursor-not-allowed"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" /> Delete list
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
           </div>
 
           {/* Sub-Tabs: Items | Linked Notes | Linked Events */}
-          {/* Sub-Tabs Row (isolated — this is now the ONLY thing in this row) */}
           <div className="flex items-center justify-between gap-3 pb-1">
             {/* Desktop: Horizontal Sub-Tabs */}
             <div className="hidden md:flex items-center gap-2">
@@ -625,82 +937,29 @@ export const ListsView: React.FC<ListsViewProps> = ({
             </div> */}
 
             <div className="flex max-sm:w-full max-md:justify-between gap-2">
-              <div className="flex gap-2">
-                {/* Status filter as FilterSelect (replaces inline chips) */}
-                <FilterSelect
-                  icon={
-                    <span
-                      className={`w-2 h-2 rounded-full ${
-                        filterStatus === "all"
-                          ? "bg-slate-400"
-                          : filterStatus === "inbox"
-                            ? "bg-slate-400"
-                            : filterStatus === "in-progress"
-                              ? "bg-amber-400"
-                              : filterStatus === "completed"
-                                ? "bg-emerald-400"
-                                : filterStatus === "dropped"
-                                  ? "bg-rose-400"
-                                  : "bg-violet-400"
-                      }`}
-                    />
-                  }
-                  value={filterStatus}
-                  active={filterStatus !== "all"}
-                  onChange={(v) => setFilterStatus(v as FilterStatusType)}
-                  options={[
-                    { value: "all", label: "All Statuses" },
-                    { value: "inbox", label: "Inbox" },
-                    { value: "in-progress", label: "In Progress" },
-                    { value: "completed", label: "Completed" },
-                    { value: "dropped", label: "Dropped" },
-                    { value: "maybe-later", label: "Maybe Later" },
-                  ]}
-                />
-
-                {/* View mode toggle */}
-                <div className="flex items-center gap-2">
-                  {/* View Mode toggle — same shape/pattern as before, just relocated */}
-                  <div className="flex items-center gap-0.5 p-0.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => handleSetViewMode("stacked")}
-                      title="Stacked Cards"
-                      className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                        viewMode === "stacked"
-                          ? "bg-slate-900 dark:bg-slate-800 text-white dark:text-slate-100 shadow-xs"
-                          : "text-slate-400 hover:text-slate-200"
-                      }`}
-                    >
-                      <LayoutList className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleSetViewMode("grid")}
-                      title="Grid"
-                      className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                        viewMode === "grid"
-                          ? "bg-slate-900 dark:bg-slate-800 text-white dark:text-slate-100 shadow-xs"
-                          : "text-slate-400 hover:text-slate-200"
-                      }`}
-                    >
-                      <LayoutGrid className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleSetViewMode("compact")}
-                      title="Compact Rows"
-                      className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                        viewMode === "compact"
-                          ? "bg-slate-900 dark:bg-slate-800 text-white dark:text-slate-100 shadow-xs"
-                          : "text-slate-400 hover:text-slate-200"
-                      }`}
-                    >
-                      <AlignJustify className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <MultiGroupFilterPopover
+                groups={LISTS_FILTER_GROUPS}
+                selections={{
+                  status: filterStatus,
+                  view: viewMode,
+                  group: groupBy,
+                  subgroup: subGroupBy,
+                }}
+                defaults={{
+                  status: "all",
+                  view: "stacked",
+                  group: "tag",
+                  subgroup: "none",
+                }}
+                allLabel="Control Panel"
+                onChange={(k, v) => {
+                  if (k === "status") setFilterStatus(v as FilterStatusType);
+                  else if (k === "view") handleSetViewMode(v as any);
+                  else if (k === "group") handleSetGroupBy(v as GroupBy);
+                  else if (k === "subgroup")
+                    handleSetSubGroupBy(v as SubGroupBy);
+                }}
+              />
 
               {/* Search Bar */}
               <div className="md:max-w-sm">
@@ -804,309 +1063,87 @@ export const ListsView: React.FC<ListsViewProps> = ({
                 </div>
               ) : (
                 (() => {
-                  // Group filtered items by their FIRST tag; untagged items go to "UNTAGGED".
-                  const groups: Record<string, ListItem[]> = {};
-                  for (const it of filteredItems) {
-                    const tag =
-                      it.tags && it.tags[0]
-                        ? it.tags[0].toLowerCase()
-                        : "__untagged__";
-                    (groups[tag] ??= []).push(it);
+                  if (groupBy === "none") {
+                    return renderItemsFlat(filteredItems);
                   }
 
-                  // Tagged sections sorted alphabetically; UNTAGGED always last.
-                  const tagKeys = Object.keys(groups)
-                    .filter((k) => k !== "__untagged__")
-                    .sort((a, b) => a.localeCompare(b));
-                  if (groups.__untagged__) tagKeys.push("__untagged__");
+                  const effectiveSub =
+                    subGroupBy === groupBy ? "none" : subGroupBy;
 
-                  return tagKeys.map((tagKey) => {
-                    const items = groups[tagKey];
-                    const isUntagged = tagKey === "__untagged__";
-                    const sectionTitle = isUntagged
-                      ? "UNTAGGED"
-                      : tagKey.toUpperCase();
+                  const groups: Record<string, ListItem[]> = {};
+                  for (const it of filteredItems) {
+                    let key: string;
+                    if (groupBy === "tag") {
+                      key = it.tags?.[0]?.toLowerCase() || "__none__";
+                    } else {
+                      // status — normalize legacy todo/done
+                      key =
+                        it.status === "todo"
+                          ? "inbox"
+                          : it.status === "done"
+                            ? "completed"
+                            : it.status;
+                    }
+                    (groups[key] ??= []).push(it);
+                  }
+
+                  let keys: string[];
+                  if (groupBy === "tag") {
+                    keys = Object.keys(groups)
+                      .filter((k) => k !== "__none__")
+                      .sort((a, b) => a.localeCompare(b));
+                  } else {
+                    // status — canonical order, not alphabetical
+                    keys = CANONICAL_STATUS_ORDER.filter((k) => groups[k]);
+                  }
+                  if (groups.__none__) keys.push("__none__");
+
+                  return keys.map((key) => {
+                    const items = groups[key];
+                    const isNone = key === "__none__";
+                    const title = isNone
+                      ? groupBy === "tag"
+                        ? "UNTAGGED"
+                        : "NO STATUS"
+                      : groupBy === "tag"
+                        ? key.toUpperCase()
+                        : getStatusLabel(key as ListItemStatus).toUpperCase();
+                    const isCollapsed = collapsedGroups.has(key);
 
                     return (
-                      <section key={tagKey} className="space-y-3">
-                        {/* Section header — matches Tag chip language used across the app */}
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-[11px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">
-                            {sectionTitle}
+                      <section key={key} className="space-y-3">
+                        {/* Collapsible header */}
+                        <button
+                          type="button"
+                          onClick={() => toggleCollapsedGroup(key)}
+                          aria-expanded={!isCollapsed}
+                          className="group flex items-center gap-2 w-full text-left cursor-pointer"
+                        >
+                          <ChevronDown
+                            className={`w-3.5 h-3.5 text-slate-400 transition-transform shrink-0 ${
+                              isCollapsed ? "-rotate-90" : ""
+                            }`}
+                          />
+                          <h3
+                            className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-mono uppercase tracking-wider font-bold border ${getGroupPillClasses(key, groupBy)}`}
+                          >
+                            {title}
                           </h3>
                           <span className="text-[10px] font-mono text-slate-400 tabular-nums">
                             · {items.length}
                           </span>
                           <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800/80" />
-                        </div>
+                        </button>
 
-                        {/* Grid / compact / stacked — same as before, minus folder logic */}
-                        <div
-                          className={
-                            viewMode === "grid"
-                              ? "grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-3.5"
-                              : viewMode === "compact"
-                                ? "space-y-1.5"
-                                : "space-y-2.5"
-                          }
-                        >
-                          {items.map((item) => {
-                            const isCompleted =
-                              item.status === "completed" ||
-                              item.status === "done";
-                            const isDropped = item.status === "dropped";
-
-                            const handleContextMenuTrigger = (
-                              e: React.MouseEvent,
-                            ) => {
-                              e.preventDefault();
-                              if (onOpenContextMenu) {
-                                onOpenContextMenu(item, {
-                                  x: e.clientX,
-                                  y: e.clientY,
-                                });
-                              }
-                            };
-
-                            const handleThreeDotClick = (
-                              e: React.MouseEvent,
-                            ) => {
-                              e.stopPropagation();
-                              if (onOpenContextMenu) {
-                                const rect = (
-                                  e.currentTarget as HTMLElement
-                                ).getBoundingClientRect();
-                                onOpenContextMenu(item, {
-                                  x: rect.left,
-                                  y: rect.bottom + 4,
-                                });
-                              }
-                            };
-
-                            // ============ VIEW MODE: COMPACT ROW ============
-                            if (viewMode === "compact") {
-                              return (
-                                <div
-                                  key={item.id}
-                                  onClick={() => onOpenItemDetail?.(item)}
-                                  onContextMenu={handleContextMenuTrigger}
-                                  className="group flex items-center justify-between px-3 py-2 rounded-xl bg-white dark:bg-[#131926] border border-slate-200 dark:border-slate-800/80 hover:border-indigo-500/40 shadow-2xs transition-all cursor-pointer"
-                                >
-                                  <div className="flex items-center gap-2.5 min-w-0">
-                                    {/* Leftmost Status Icon Button (1-Click Status Popover) */}
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        const rect = (
-                                          e.currentTarget as HTMLElement
-                                        ).getBoundingClientRect();
-                                        setActiveStatusPicker({
-                                          itemId: item.id,
-                                          status: item.status,
-                                          position: {
-                                            x: rect.left,
-                                            y: rect.bottom + 6,
-                                          },
-                                        });
-                                      }}
-                                      title={`Status: ${getStatusLabel(item.status)} (click to change)`}
-                                      className="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-all hover:scale-110 cursor-pointer shrink-0"
-                                    >
-                                      {getStatusIcon(item.status)}
-                                    </button>
-
-                                    <span
-                                      className={`text-xs font-semibold truncate ${
-                                        isCompleted
-                                          ? "line-through text-slate-400 dark:text-slate-500"
-                                          : isDropped
-                                            ? "line-through text-rose-400/70"
-                                            : "text-slate-900 dark:text-slate-100"
-                                      }`}
-                                    >
-                                      {item.title}
-                                    </span>
-
-                                    {item.subtitle && (
-                                      <span className="text-[11px] text-slate-400 truncate hidden sm:inline">
-                                        · {item.subtitle}
-                                      </span>
-                                    )}
-                                  </div>
-
-                                  <div className="flex items-center gap-2 shrink-0">
-                                    {item.dueDate && (
-                                      <span className="text-[10px] font-mono text-cyan-600 dark:text-cyan-400 hidden sm:inline">
-                                        {item.dueDate}
-                                      </span>
-                                    )}
-
-                                    {/* Status Clickable Text Badge */}
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        const rect = (
-                                          e.currentTarget as HTMLElement
-                                        ).getBoundingClientRect();
-                                        setActiveStatusPicker({
-                                          itemId: item.id,
-                                          status: item.status,
-                                          position: {
-                                            x: rect.left - 40,
-                                            y: rect.bottom + 6,
-                                          },
-                                        });
-                                      }}
-                                      className="text-[10px] font-mono uppercase text-slate-400 hover:text-indigo-400 transition-colors cursor-pointer"
-                                    >
-                                      {getStatusLabel(item.status)}
-                                    </button>
-
-                                    <button
-                                      type="button"
-                                      onClick={handleThreeDotClick}
-                                      title="Item options"
-                                      className="p-1 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
-                                    >
-                                      <MoreVertical className="w-3.5 h-3.5" />
-                                    </button>
-                                  </div>
-                                </div>
-                              );
-                            }
-
-                            // ============ VIEW MODE: STACKED & GRID CARDS ============
-                            return (
-                              <div
-                                key={item.id}
-                                onClick={() => onOpenItemDetail?.(item)}
-                                onContextMenu={handleContextMenuTrigger}
-                                className={`group flex items-start justify-between p-4 rounded-2xl bg-white dark:bg-[#131926] border border-slate-200 dark:border-slate-800/80 hover:border-indigo-500/40 shadow-xs transition-all cursor-pointer ${
-                                  viewMode === "grid"
-                                    ? "flex-col gap-3"
-                                    : "gap-4"
-                                }`}
-                              >
-                                <div className="flex items-start gap-3 min-w-0 w-full">
-                                  {/* Leftmost Status Icon Button (1-Click Status Popover) */}
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      const rect = (
-                                        e.currentTarget as HTMLElement
-                                      ).getBoundingClientRect();
-                                      setActiveStatusPicker({
-                                        itemId: item.id,
-                                        status: item.status,
-                                        position: {
-                                          x: rect.left,
-                                          y: rect.bottom + 6,
-                                        },
-                                      });
-                                    }}
-                                    title={`Status: ${getStatusLabel(item.status)} (click to change)`}
-                                    className="p-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-all hover:scale-110 cursor-pointer shrink-0 mt-0.5"
-                                  >
-                                    {getStatusIcon(item.status)}
-                                  </button>
-
-                                  {/* Content */}
-                                  <div className="min-w-0 flex-1 space-y-1">
-                                    <div className="flex items-center gap-2">
-                                      <span
-                                        className={`text-sm font-semibold truncate ${
-                                          isCompleted
-                                            ? "line-through text-slate-400 dark:text-slate-500"
-                                            : isDropped
-                                              ? "line-through text-rose-400/70"
-                                              : "text-slate-900 dark:text-slate-100"
-                                        }`}
-                                      >
-                                        {item.title}
-                                      </span>
-                                    </div>
-
-                                    {item.subtitle && (
-                                      <p className="text-xs text-slate-500 truncate">
-                                        {item.subtitle}
-                                      </p>
-                                    )}
-
-                                    {/* Tags or notes indicator */}
-                                    <div className="flex items-center gap-2 pt-1 text-[10px] font-mono text-slate-400">
-                                      {/* {item.notes && (
-                                        <span className="text-indigo-400 font-sans">
-                                          Has notes
-                                        </span>
-                                      )} */}
-                                      {item.dueDate && (
-                                        <>
-                                          {item.notes && <span>·</span>}
-                                          <span className="text-cyan-500">
-                                            Due {item.dueDate}
-                                          </span>
-                                        </>
-                                      )}
-                                      {item.tags && item.tags.length > 0 && (
-                                        <>
-                                          {/* {(item.notes || item.dueDate) && (
-                                            <span>·</span>
-                                          )} */}
-                                          <span className="text-slate-400 truncate">
-                                            {item.tags
-                                              .map((t) => `#${t}`)
-                                              .join(" ")}
-                                          </span>
-                                        </>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-
-                                {/* Right/Bottom Actions: Status Badge, 3-Dot Trigger, Delete */}
-                                <div
-                                  className={`flex items-center gap-2 shrink-0 ${viewMode === "grid" ? "w-full justify-between pt-2 border-t border-slate-100 dark:border-slate-800/60" : ""}`}
-                                >
-                                  {/* Status Clickable Text Badge */}
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      const rect = (
-                                        e.currentTarget as HTMLElement
-                                      ).getBoundingClientRect();
-                                      setActiveStatusPicker({
-                                        itemId: item.id,
-                                        status: item.status,
-                                        position: {
-                                          x: rect.left - 40,
-                                          y: rect.bottom + 6,
-                                        },
-                                      });
-                                    }}
-                                    className="text-[11px] font-mono uppercase text-slate-400 hover:text-indigo-400 transition-colors cursor-pointer"
-                                  >
-                                    {getStatusLabel(item.status)}
-                                  </button>
-
-                                  <div className="flex items-center gap-1">
-                                    <button
-                                      type="button"
-                                      onClick={handleThreeDotClick}
-                                      title="Item options"
-                                      className="p-1 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
-                                    >
-                                      <MoreVertical className="w-3.5 h-3.5" />
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
+                        {/* Collapsible content */}
+                        {!isCollapsed &&
+                          (effectiveSub === "none" ? (
+                            renderItemsGrid(items)
+                          ) : (
+                            <div className="space-y-4 pl-2 border-l border-slate-200/70 dark:border-slate-800/60">
+                              {renderSubGroups(items, effectiveSub)}
+                            </div>
+                          ))}
                       </section>
                     );
                   });
