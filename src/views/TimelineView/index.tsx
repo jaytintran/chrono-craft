@@ -10,18 +10,15 @@ import {
   CheckCircle2,
   History,
 } from "lucide-react";
-import { EntryType, TimelineEntry, TimelineDisplayMode } from "../types";
-import { NLPInputBar } from "../components/NLPInputBar";
-import { toLocalDateKey } from "../utils/date";
+import { EntryType, TimelineEntry, TimelineDisplayMode } from "../../types";
+import { NLPInputBar } from "../../components/NLPInputBar";
+import { toLocalDateKey } from "../../utils/date";
 
-import { CustomCalendarDropdown } from "../components/CustomCalendarDropdown";
-import { CustomTimePickerPopover } from "../components/CustomTimePickerPopover";
-import { SearchBar } from "../components/SearchBar";
-import { TimelineSearchView } from "../components/TimelineSearchView";
-import {
-  TimelineEntryRow,
-  ProcessedTimelineItem,
-} from "../components/TimelineEntryRow";
+import { CustomCalendarDropdown } from "../../components/modals/CustomCalendarDropdown";
+import { CustomTimePickerPopover } from "../../components/modals/CustomTimePickerPopover";
+import { SearchBar } from "../../components/ui/SearchBar";
+import { TimelineSearchView } from "./TimelineSearchView";
+import { TimelineEntryRow, ProcessedTimelineItem } from "./TimelineEntryRow";
 
 import { Keyboard } from "@capacitor/keyboard";
 

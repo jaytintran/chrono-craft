@@ -34,13 +34,13 @@ import {
   ListItem,
   ListItemStatus,
   Note,
-} from "../types";
+} from "../../types";
 
-import { CreateListModal } from "../components/CreateListModal";
-import { ConfirmDialog } from "../components/ConfirmDialog";
-import { StatusPickerPopover } from "../components/StatusPickerPopover";
-import { stripHtml } from "../components/RichTextEditor";
-import { SearchBar } from "../components/SearchBar";
+import { CreateListModal } from "../../components/modals/CreateListModal";
+import { ConfirmDialog } from "../../components/ui/ConfirmDialog";
+import { StatusPickerPopover } from "../../components/ui/StatusPickerPopover";
+import { stripHtml } from "../../components/editors/RichTextEditor";
+import { SearchBar } from "../../components/ui/SearchBar";
 
 import {
   LISTS_FILTER_GROUPS,
@@ -48,7 +48,7 @@ import {
   GroupBy,
   SubGroupBy,
   CANONICAL_STATUS_ORDER,
-} from "./ListsView/constants";
+} from "./constants";
 
 interface ListsViewProps {
   lists: CustomList[];
@@ -76,14 +76,15 @@ interface ListsViewProps {
   onCreateLinkedEvent: (listId: string) => void;
 }
 
-import { MultiGroupFilterPopover } from "../components/MultiGroupFilterPopover";
+import { MultiGroupFilterPopover } from "../../components/ui/MultiGroupFilterPopover";
 import {
   formatCreatedDate,
   getGroupPillClasses,
   parseTagsFromTitle,
-} from "./ListsView/helpers";
-import { TagAutocompleteInput } from "../components/TagAutocompleteInput";
-import { LinkedCreateCard } from "./ListsView/LinkedCreateCard";
+} from "./helpers";
+import { TagAutocompleteInput } from "../../components/TagAutocompleteInput";
+import { LinkedCreateCard } from "./LinkedCreateCard";
+import { ItemsGrid } from "./ItemsGrid";
 
 export const ListsView: React.FC<ListsViewProps> = ({
   lists,
@@ -312,24 +313,6 @@ export const ListsView: React.FC<ListsViewProps> = ({
     }
   };
 
-  const getStatusIcon = (status: ListItemStatus) => {
-    switch (status) {
-      case "in-progress":
-        return <PlayCircle className="w-4 h-4 text-amber-400" />;
-      case "completed":
-      case "done":
-        return <CheckCircle2 className="w-4 h-4 text-emerald-400" />;
-      case "dropped":
-        return <MinusCircle className="w-4 h-4 text-rose-400" />;
-      case "maybe-later":
-        return <Bookmark className="w-4 h-4 text-violet-400" />;
-      case "inbox":
-      case "todo":
-      default:
-        return <Inbox className="w-4 h-4 text-slate-400" />;
-    }
-  };
-
   const getStatusLabel = (status: ListItemStatus) => {
     switch (status) {
       case "in-progress":
@@ -412,204 +395,6 @@ export const ListsView: React.FC<ListsViewProps> = ({
     </div>
   );
 
-  // ---- renderItem: extracted per-item card (compact / stacked / grid) ----
-  const renderItem = (item: ListItem) => {
-    const isCompleted = item.status === "completed" || item.status === "done";
-    const isDropped = item.status === "dropped";
-
-    const handleContextMenuTrigger = (e: React.MouseEvent) => {
-      e.preventDefault();
-      if (onOpenContextMenu) {
-        onOpenContextMenu(item, { x: e.clientX, y: e.clientY });
-      }
-    };
-
-    const handleThreeDotClick = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      if (onOpenContextMenu) {
-        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-        onOpenContextMenu(item, { x: rect.left, y: rect.bottom + 4 });
-      }
-    };
-
-    // ============ VIEW MODE: COMPACT ROW ============
-    if (viewMode === "compact") {
-      return (
-        <div
-          key={item.id}
-          onClick={() => onOpenItemDetail?.(item)}
-          onContextMenu={handleContextMenuTrigger}
-          className="group flex items-center justify-between px-3 py-2 rounded-xl bg-white dark:bg-[#131926] border border-slate-200 dark:border-slate-800/80 hover:border-indigo-500/40 shadow-2xs transition-all cursor-pointer"
-        >
-          <div className="flex items-center gap-2.5 min-w-0">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                const rect = (
-                  e.currentTarget as HTMLElement
-                ).getBoundingClientRect();
-                setActiveStatusPicker({
-                  itemId: item.id,
-                  status: item.status,
-                  position: { x: rect.left, y: rect.bottom + 6 },
-                });
-              }}
-              title={`Status: ${getStatusLabel(item.status)} (click to change)`}
-              className="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-all hover:scale-110 cursor-pointer shrink-0"
-            >
-              {getStatusIcon(item.status)}
-            </button>
-
-            <span
-              className={`text-xs font-semibold truncate ${
-                isCompleted
-                  ? "line-through text-slate-400 dark:text-slate-500"
-                  : isDropped
-                    ? "line-through text-rose-400/70"
-                    : "text-slate-900 dark:text-slate-100"
-              }`}
-            >
-              {item.title}
-            </span>
-
-            {item.subtitle && (
-              <span className="text-[11px] text-slate-400 truncate hidden sm:inline">
-                · {item.subtitle}
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            {item.dueDate && (
-              <span className="text-[10px] font-mono text-cyan-600 dark:text-cyan-400 hidden sm:inline">
-                {item.dueDate}
-              </span>
-            )}
-
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                const rect = (
-                  e.currentTarget as HTMLElement
-                ).getBoundingClientRect();
-                setActiveStatusPicker({
-                  itemId: item.id,
-                  status: item.status,
-                  position: { x: rect.left - 40, y: rect.bottom + 6 },
-                });
-              }}
-              className="text-[10px] font-mono uppercase text-slate-400 hover:text-indigo-400 transition-colors cursor-pointer"
-            >
-              {getStatusLabel(item.status)}
-            </button>
-
-            <button
-              type="button"
-              onClick={handleThreeDotClick}
-              title="Item options"
-              className="p-1 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
-            >
-              <MoreVertical className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-      );
-    }
-
-    // ============ VIEW MODE: STACKED & GRID CARDS ============
-    return (
-      <div
-        key={item.id}
-        onClick={() => onOpenItemDetail?.(item)}
-        onContextMenu={handleContextMenuTrigger}
-        className={`group flex items-start justify-between p-4 rounded-2xl bg-white dark:bg-[#131926] border border-slate-200 dark:border-slate-800/80 hover:border-indigo-500/40 shadow-xs transition-all cursor-pointer ${
-          viewMode === "grid" ? "flex-col gap-3" : "gap-4"
-        }`}
-      >
-        <div className="flex items-start gap-3 min-w-0 w-full">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              const rect = (
-                e.currentTarget as HTMLElement
-              ).getBoundingClientRect();
-              setActiveStatusPicker({
-                itemId: item.id,
-                status: item.status,
-                position: { x: rect.left, y: rect.bottom + 6 },
-              });
-            }}
-            title={`Status: ${getStatusLabel(item.status)} (click to change)`}
-            className="p-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-all hover:scale-110 cursor-pointer shrink-0 mt-0.5"
-          >
-            {getStatusIcon(item.status)}
-          </button>
-
-          <div className="min-w-0 flex-1 space-y-1">
-            <div className="flex items-center justify-between gap-2">
-              <span
-                className={`text-sm font-semibold truncate ${
-                  isCompleted
-                    ? "line-through text-slate-400 dark:text-slate-500"
-                    : isDropped
-                      ? "line-through text-rose-400/70"
-                      : "text-slate-900 dark:text-slate-100"
-                }`}
-              >
-                {item.title}
-              </span>
-
-              <button
-                type="button"
-                onClick={handleThreeDotClick}
-                title="Item options"
-                className="p-1 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
-              >
-                <MoreVertical className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            {item.subtitle && (
-              <p className="text-xs text-slate-500 truncate">{item.subtitle}</p>
-            )}
-
-            <div className="flex items-center gap-2 pt-1 text-[10px] font-mono text-slate-400">
-              {item.dueDate && (
-                <span className="text-cyan-500">Due {item.dueDate}</span>
-              )}
-              {item.tags && item.tags.length > 0 && (
-                <span className="text-slate-400 truncate">
-                  {item.tags.map((t) => `#${t}`).join(" ")}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // ---- renderItemsGrid: wrapper that lays out renderItem()s ----
-  const renderItemsGrid = (items: ListItem[]) => (
-    <div
-      className={
-        viewMode === "grid"
-          ? "grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-3.5"
-          : viewMode === "compact"
-            ? "space-y-1.5"
-            : "space-y-2.5"
-      }
-    >
-      {items.map(renderItem)}
-    </div>
-  );
-
-  // ---- renderItemsFlat: alias for the "none" group branch ----
-  const renderItemsFlat = (items: ListItem[]) => renderItemsGrid(items);
-
   // ---- renderSubGroups ---
   const renderSubGroups = (items: ListItem[], keyBy: "tag" | "status") => {
     const sub: Record<string, ListItem[]> = {};
@@ -658,7 +443,19 @@ export const ListsView: React.FC<ListsViewProps> = ({
             <span>{label}</span>
             <span className="tabular-nums">· {list.length}</span>
           </div>
-          {renderItemsGrid(list)}
+          <ItemsGrid
+            items={list}
+            viewMode={viewMode}
+            onOpenStatusPicker={(it, rect, status) =>
+              setActiveStatusPicker({
+                itemId: it.id,
+                status,
+                position: { x: rect.left, y: rect.bottom + 6 },
+              })
+            }
+            onOpenItemDetail={onOpenItemDetail}
+            onOpenContextMenu={onOpenContextMenu}
+          />
         </div>
       );
     });
@@ -1062,8 +859,23 @@ export const ListsView: React.FC<ListsViewProps> = ({
                 </div>
               ) : (
                 (() => {
+                  // AFTER
                   if (groupBy === "none") {
-                    return renderItemsFlat(filteredItems);
+                    return (
+                      <ItemsGrid
+                        items={filteredItems}
+                        viewMode={viewMode}
+                        onOpenStatusPicker={(item, rect, status) =>
+                          setActiveStatusPicker({
+                            itemId: item.id,
+                            status,
+                            position: { x: rect.left, y: rect.bottom + 6 },
+                          })
+                        }
+                        onOpenItemDetail={onOpenItemDetail}
+                        onOpenContextMenu={onOpenContextMenu}
+                      />
+                    );
                   }
 
                   const effectiveSub =
@@ -1133,11 +945,26 @@ export const ListsView: React.FC<ListsViewProps> = ({
                           </span>
                           <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800/80" />
                         </button>
-
                         {/* Collapsible content */}
+
                         {!isCollapsed &&
                           (effectiveSub === "none" ? (
-                            renderItemsGrid(items)
+                            <ItemsGrid
+                              items={items}
+                              viewMode={viewMode}
+                              onOpenStatusPicker={(it, rect, status) =>
+                                setActiveStatusPicker({
+                                  itemId: it.id,
+                                  status,
+                                  position: {
+                                    x: rect.left,
+                                    y: rect.bottom + 6,
+                                  },
+                                })
+                              }
+                              onOpenItemDetail={onOpenItemDetail}
+                              onOpenContextMenu={onOpenContextMenu}
+                            />
                           ) : (
                             <div className="space-y-4 pl-2 border-l border-slate-200/70 dark:border-slate-800/60">
                               {renderSubGroups(items, effectiveSub)}

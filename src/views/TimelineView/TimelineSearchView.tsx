@@ -7,10 +7,10 @@
 
 import React, { useMemo } from "react";
 import { Search, SearchX, X } from "lucide-react";
-import { TimelineEntry, TimelineDisplayMode } from "../types";
+import { TimelineEntry, TimelineDisplayMode } from "../../types";
 import { TimelineEntryRow, ProcessedTimelineItem } from "./TimelineEntryRow";
-import { toLocalDateKey } from "../utils/date";
-import { stripHtml } from "./RichTextEditor";
+import { toLocalDateKey } from "../../utils/date";
+import { stripHtml } from "../../components/editors/RichTextEditor";
 
 const getEntryAnchorIso = (e: TimelineEntry): string =>
   e.status === "completed" && e.completedAt

@@ -4,19 +4,14 @@
  * "+ New Habit" action, and clickable habit rows opening the specialized DetailSheet.
  */
 
-import React, { useState } from "react";
-import {
-  Flame,
-  Plus,
-  ChevronLeft,
-  ChevronRight,
-  Check,
-  Calendar,
-  Sparkles,
-  TrendingUp,
-} from "lucide-react";
-import { Habit, HabitLog } from "../types";
-import { toLocalDateKey } from "../utils/date";
+import React, { useMemo, useState } from "react";
+import { Flame, Plus, ChevronLeft, ChevronRight, Check } from "lucide-react";
+import { Habit, HabitLog } from "../../types";
+import { toLocalDateKey } from "../../utils/date";
+import { HABITS_VIEW_STORAGE, HabitsRange, HabitsViewMode } from "./constants";
+import { buildDayCells, formatRangeLabel } from "./helpers";
+import { HabitsToolbar } from "./HabitsToolbar";
+import { HabitsCards } from "./HabitsCard";
 
 interface HabitsViewProps {
   habits: Habit[];
@@ -33,46 +28,36 @@ export const HabitsView: React.FC<HabitsViewProps> = ({
   onOpenHabitDetail,
   onOpenCreateHabit,
 }) => {
-  const [weekOffset, setWeekOffset] = useState<number>(0);
-
-  // Compute the 7 days of the selected week (Monday to Sunday)
-  const getWeekDays = (offset: number) => {
-    const now = new Date();
-    // Find current Monday
-    const dayOfWeek = now.getDay(); // 0 is Sunday, 1 is Monday...
-    const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-    const monday = new Date(now);
-    monday.setDate(now.getDate() + diffToMonday + offset * 7);
-
-    const days: Array<{
-      date: Date;
-      dateStr: string;
-      dayName: string;
-      dayNum: number;
-      isToday: boolean;
-      dayIndex: number; // 0 = Sun, 1 = Mon...
-    }> = [];
-
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(monday);
-      d.setDate(monday.getDate() + i);
-      const dStr = toLocalDateKey(d);
-      const todayStr = toLocalDateKey(new Date());
-
-      days.push({
-        date: d,
-        dateStr: dStr,
-        dayName: d.toLocaleDateString("en-US", { weekday: "short" }),
-        dayNum: d.getDate(),
-        isToday: dStr === todayStr,
-        dayIndex: d.getDay(),
-      });
-    }
-
-    return days;
+  // Persisted view mode
+  const [viewMode, setViewMode] = useState<HabitsViewMode>(() => {
+    if (typeof window === "undefined") return "matrix";
+    const v = localStorage.getItem(HABITS_VIEW_STORAGE.mode);
+    return v === "cards" || v === "matrix" ? v : "matrix";
+  });
+  const handleSetViewMode = (m: HabitsViewMode) => {
+    setViewMode(m);
+    localStorage.setItem(HABITS_VIEW_STORAGE.mode, m);
   };
 
-  const weekDays = getWeekDays(weekOffset);
+  // Persisted range
+  const [range, setRange] = useState<HabitsRange>(() => {
+    if (typeof window === "undefined") return "7d";
+    const v = localStorage.getItem(HABITS_VIEW_STORAGE.range);
+    return v === "7d" || v === "14d" || v === "1m" ? v : "7d";
+  });
+  const handleSetRange = (r: HabitsRange) => {
+    setRange(r);
+    localStorage.setItem(HABITS_VIEW_STORAGE.range, r);
+  };
+
+  // Week offset only affects 7D
+  const [weekOffset, setWeekOffset] = useState<number>(0);
+
+  // Rebuild day cells when range or (for 7D) weekOffset changes
+  const weekDays = useMemo(
+    () => buildDayCells(range, range === "7d" ? weekOffset : 0),
+    [range, weekOffset],
+  );
   const logDatesSet = new Set(habitLogs.map((l) => `${l.habitId}_${l.date}`));
 
   // Streak calculator
@@ -143,46 +128,53 @@ export const HabitsView: React.FC<HabitsViewProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          {/* Week Navigation Matching Timeline View Scrubber */}
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => setWeekOffset(weekOffset - 1)}
-              title="Previous Week"
-              className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 transition-colors cursor-pointer"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
+        <div className="flex items-center gap-3 flex-wrap">
+          <HabitsToolbar
+            mode={viewMode}
+            range={range}
+            onChangeMode={handleSetViewMode}
+            onChangeRange={handleSetRange}
+          />
 
-            <button
-              type="button"
-              onClick={() => setWeekOffset(0)}
-              title={
-                weekOffset !== 0
-                  ? "Click to jump to Current Week"
-                  : "Current Week"
-              }
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold font-mono shadow-xs transition-all cursor-pointer ${
-                weekOffset === 0
-                  ? "text-slate-800 dark:text-slate-200 border-indigo-500/40 ring-1 ring-indigo-500/20"
-                  : "text-indigo-500 dark:text-indigo-400 hover:bg-slate-50 dark:hover:bg-slate-800/80"
-              }`}
-            >
-              <span>{weekRangeText}</span>
-            </button>
+          {/* Week nav only for 7D matrix mode */}
+          {range === "7d" && viewMode === "matrix" && (
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setWeekOffset(weekOffset - 1)}
+                title="Previous Week"
+                className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 transition-colors cursor-pointer"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setWeekOffset(0)}
+                title={
+                  weekOffset !== 0
+                    ? "Click to jump to Current Week"
+                    : "Current Week"
+                }
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-bold font-mono shadow-xs transition-all cursor-pointer ${
+                  weekOffset === 0
+                    ? "text-slate-800 dark:text-slate-200 border-indigo-500/40 ring-1 ring-indigo-500/20"
+                    : "text-indigo-500 dark:text-indigo-400 hover:bg-slate-50 dark:hover:bg-slate-800/80"
+                }`}
+              >
+                <span>{formatRangeLabel(weekDays, range)}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setWeekOffset(weekOffset + 1)}
+                title="Next Week"
+                className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 transition-colors cursor-pointer"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
 
-            <button
-              type="button"
-              onClick={() => setWeekOffset(weekOffset + 1)}
-              title="Next Week"
-              className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 transition-colors cursor-pointer"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* + New Habit Action */}
+          {/* + New Habit */}
           <button
             type="button"
             onClick={onOpenCreateHabit}
@@ -194,61 +186,72 @@ export const HabitsView: React.FC<HabitsViewProps> = ({
         </div>
       </div>
 
-      {/* Main Matrix Container */}
+      {/* Main Body */}
       <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
         <div className="max-w-6xl mx-auto space-y-4">
-          {/* Habit Matrix Table */}
-          <div className="rounded-2xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#131926] shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-left">
-                {/* Header Row: Days of Week */}
-                <thead>
-                  <tr className="border-b border-slate-200 dark:border-slate-800/80 bg-slate-50/60 dark:bg-slate-900/40 text-xs">
-                    <th className="py-3.5 px-4 font-semibold text-slate-700 dark:text-slate-300 min-w-[200px]">
-                      Habit Routine
-                    </th>
-                    {weekDays.map((d) => (
-                      <th
-                        key={d.dateStr}
-                        className={`py-3.5 px-2 text-center font-mono font-medium w-14 ${
-                          d.isToday
-                            ? "bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 font-bold"
-                            : "text-slate-500"
-                        }`}
-                      >
-                        <div className="text-[11px] uppercase">{d.dayName}</div>
-                        <div className="text-xs tabular-nums mt-0.5">
-                          {d.dayNum}
-                        </div>
+          {habits.length === 0 ? (
+            <div className="p-12 text-center rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 text-xs text-slate-400">
+              No habits defined yet. Click "+ New Habit" to establish your daily
+              routines.
+            </div>
+          ) : viewMode === "cards" ? (
+            <HabitsCards
+              habits={habits}
+              habitLogs={habitLogs}
+              range={range}
+              onToggleHabitDay={onToggleHabitDay}
+              onOpenHabitDetail={onOpenHabitDetail}
+              formatScheduleBadge={formatScheduleBadge}
+              calculateStreak={calculateStreak}
+            />
+          ) : (
+            <div className="rounded-2xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#131926] shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-left">
+                  <thead>
+                    <tr className="border-b border-slate-200 dark:border-slate-800/80 bg-slate-50/60 dark:bg-slate-900/40 text-xs">
+                      <th className="py-3.5 px-4 font-semibold text-slate-700 dark:text-slate-300 min-w-[200px]">
+                        Habit Routine
                       </th>
-                    ))}
-                    <th className="py-3.5 px-4 text-right font-mono text-xs font-semibold text-slate-500 w-24">
-                      Streak
-                    </th>
-                  </tr>
-                </thead>
-
-                {/* Body Rows */}
-                <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
-                  {habits.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={9}
-                        className="py-12 text-center text-xs text-slate-400"
-                      >
-                        No habits defined yet. Click "+ New Habit" to establish
-                        your daily routines.
-                      </td>
+                      {weekDays.map((d) => (
+                        <th
+                          key={d.dateStr}
+                          className={`py-3.5 px-1 text-center font-mono font-medium ${
+                            weekDays.length > 14
+                              ? "w-7"
+                              : weekDays.length > 7
+                                ? "w-10"
+                                : "w-14"
+                          } ${
+                            d.isToday
+                              ? "bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 font-bold"
+                              : "text-slate-500"
+                          }`}
+                        >
+                          <div className="text-[10px] uppercase">
+                            {weekDays.length > 7 ? d.dayNum : d.dayName}
+                          </div>
+                          {weekDays.length <= 7 && (
+                            <div className="text-xs tabular-nums mt-0.5">
+                              {d.dayNum}
+                            </div>
+                          )}
+                        </th>
+                      ))}
+                      <th className="py-3.5 px-4 text-right font-mono text-xs font-semibold text-slate-500 w-20">
+                        Streak
+                      </th>
                     </tr>
-                  ) : (
-                    habits.map((habit) => {
+                  </thead>
+
+                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
+                    {habits.map((habit) => {
                       const streak = calculateStreak(habit.id);
                       return (
                         <tr
                           key={habit.id}
                           className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition-colors group"
                         >
-                          {/* Habit Title & Cadence (Clickable to open DetailSheet) */}
                           <td
                             onClick={() => onOpenHabitDetail(habit)}
                             className="py-3.5 px-4 cursor-pointer"
@@ -277,7 +280,6 @@ export const HabitsView: React.FC<HabitsViewProps> = ({
                             </div>
                           </td>
 
-                          {/* 7 Day Matrix Check Cells */}
                           {weekDays.map((d) => {
                             const isCompleted = logDatesSet.has(
                               `${habit.id}_${d.dateStr}`,
@@ -285,7 +287,7 @@ export const HabitsView: React.FC<HabitsViewProps> = ({
                             return (
                               <td
                                 key={d.dateStr}
-                                className={`py-3.5 px-2 text-center ${
+                                className={`py-3.5 px-1 text-center ${
                                   d.isToday ? "bg-indigo-500/5" : ""
                                 }`}
                               >
@@ -295,14 +297,18 @@ export const HabitsView: React.FC<HabitsViewProps> = ({
                                     e.stopPropagation();
                                     await onToggleHabitDay(habit.id, d.dateStr);
                                   }}
-                                  title={`${habit.title} on ${d.dateStr}: ${
-                                    isCompleted
-                                      ? "Completed (click to undo)"
-                                      : "Click to complete"
+                                  title={`${habit.title} · ${d.dateStr}${
+                                    isCompleted ? " (click to undo)" : ""
                                   }`}
-                                  className={`w-7 h-7 mx-auto rounded-lg flex items-center justify-center transition-all cursor-pointer ${
+                                  className={`mx-auto rounded-lg flex items-center justify-center transition-all cursor-pointer ${
+                                    weekDays.length > 14
+                                      ? "w-5 h-5"
+                                      : weekDays.length > 7
+                                        ? "w-6 h-6"
+                                        : "w-7 h-7"
+                                  } ${
                                     isCompleted
-                                      ? "shadow-xs text-white scale-105"
+                                      ? "shadow-xs text-white"
                                       : "border border-slate-200 dark:border-slate-700/80 hover:border-slate-400 dark:hover:border-slate-500 bg-white/40 dark:bg-slate-900/40 text-transparent hover:text-slate-300"
                                   }`}
                                   style={{
@@ -311,13 +317,12 @@ export const HabitsView: React.FC<HabitsViewProps> = ({
                                       : undefined,
                                   }}
                                 >
-                                  <Check className="w-4 h-4 stroke-[2.5]" />
+                                  <Check className="w-3.5 h-3.5 stroke-[2.5]" />
                                 </button>
                               </td>
                             );
                           })}
 
-                          {/* Streak Counter */}
                           <td className="py-3.5 px-4 text-right">
                             <span className="inline-flex items-center gap-1 font-mono text-xs font-bold text-amber-500 tabular-nums">
                               <Flame className="w-3.5 h-3.5 fill-amber-500/20" />
@@ -326,12 +331,12 @@ export const HabitsView: React.FC<HabitsViewProps> = ({
                           </td>
                         </tr>
                       );
-                    })
-                  )}
-                </tbody>
-              </table>
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

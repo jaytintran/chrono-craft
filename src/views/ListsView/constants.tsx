@@ -1,4 +1,4 @@
-import { FilterGroup } from "@/src/components/MultiGroupFilterPopover";
+import { FilterGroup } from "@/src/components/ui/MultiGroupFilterPopover";
 import {
   AlignJustify,
   Bookmark,

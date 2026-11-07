@@ -25,8 +25,8 @@ import {
   HardDrive,
   AlertTriangle,
 } from "lucide-react";
-import { AppSettings, TimelineDisplayMode } from "../types";
-import { appDb } from "../services/db";
+import { AppSettings, TimelineDisplayMode } from "../../types";
+import { appDb } from "../../services/db";
 
 interface SettingsModalProps {
   isOpen: boolean;

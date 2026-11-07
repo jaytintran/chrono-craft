@@ -16,20 +16,21 @@ import {
   MoreVertical,
   Trophy,
 } from "lucide-react";
-import { CalendarEvent, CustomList, TimelineEntry } from "../types";
-import { RichContent } from "../components/RichContent";
+import { CalendarEvent, CustomList, TimelineEntry } from "../../types";
+import { RichContent } from "../../components/editors/RichContent";
 import {
   MultiGroupFilterPopover,
   FilterGroup,
-} from "../components/MultiGroupFilterPopover";
+} from "../../components/ui/MultiGroupFilterPopover";
 
-import { stripHtml } from "../components/RichTextEditor";
-import { toLocalDateKey } from "../utils/date";
+import { stripHtml } from "../../components/editors/RichTextEditor";
+import { toLocalDateKey } from "../../utils/date";
+import { EventDatePickerModal } from "./EventDatePickerModal";
 
 interface EventsViewProps {
   events: CalendarEvent[];
   timelineEvents: TimelineEntry[];
-  onOpenCreateEvent: () => void;
+  onOpenCreateEvent: (prefillDate?: Date) => void;
   onOpenEditEvent: (event: CalendarEvent) => void;
   onDeleteEvent: (id: string) => Promise<void>;
   onResolveEvent: (
@@ -113,6 +114,7 @@ export const EventsView: React.FC<EventsViewProps> = ({
   onResolveEvent,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
   // Persistent Filter & Sort State from localStorage
   const [filterOptions, setFilterOptions] = useState<EventsFilterStorage>(
@@ -270,7 +272,7 @@ export const EventsView: React.FC<EventsViewProps> = ({
           {/* + New Event Button */}
           <button
             type="button"
-            onClick={onOpenCreateEvent}
+            onClick={() => setIsDatePickerOpen(true)}
             className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4" />
@@ -563,6 +565,16 @@ export const EventsView: React.FC<EventsViewProps> = ({
           )}
         </div>
       </div>
+
+      {/* Pre-creation date picker */}
+      <EventDatePickerModal
+        isOpen={isDatePickerOpen}
+        onClose={() => setIsDatePickerOpen(false)}
+        onPickDate={(date) => {
+          setIsDatePickerOpen(false);
+          onOpenCreateEvent(date);
+        }}
+      />
     </div>
   );
 };

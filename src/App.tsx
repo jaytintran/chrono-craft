@@ -19,12 +19,12 @@ import {
   TimelineEntry,
 } from "./types";
 import { appDb } from "./services/db";
-import { Header } from "./components/Header";
-import { Sidebar } from "./components/Sidebar";
-import { DetailSheet, DetailSheetMode } from "./components/DetailSheet";
-import { SettingsModal } from "./components/SettingsModal";
-import { CreateListModal } from "./components/CreateListModal";
-import { ContextMenu, ContextMenuTarget } from "./components/ContextMenu";
+import { Header } from "./components/layout/Header";
+import { Sidebar } from "./components/layout/Sidebar";
+import { DetailSheet, DetailSheetMode } from "@/components/detailSheet";
+import { SettingsModal } from "./components/modals/SettingsModal";
+import { CreateListModal } from "./components/modals/CreateListModal";
+import { ContextMenu, ContextMenuTarget } from "./components/menu/ContextMenu";
 
 import { FocusView } from "./views/FocusView";
 import { TimelineView } from "./views/TimelineView";
@@ -894,13 +894,26 @@ export default function App() {
             <EventsView
               events={events}
               timelineEvents={timelineEvents}
-              onOpenCreateEvent={() =>
+              onOpenCreateEvent={(prefillDate) => {
+                // Preserve the current time-of-day so a same-day event doesn't jump to midnight,
+                // but honour the user's chosen date.
+                const base = prefillDate ? new Date(prefillDate) : new Date();
+                if (prefillDate) {
+                  const now = new Date();
+                  base.setHours(now.getHours(), now.getMinutes(), 0, 0);
+                }
+                const endBase = new Date(base);
+                endBase.setHours(base.getHours() + 1);
+
                 setSheetMode({
                   type: "event",
-                  data: {},
+                  data: {
+                    startAt: base.toISOString(),
+                    endAt: endBase.toISOString(),
+                  },
                   isNew: true,
-                })
-              }
+                });
+              }}
               onOpenEditEvent={(event) =>
                 setSheetMode({
                   type: "event",

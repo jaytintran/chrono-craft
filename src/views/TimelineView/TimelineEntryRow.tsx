@@ -15,10 +15,10 @@ import {
   Hourglass,
   MoreVertical,
 } from "lucide-react";
-import { TimelineEntry, TimelineDisplayMode } from "../types";
-import { InlineTitle } from "./InlineTitle";
-import { RichContent } from "./RichContent";
-import { toLocalDateKey } from "../utils/date";
+import { TimelineEntry, TimelineDisplayMode } from "../../types";
+import { InlineTitle } from "../../components/ui/InlineTitle";
+import { RichContent } from "../../components/editors/RichContent";
+import { toLocalDateKey } from "../../utils/date";
 
 export interface ProcessedTimelineItem {
   id: string;
@@ -287,11 +287,6 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
                     : "text-slate-900 dark:text-slate-100"
                 }`}
               />
-              {entry.priority === "high" && (
-                <span className="text-[9px] font-mono text-rose-500 font-bold uppercase shrink-0">
-                  !HIGH
-                </span>
-              )}
             </div>
             <button
               type="button"
@@ -409,11 +404,6 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
                     : "text-slate-900 dark:text-slate-100"
                 }`}
               />
-              {entry.priority === "high" && (
-                <span className="text-[10px] font-mono text-rose-500 font-bold uppercase">
-                  !HIGH
-                </span>
-              )}
             </div>
             <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-mono">
               <span className="uppercase text-[11px] text-indigo-400 font-semibold font-sans">

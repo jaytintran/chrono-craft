@@ -16,10 +16,10 @@ import {
   Tag,
   MoreVertical,
 } from "lucide-react";
-import { Note, TimelineEntry } from "../types";
-import { stripHtml } from "../components/RichTextEditor";
-import { RichContent } from "../components/RichContent";
-import { FilterSelect } from "../components/FilterSelect";
+import { Note, TimelineEntry } from "../../types";
+import { stripHtml } from "../../components/editors/RichTextEditor";
+import { RichContent } from "../../components/editors/RichContent";
+import { FilterSelect } from "../../components/ui/FilterSelect";
 
 interface NotesViewProps {
   notes: Note[];

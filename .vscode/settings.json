@@ -1,0 +1,25 @@
+{
+  "customFileOrder.rules": {
+    "src/views": {
+      "order": [
+        "FocusView",
+        "TimelineView",
+        "EventsView",
+        "HabitsView",
+        "ListsView",
+        "NotesView"
+      ]
+    },
+    "src/views/FocusView": {
+      "order": [
+        "index.tsx",
+        "CreateTabModal.tsx",
+        "EditTabModal.tsx",
+        "MobileTabPicker.tsx",
+        "TodayTab.tsx",
+        "ScratchpadTab.tsx",
+        "CustomTabView.tsx"
+      ]
+    }
+  }
+}
