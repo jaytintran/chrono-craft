@@ -118,7 +118,11 @@ export const ItemCard: React.FC<ItemCardProps> = ({
                   : "text-slate-900 dark:text-slate-100"
             }`}
           >
-            {item.title}
+            {item.title || (
+              <span className="text-slate-400 dark:text-slate-500">
+                Untitled Item
+              </span>
+            )}
           </span>
 
           {item.subtitle && (
@@ -186,7 +190,11 @@ export const ItemCard: React.FC<ItemCardProps> = ({
                     : "text-slate-900 dark:text-slate-100"
               }`}
             >
-              {item.title}
+              {item.title || (
+                <span className="text-slate-400 dark:text-slate-500">
+                  Untitled Item
+                </span>
+              )}
             </span>
 
             <button

@@ -43,7 +43,7 @@ export const ListItemForm = React.forwardRef<
     collect: () => ({
       id: data.id,
       listId: listId || data.listId || availableLists[0]?.id || "projects",
-      title: title.trim() || "Untitled Item",
+      title: title.trim(),
       subtitle: subtitle.trim() || undefined,
       status,
       notes: notes.trim() || undefined,

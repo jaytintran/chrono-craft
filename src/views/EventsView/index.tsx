@@ -445,10 +445,12 @@ export const EventsView: React.FC<EventsViewProps> = ({
                             ? "text-amber-600 dark:text-amber-400"
                             : isDone || isMissed
                               ? "line-through text-slate-400 dark:text-slate-500"
-                              : "text-slate-900 dark:text-slate-100 group-hover:text-rose-500"
+                              : event.title
+                                ? "text-slate-900 dark:text-slate-100 group-hover:text-rose-500"
+                                : "text-slate-400 dark:text-slate-500"
                         }`}
                       >
-                        {event.title}
+                        {event.title || "Untitled Event"}
                       </h3>
 
                       {isAchievement && (

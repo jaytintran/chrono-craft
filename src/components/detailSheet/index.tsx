@@ -111,29 +111,6 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
 
   if (!sheetMode) return null;
 
-  // Called ONLY from the "Create …" button in the footer (create mode)
-  const handleCreate = () => {
-    if (!sheetMode) return;
-    const collected = collectCurrentDraft();
-    if (!collected) return;
-
-    switch (collected.kind) {
-      case "note":
-        onSaveNote?.(collected.payload);
-        break;
-      case "event":
-        onSaveEvent?.(collected.payload);
-        break;
-      case "habit":
-        onSaveHabit?.(collected.payload);
-        break;
-      case "list_item":
-        onSaveListItem?.(collected.payload);
-        break;
-    }
-    onClose();
-  };
-
   // Unified close: flush edits in edit mode, discard in create mode
   const handleClose = () => {
     if (sheetMode && !sheetMode.isNew) flushAutosave();
@@ -358,45 +335,12 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
     </div>
   );
 
-  const footer = sheetMode.isNew ? (
-    <div className="flex items-center justify-between gap-3 px-4 md:px-6 py-3 md:py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-[#0E131E] shrink-0">
-      <div />
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={onClose}
-          className="px-4 py-2 rounded-lg text-xs font-medium text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          onClick={handleCreate}
-          className="flex items-center gap-1.5 px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md transition-all cursor-pointer"
-        >
-          <Check className="w-4 h-4" />
-          <span>Create {saveLabel.replace(/^Save\s+/, "")}</span>
-        </button>
-      </div>
-    </div>
-  ) : null;
-
   return (
     <>
       {/* ================= MOBILE: FULL-SCREEN PANEL ================= */}
-      <div
-        className="md:hidden fixed inset-0 z-50 bg-white dark:bg-[#111724] flex flex-col animate-slideInRight"
-        onKeyDown={(e) => {
-          if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-            e.preventDefault();
-            if (sheetMode.isNew) handleCreate();
-            else handleClose();
-          }
-        }}
-      >
+      <div className="md:hidden fixed inset-0 z-50 bg-white dark:bg-[#111724] flex flex-col animate-slideInRight">
         {header}
         {body}
-        {footer}
       </div>
 
       {/* ================= DESKTOP: CENTERED MODAL ================= */}
@@ -408,17 +352,9 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
 
         <div
           className={`relative w-full ${sheetMode.type === "habit" ? "max-w-lg" : "max-w-3xl"} bg-white dark:bg-[#111724] rounded-2xl shadow-2xl flex flex-col z-10 border border-slate-200 dark:border-slate-800 animate-scaleUp overflow-hidden max-h-[85vh]`}
-          onKeyDown={(e) => {
-            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-              e.preventDefault();
-              if (sheetMode.isNew) handleCreate();
-              else handleClose();
-            }
-          }}
         >
           {header}
           {body}
-          {footer}
         </div>
       </div>
 

@@ -54,7 +54,7 @@ export const NoteForm = React.forwardRef<NoteFormHandle, NoteFormProps>(
     React.useImperativeHandle(ref, () => ({
       collect: () => ({
         id: data.id,
-        title: title.trim() || "Untitled Note",
+        title: title.trim(),
         content,
         tags,
         listIds,

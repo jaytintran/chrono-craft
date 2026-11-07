@@ -246,7 +246,11 @@ export const NotesView: React.FC<NotesViewProps> = ({
                   <div className="space-y-2">
                     <div className="flex items-start justify-between gap-2">
                       <h3 className="font-semibold text-sm text-slate-900 dark:text-slate-100 group-hover:text-amber-500 transition-colors line-clamp-1">
-                        {note.title}
+                        {note.title || (
+                          <span className="text-slate-400 dark:text-slate-500">
+                            Untitled Note
+                          </span>
+                        )}
                       </h3>
                       {note.isPinned && (
                         <Pin className="w-3.5 h-3.5 text-amber-400 shrink-0" />

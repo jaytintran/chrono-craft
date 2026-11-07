@@ -292,10 +292,64 @@ export default function App() {
     }
   };
 
+  const handleCreateNote = async (prefill?: Partial<Note>) => {
+    const now = new Date().toISOString();
+    const draft: Note = {
+      id: crypto.randomUUID(),
+      title: "",
+      content: "",
+      tags: [],
+      listIds: [],
+      createdAt: now,
+      updatedAt: now,
+      isPinned: false,
+      ...prefill,
+    };
+    await appDb.put("notes", draft);
+    setSheetMode({ type: "note", data: draft, isNew: false });
+  };
+
+  const handleCreateLinkedNote = async (listId: string) => {
+    await handleCreateNote({ listIds: [listId] });
+  };
+
+  const handleCreateEvent = async (prefillDate?: Date, listId?: string) => {
+    const now = new Date().toISOString();
+    const start = prefillDate ? new Date(prefillDate) : new Date();
+    if (prefillDate) {
+      const t = new Date();
+      start.setHours(t.getHours(), t.getMinutes(), 0, 0);
+    } else {
+      start.setHours(9, 0, 0, 0);
+    }
+    const end = new Date(start);
+    end.setHours(start.getHours() + 1);
+
+    const draft: CalendarEvent = {
+      id: crypto.randomUUID(),
+      title: "",
+      description: "",
+      startAt: start.toISOString(),
+      endAt: end.toISOString(),
+      allDay: false,
+      category: "personal",
+      tags: [],
+      listIds: listId ? [listId] : [],
+      createdAt: now,
+    };
+    await appDb.put("events", draft);
+    setSheetMode({ type: "event", data: draft, isNew: false });
+  };
+
+  const handleCreateLinkedEvent = async (listId: string) => {
+    await handleCreateEvent(undefined, listId);
+  };
+
   // Notes
   const handleSaveNote = async (noteData: Partial<Note>) => {
     const now = new Date().toISOString();
 
+    // 1. Timeline-born note → write back to the entries store
     const linked = findLinkedEntry(noteData.id, "note");
     if (linked) {
       await appDb.put("entries", {
@@ -314,28 +368,17 @@ export default function App() {
       return;
     }
 
-    if (noteData.id && !noteData.id.startsWith("tl_")) {
-      const existing = notes.find((n) => n.id === noteData.id);
-      if (existing) {
-        await appDb.put("notes", {
-          ...existing,
-          ...noteData,
-          updatedAt: now,
-        });
-        return;
-      }
-    }
-    const id =
-      "note_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
-    await appDb.put<Note>("notes", {
-      id,
-      title: noteData.title || "Untitled Note",
-      content: noteData.content || "",
-      tags: noteData.tags || [],
-      listIds: noteData.listIds || [],
-      createdAt: now,
+    // 2. Plain note → update-in-place only (never create here)
+    if (!noteData.id || noteData.id.startsWith("tl_")) return;
+
+    const existing = notes.find((n) => n.id === noteData.id);
+    if (!existing) return; // draft was deleted; drop stale write
+
+    await appDb.put("notes", {
+      ...existing,
+      ...noteData,
+      title: noteData.title ?? existing.title,
       updatedAt: now,
-      isPinned: noteData.isPinned || false,
     });
   };
 
@@ -349,6 +392,7 @@ export default function App() {
   const handleSaveEvent = async (eventData: Partial<CalendarEvent>) => {
     const now = new Date().toISOString();
 
+    // 1. Timeline-born event → write back to entries store
     const linked = findLinkedEntry(eventData.id, "event");
     if (linked) {
       await appDb.put("entries", {
@@ -370,30 +414,16 @@ export default function App() {
       return;
     }
 
-    if (eventData.id && !eventData.id.startsWith("tl_")) {
-      const existing = events.find((e) => e.id === eventData.id);
-      if (existing) {
-        await appDb.put("events", {
-          ...existing,
-          ...eventData,
-        });
-        return;
-      }
-    }
-    const id =
-      "event_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
-    await appDb.put<CalendarEvent>("events", {
-      id,
-      title: eventData.title || "Untitled Event",
-      description: eventData.description || "",
-      startAt: eventData.startAt || now,
-      endAt: eventData.endAt,
-      allDay: eventData.allDay || false,
-      tags: eventData.tags || [],
-      listIds: eventData.listIds || [],
-      createdAt: now,
-      isAchievement: eventData.isAchievement ?? false,
-    });
+    // 2. Plain event → update-in-place only
+    if (!eventData.id || eventData.id.startsWith("tl_")) return;
+
+    const existing = events.find((e) => e.id === eventData.id);
+    if (!existing) return;
+
+    await appDb.put("events", { ...existing, ...eventData });
+
+    // `now` unused in this branch — kept for symmetry with note save; safe to remove
+    void now;
   };
 
   const handleDeleteEvent = async (id: string) => {
@@ -545,16 +575,52 @@ export default function App() {
 
   const handleContextMenuReschedule = async (item: any, date: Date) => {
     const isoDate = date.toISOString();
+
+    // 1. CalendarEvent (events store)
     if (item.startAt !== undefined) {
-      await appDb.put("events", {
-        ...item,
-        startAt: isoDate,
-      });
-    } else {
-      await appDb.put("entries", {
-        ...item,
-        scheduledAt: isoDate,
-      });
+      await appDb.put("events", { ...item, startAt: isoDate });
+      return;
+    }
+
+    // 2. TimelineEntry (entries store) — must actually be an entry.
+    //    Gate on `type` + `source` presence so notes / list items never
+    //    leak into the entries store by accident.
+    if (
+      item.type !== undefined &&
+      item.source !== undefined &&
+      item.id !== undefined
+    ) {
+      // Time blocks: shift the whole block window, not just scheduledAt
+      if (item.type === "timeblock" && item.timeBlock) {
+        const oldStart = new Date(item.timeBlock.startIso).getTime();
+        const oldEnd = new Date(item.timeBlock.endIso).getTime();
+        const duration = Math.max(0, oldEnd - oldStart);
+        const newStart = new Date(isoDate);
+        const newEnd = new Date(newStart.getTime() + duration);
+
+        await appDb.put("entries", {
+          ...item,
+          scheduledAt: isoDate,
+          timeBlock: {
+            ...item.timeBlock,
+            startIso: newStart.toISOString(),
+            endIso: newEnd.toISOString(),
+          },
+        });
+        return;
+      }
+
+      await appDb.put("entries", { ...item, scheduledAt: isoDate });
+      return;
+    }
+
+    // 3. Anything else: refuse loudly in dev, silently in prod.
+    //    If you see this warning, a caller bypassed the ContextMenu gate.
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(
+        "[handleContextMenuReschedule] Called on an unsupported item shape:",
+        item,
+      );
     }
   };
 
@@ -587,12 +653,29 @@ export default function App() {
     }
   };
 
-  const handleContextMenuDelete = async (item: any) => {
+  const handleContextMenuSetTags = async (item: any, nextTags: string[]) => {
     if (item.listId !== undefined) {
+      await appDb.put("list_items", { ...item, tags: nextTags });
+    } else if (item.startAt !== undefined) {
+      await appDb.put("events", { ...item, tags: nextTags });
+    } else if (item.content !== undefined && !item.type) {
+      await appDb.put("notes", { ...item, tags: nextTags });
+    } else {
+      await appDb.put("entries", { ...item, tags: nextTags });
+    }
+  };
+
+  const handleContextMenuDelete = async (item: any) => {
+    const isListItem =
+      typeof item.listId === "string" &&
+      item.subtitle !== undefined &&
+      item.startAt === undefined &&
+      item.content === undefined;
+    if (isListItem) {
       await handleDeleteListItem(item.id);
     } else if (item.startAt !== undefined) {
       await handleDeleteEvent(item.id);
-    } else if (item.content !== undefined && !item.type) {
+    } else if (item.content !== undefined && item.type === undefined) {
       await handleDeleteNote(item.id);
     } else {
       await handleDeleteEntry(item.id);
@@ -696,14 +779,10 @@ export default function App() {
   };
 
   const handleSaveListItem = async (data: Partial<ListItem>) => {
-    const existing = data.id
-      ? listItems.find((i) => i.id === data.id)
-      : undefined;
-    if (existing) {
-      await appDb.put("list_items", { ...existing, ...data });
-    } else {
-      await handleAddListItem(data);
-    }
+    if (!data.id) return;
+    const existing = listItems.find((i) => i.id === data.id);
+    if (!existing) return;
+    await appDb.put("list_items", { ...existing, ...data });
   };
 
   const handleUpdateListItem = async (
@@ -750,12 +829,6 @@ export default function App() {
     setSettings(updated);
   };
 
-  const handleToggleTheme = () => {
-    handleUpdateSettings({
-      theme: settings.theme === "dark" ? "light" : "dark",
-    });
-  };
-
   // Header quick statistics
   const activeFocusCount = entries.filter(
     (e) => e.source === "focus-active" && e.status !== "completed",
@@ -773,7 +846,20 @@ export default function App() {
   const timelineNotes = entries.filter(
     (e) => e.type === "note" && e.source === "timeline",
   );
-  const timelineEvents = entries.filter((e) => e.type === "event");
+  const timelineEvents = entries.filter(
+    (e) => e.type === "event" && e.source !== "focus-anchor",
+  );
+  // Compute available tags for Context Menu
+  const availableTags = React.useMemo(() => {
+    const set = new Set<string>();
+    const visit = (arr: any[]) =>
+      arr.forEach((x) => (x.tags || []).forEach((t: string) => set.add(t)));
+    visit(notes);
+    visit(events);
+    visit(listItems);
+    visit(entries);
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [notes, events, listItems, entries]);
 
   return (
     <div className="flex flex-col h-[100dvh] w-full bg-slate-50 dark:bg-[#0B0F17] text-slate-900 dark:text-slate-100 antialiased overflow-hidden transition-colors selection:bg-indigo-500/30 selection:text-indigo-400">
@@ -833,7 +919,13 @@ export default function App() {
 
           {activeView === "timeline" && (
             <TimelineView
-              entries={entries}
+              entries={entries.filter(
+                (e) =>
+                  // focus-anchor entries never publish to Timeline (they live only in Focus View)
+                  e.source !== "focus-anchor" &&
+                  // pending focus-active entries only publish once completed
+                  !(e.source === "focus-active" && e.status !== "completed"),
+              )}
               onAddEntry={handleAddEntry}
               onToggleEntryStatus={handleToggleEntryStatus}
               onDeleteEntry={handleDeleteEntry}
@@ -869,13 +961,7 @@ export default function App() {
             <NotesView
               notes={notes}
               timelineNotes={timelineNotes}
-              onOpenCreateNote={() =>
-                setSheetMode({
-                  type: "note",
-                  data: {},
-                  isNew: true,
-                })
-              }
+              onOpenCreateNote={() => handleCreateNote()}
               onOpenEditNote={(note) =>
                 setSheetMode({
                   type: "note",
@@ -894,26 +980,9 @@ export default function App() {
             <EventsView
               events={events}
               timelineEvents={timelineEvents}
-              onOpenCreateEvent={(prefillDate) => {
-                // Preserve the current time-of-day so a same-day event doesn't jump to midnight,
-                // but honour the user's chosen date.
-                const base = prefillDate ? new Date(prefillDate) : new Date();
-                if (prefillDate) {
-                  const now = new Date();
-                  base.setHours(now.getHours(), now.getMinutes(), 0, 0);
-                }
-                const endBase = new Date(base);
-                endBase.setHours(base.getHours() + 1);
-
-                setSheetMode({
-                  type: "event",
-                  data: {
-                    startAt: base.toISOString(),
-                    endAt: endBase.toISOString(),
-                  },
-                  isNew: true,
-                });
-              }}
+              onOpenCreateEvent={(prefillDate) =>
+                handleCreateEvent(prefillDate)
+              }
               onOpenEditEvent={(event) =>
                 setSheetMode({
                   type: "event",
@@ -989,20 +1058,8 @@ export default function App() {
               onUpdateList={handleUpdateList}
               onDeleteList={handleDeleteList}
               onUpdateListItem={handleUpdateListItem}
-              onCreateLinkedNote={(listId) =>
-                setSheetMode({
-                  type: "note",
-                  data: { listIds: [listId] },
-                  isNew: true,
-                })
-              }
-              onCreateLinkedEvent={(listId) =>
-                setSheetMode({
-                  type: "event",
-                  data: { listIds: [listId] },
-                  isNew: true,
-                })
-              }
+              onCreateLinkedNote={handleCreateLinkedNote}
+              onCreateLinkedEvent={handleCreateLinkedEvent}
             />
           )}
         </main>
@@ -1052,6 +1109,8 @@ export default function App() {
         onRemoveTag={handleContextMenuRemoveTag}
         onMarkAchievement={handleMarkAchievement}
         onResolveEvent={handleResolveEvent}
+        onSetTags={handleContextMenuSetTags}
+        availableTags={availableTags}
       />
     </div>
   );

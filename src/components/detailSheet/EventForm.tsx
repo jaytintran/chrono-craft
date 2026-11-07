@@ -107,7 +107,7 @@ export const EventForm = React.forwardRef<EventFormHandle, EventFormProps>(
     React.useImperativeHandle(ref, () => ({
       collect: () => ({
         id: data.id,
-        title: title.trim() || "Untitled Event",
+        title: title.trim(),
         description,
         startAt: new Date(startAt).toISOString(),
         endAt: endAt ? new Date(endAt).toISOString() : undefined,
@@ -133,7 +133,7 @@ export const EventForm = React.forwardRef<EventFormHandle, EventFormProps>(
               )?.focus();
             }
           }}
-          placeholder="Untitled event"
+          placeholder="Untitled Event"
           className="text-2xl font-semibold text-slate-900 dark:text-slate-100 placeholder-slate-300 dark:placeholder-slate-600 leading-tight"
         />
 

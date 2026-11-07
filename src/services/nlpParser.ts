@@ -291,6 +291,35 @@ export function parseNaturalLanguageInput(
   }
   text = text.replace(tagRegex, " ");
 
+  // 4a. Relative duration: "in 30 mins", "in 30 minutes", "in 2 hrs", "in 90 min"
+  //     Anchors "in X mins from now" to baseDate + duration.
+  const relativeDurationRegex =
+    /\bin\s+(\d+)\s*(m|min|mins|minute|minutes|h|hr|hrs|hour|hours)\b/i;
+  const relativeMatch = text.match(relativeDurationRegex);
+
+  if (relativeMatch) {
+    const amount = parseInt(relativeMatch[1], 10);
+    const unit = relativeMatch[2].toLowerCase();
+    const isHours = unit.startsWith("h");
+    const offsetMs = amount * (isHours ? 3600_000 : 60_000);
+
+    const anchor = new Date(baseDate.getTime() + offsetMs);
+    targetDate = anchor;
+    targetHours = anchor.getHours();
+    targetMinutes = anchor.getMinutes();
+    hasSpecificTime = true;
+
+    const label = isHours
+      ? `${amount} hour${amount === 1 ? "" : "s"} from now`
+      : `${amount} min${amount === 1 ? "" : "s"} from now`;
+    rawMatches.push({
+      label,
+      type: "time",
+      raw: relativeMatch[0].trim(),
+    });
+    text = text.replace(relativeMatch[0], " ");
+  }
+
   // 4. Standard Time Detection (if not consumed by Time Block)
   if (!timeBlockInfo) {
     const timeRegex =
