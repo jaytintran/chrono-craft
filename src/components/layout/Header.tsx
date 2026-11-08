@@ -14,11 +14,43 @@ import {
   CalendarDays,
   Flame,
   FolderKanban,
+  ArrowUpFromLine,
+  ArrowDownToLine,
 } from "lucide-react";
 import { ActiveView, AppSettings } from "@/types";
 
-import { SyncStatusStrip } from "./SyncStatusStrip";
-import { SyncStatusPill } from "./SyncStatusPill";
+type SyncState = "synced" | "stale" | "error" | "off";
+
+function getSyncState(
+  settings: AppSettings,
+  lastSyncResult: string | null,
+): SyncState {
+  const lastAt = settings.gistSync?.lastSyncedAt;
+  if (!settings.gistSync?.token) return "off";
+  if (lastSyncResult && /failed/i.test(lastSyncResult)) return "error";
+  if (!lastAt) return "stale";
+  const ageMs = Date.now() - new Date(lastAt).getTime();
+  if (ageMs > 24 * 60 * 60 * 1000) return "stale";
+  return "synced";
+}
+
+function formatAgo(iso?: string): string {
+  if (!iso) return "Never";
+  const ms = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(ms / 60000);
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
+const SYNC_DOT_CLASS: Record<SyncState, string> = {
+  synced: "bg-emerald-500",
+  stale: "bg-amber-500",
+  error: "bg-rose-500",
+  off: "bg-slate-400",
+};
 
 interface HeaderProps {
   activeView: ActiveView;
@@ -32,8 +64,116 @@ interface HeaderProps {
   lastSyncResult: string | null;
   onGistPush: () => Promise<void> | void;
   onGistPull: () => Promise<void> | void;
-  onGistSync: () => Promise<void> | void;
 }
+
+interface SyncControlProps {
+  settings: AppSettings;
+  isSyncing: boolean;
+  lastSyncResult: string | null;
+  onPush: () => Promise<void> | void;
+  onPull: () => Promise<void> | void;
+  onOpenSettings: () => void;
+  /** Compact mode = mobile strip (smaller paddings, shorter labels) */
+  compact?: boolean;
+}
+
+const SyncControl: React.FC<SyncControlProps> = ({
+  settings,
+  isSyncing,
+  lastSyncResult,
+  onPush,
+  onPull,
+  onOpenSettings,
+  compact = false,
+}) => {
+  const state = getSyncState(settings, lastSyncResult);
+
+  // Not configured: show a one-tap setup chip
+  if (state === "off") {
+    return (
+      <button
+        type="button"
+        onClick={onOpenSettings}
+        className={`flex items-center gap-1.5 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-indigo-500/60 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors cursor-pointer ${
+          compact
+            ? "px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider"
+            : "px-2.5 py-1 text-[11px] font-mono uppercase tracking-wider"
+        }`}
+        title="Set up Gist Sync"
+      >
+        <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+        <span>Set up sync</span>
+      </button>
+    );
+  }
+
+  const statusText =
+    state === "error"
+      ? "Sync failed"
+      : isSyncing
+        ? "Syncing…"
+        : `Synced ${formatAgo(settings.gistSync?.lastSyncedAt)}`;
+
+  const canPull = !!settings.gistSync?.gistId;
+
+  return (
+    <div
+      className={`flex items-center gap-2 ${
+        compact ? "text-[10px]" : "text-[11px]"
+      } font-mono`}
+    >
+      {/* Status indicator (dot + label) */}
+      <div className="flex items-center gap-1.5 min-w-0 shrink">
+        <span
+          className={`w-1.5 h-1.5 rounded-full shrink-0 ${SYNC_DOT_CLASS[state]} ${
+            isSyncing ? "animate-pulse" : ""
+          }`}
+        />
+        <span
+          className={`truncate ${
+            state === "error"
+              ? "text-rose-500 dark:text-rose-400"
+              : "text-slate-500 dark:text-slate-400"
+          }`}
+        >
+          {statusText}
+        </span>
+      </div>
+
+      {/* Push */}
+      <button
+        type="button"
+        disabled={isSyncing}
+        onClick={() => onPush()}
+        title="Push local state to Gist"
+        className={`flex items-center gap-1 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer ${
+          compact ? "px-1.5 py-0.5 text-[10px]" : "px-2 py-1 text-[10px]"
+        } font-semibold uppercase tracking-wider`}
+      >
+        <ArrowUpFromLine className="w-3 h-3 text-indigo-400" />
+        <span>Push</span>
+      </button>
+
+      {/* Pull */}
+      <button
+        type="button"
+        disabled={isSyncing || !canPull}
+        onClick={() => onPull()}
+        title={
+          canPull
+            ? "Pull remote changes into local DB"
+            : "Push first to create a Gist, then Pull becomes available"
+        }
+        className={`flex items-center gap-1 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer ${
+          compact ? "px-1.5 py-0.5 text-[10px]" : "px-2 py-1 text-[10px]"
+        } font-semibold uppercase tracking-wider`}
+      >
+        <ArrowDownToLine className="w-3 h-3 text-emerald-400" />
+        <span>Pull</span>
+      </button>
+    </div>
+  );
+};
 
 export const Header: React.FC<HeaderProps> = ({
   activeView,
@@ -47,7 +187,6 @@ export const Header: React.FC<HeaderProps> = ({
   lastSyncResult,
   onGistPush,
   onGistPull,
-  onGistSync,
 }) => {
   const viewOptions: Array<{
     id: ActiveView;
@@ -98,16 +237,18 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="sticky top-0 z-30 bg-white/90 dark:bg-[#0B0F17]/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800/80 transition-colors pt-[env(safe-area-inset-top)]">
-      {/* Mobile-only sync status strip — sits above the nav tabs */}
-      <SyncStatusStrip
-        settings={settings}
-        isSyncing={isSyncing}
-        lastSyncResult={lastSyncResult}
-        onPush={onGistPush}
-        onPull={onGistPull}
-        onFullSync={onGistSync}
-        onOpenGistSettings={onOpenGistSettings}
-      />
+      {/* Mobile-only: sync strip above the nav tabs */}
+      <div className="md:hidden w-full h-8 flex items-center justify-between gap-2 px-4 border-b border-slate-200 dark:border-slate-800/80 bg-white/90 dark:bg-[#0B0F17]/90">
+        <SyncControl
+          settings={settings}
+          isSyncing={isSyncing}
+          lastSyncResult={lastSyncResult}
+          onPush={onGistPush}
+          onPull={onGistPull}
+          onOpenSettings={onOpenGistSettings}
+          compact
+        />
+      </div>
 
       {/* Zones */}
       <div className="h-14 md:h-16 px-4 md:px-6 flex items-center justify-between">
@@ -214,18 +355,15 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Zone 3: Settings) */}
         <div className="flex items-center gap-2 shrink-0 max-md:hidden">
-          {/* Sync pill (desktop only) */}
-          <div className="hidden md:block">
-            <SyncStatusPill
-              settings={settings}
-              isSyncing={isSyncing}
-              lastSyncResult={lastSyncResult}
-              onPush={onGistPush}
-              onPull={onGistPull}
-              onFullSync={onGistSync}
-              onOpenGistSettings={onOpenGistSettings}
-            />
-          </div>
+          {/* Desktop: inline sync control */}
+          <SyncControl
+            settings={settings}
+            isSyncing={isSyncing}
+            lastSyncResult={lastSyncResult}
+            onPush={onGistPush}
+            onPull={onGistPull}
+            onOpenSettings={onOpenGistSettings}
+          />
 
           {/* Desktop: full view-button; Mobile: icon-only (Settings lives in mobile tab strip) */}
           <button

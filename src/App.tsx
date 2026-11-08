@@ -1009,7 +1009,6 @@ export default function App() {
         lastSyncResult={lastSyncResult}
         onGistPush={handleGistPush}
         onGistPull={handleGistPull}
-        onGistSync={handleGistSync}
       />
 
       {/* 2. Workspace Body: Desktop Sidebar + Main Canvas */}
