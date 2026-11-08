@@ -24,6 +24,9 @@ import {
   AlignJustify,
   HardDrive,
   AlertTriangle,
+  Cloud,
+  ArrowUpFromLine,
+  ArrowDownToLine,
 } from "lucide-react";
 import { AppSettings, TimelineDisplayMode } from "../../types";
 import { appDb } from "../../services/db";
@@ -33,15 +36,25 @@ interface SettingsModalProps {
   settings: AppSettings;
   onClose: () => void;
   onUpdateSettings: (settings: Partial<AppSettings>) => void;
+  onGistSync?: () => Promise<void>;
+  onGistPush?: () => Promise<void>;
+  onGistPull?: () => Promise<void>;
+  isSyncing?: boolean;
+  lastSyncResult?: string | null;
 }
 
-type SettingsTab = "preferences" | "backup" | "storage";
+type SettingsTab = "preferences" | "backup" | "storage" | "gist";
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   settings,
   onClose,
   onUpdateSettings,
+  onGistSync,
+  onGistPush,
+  onGistPull,
+  isSyncing,
+  lastSyncResult,
 }) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>("preferences");
   const [activeLimit, setActiveLimit] = useState(settings.xActiveLimit || 5);
@@ -66,12 +79,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [gistToken, setGistToken] = useState(settings.gistSync?.token ?? "");
+  const [gistId, setGistId] = useState(settings.gistSync?.gistId ?? "");
+  const [autoSync, setAutoSync] = useState(
+    settings.gistSync?.autoSyncOnStart ?? false,
+  );
+
   useEffect(() => {
     if (isOpen) {
       setActiveLimit(settings.xActiveLimit || 5);
       setShowEntryContent(settings.showEntryContent !== false);
       setDisplayMode(settings.timelineDisplayMode ?? "default");
       setNlpAutoExtract(settings.nlpAutoExtract !== false);
+      setGistToken(settings.gistSync?.token ?? "");
+      setGistId(settings.gistSync?.gistId ?? "");
+      setAutoSync(settings.gistSync?.autoSyncOnStart ?? false);
 
       // Load database stats
       const loadStats = async () => {
@@ -221,6 +243,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
         </div>
         {/* Modern Segmented Navigation Tabs */}
+
         <div className="flex items-center gap-2 px-6 pt-3 pb-2 border-b border-slate-200 dark:border-slate-800/80 bg-slate-100/40 dark:bg-slate-900/40">
           <button
             type="button"
@@ -233,6 +256,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           >
             <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-400" />
             <span>Preferences</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("gist")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === "gist"
+                ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xs border border-slate-200/80 dark:border-slate-700"
+                : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-300"
+            }`}
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Gist Sync</span>
           </button>
 
           <button
@@ -476,7 +512,175 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           )}
 
-          {/* ================= TAB 2: DATA & BACKUP ================= */}
+          {/* ================= TAB 2: GIST SYNC ================= */}
+          {activeTab === "gist" && (
+            <div className="space-y-4">
+              <div className="flex items-start gap-3 p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-800 dark:text-indigo-300 text-xs">
+                <ShieldCheck className="w-5 h-5 shrink-0 text-indigo-500 mt-0.5" />
+                <div className="space-y-1">
+                  <strong className="font-semibold block">
+                    Sync via GitHub Gist
+                  </strong>
+                  <p className="leading-relaxed opacity-90">
+                    Push your local workspace to a private Gist, then pull it on
+                    another device. Requires a Personal Access Token with{" "}
+                    <code className="font-mono">gist</code> scope. The token is
+                    stored only in your local IndexedDB.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-3">
+                <div>
+                  <label className="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1">
+                    Personal Access Token
+                  </label>
+                  <input
+                    type="password"
+                    value={gistToken}
+                    onChange={(e) => setGistToken(e.target.value)}
+                    onBlur={() =>
+                      onUpdateSettings({
+                        gistSync: {
+                          ...(settings.gistSync ?? {
+                            enabled: true,
+                            gistId: "",
+                            token: "",
+                          }),
+                          token: gistToken.trim(),
+                          gistId: gistId.trim(),
+                          autoSyncOnStart: autoSync,
+                        },
+                      })
+                    }
+                    placeholder="ghp_..."
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono focus:outline-none focus:border-indigo-500"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Create at github.com/settings/tokens with <code>gist</code>{" "}
+                    scope.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1">
+                    Gist ID (leave empty to auto-create)
+                  </label>
+                  <input
+                    type="text"
+                    value={gistId}
+                    onChange={(e) => setGistId(e.target.value)}
+                    onBlur={() =>
+                      onUpdateSettings({
+                        gistSync: {
+                          ...(settings.gistSync ?? {
+                            enabled: true,
+                            token: "",
+                            gistId: "",
+                          }),
+                          token: gistToken.trim(),
+                          gistId: gistId.trim(),
+                          autoSyncOnStart: autoSync,
+                        },
+                      })
+                    }
+                    placeholder="e.g. 2decf6c462d9b4418f2"
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-500">
+                    Auto-sync on app start
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = !autoSync;
+                      setAutoSync(next);
+                      onUpdateSettings({
+                        gistSync: {
+                          ...(settings.gistSync ?? {
+                            enabled: true,
+                            token: "",
+                            gistId: "",
+                          }),
+                          token: gistToken.trim(),
+                          gistId: gistId.trim(),
+                          autoSyncOnStart: next,
+                        },
+                      });
+                    }}
+                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+                      autoSync
+                        ? "bg-indigo-600"
+                        : "bg-slate-300 dark:bg-slate-700"
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition ${
+                        autoSync ? "translate-x-4" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              {/* Split Push / Pull + full Sync */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  disabled={isSyncing || !gistToken.trim()}
+                  onClick={() => onGistPush?.()}
+                  title="Upload local state to the gist (creates it if missing)"
+                  className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 text-slate-700 dark:text-slate-200 text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                >
+                  <ArrowUpFromLine className="w-4 h-4 text-indigo-400" />
+                  <span>Push</span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={isSyncing || !gistToken.trim() || !gistId.trim()}
+                  onClick={() => onGistPull?.()}
+                  title="Download and merge remote records into local DB"
+                  className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 text-slate-700 dark:text-slate-200 text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                >
+                  <ArrowDownToLine className="w-4 h-4 text-emerald-400" />
+                  <span>Pull</span>
+                </button>
+              </div>
+
+              <button
+                type="button"
+                disabled={isSyncing || !gistToken.trim()}
+                onClick={() => onGistSync?.()}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+              >
+                <Cloud
+                  className={`w-4 h-4 ${isSyncing ? "animate-pulse" : ""}`}
+                />
+                <span>
+                  {isSyncing ? "Syncing…" : "Full Sync (Pull then Push)"}
+                </span>
+              </button>
+
+              {lastSyncResult && (
+                <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-[11px] font-mono text-slate-600 dark:text-slate-400 text-center">
+                  {lastSyncResult}
+                </div>
+              )}
+
+              {settings.gistSync?.lastSyncedAt && (
+                <p className="text-[10px] text-slate-400 text-center font-mono">
+                  Last synced:{" "}
+                  {new Date(settings.gistSync.lastSyncedAt).toLocaleString()}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* ================= TAB 3: DATA & BACKUP ================= */}
           {activeTab === "backup" && (
             <div className="space-y-4">
               {/* Privacy Notice */}
@@ -557,7 +761,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           )}
 
-          {/* ================= TAB 3: STORAGE & SYSTEM ================= */}
+          {/* ================= TAB 4: STORAGE & SYSTEM ================= */}
           {activeTab === "storage" && (
             <div className="space-y-4">
               {/* Storage Telemetry Cards */}

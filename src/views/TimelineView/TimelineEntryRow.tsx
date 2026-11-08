@@ -64,6 +64,11 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
   onOpenTimePicker,
 }) => {
   const entry = item.originalEntry;
+  // Defensive: a malformed record without a `type` field would otherwise
+  // crash the whole timeline on `entry.type.toUpperCase()`. Skip it.
+  // if (!entry || !entry.type) {
+  //   return null;
+  // }
   const isCompleted = entry.status === "completed";
   const isNoteOrEvent = entry.type === "note" || entry.type === "event";
   const isLog = entry.type === "log";

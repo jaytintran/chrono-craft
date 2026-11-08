@@ -19,6 +19,8 @@ import {
   TimelineEntry,
 } from "./types";
 import { appDb } from "./services/db";
+import { syncWithGist, pushToGist, pullFromGist } from "./services/gistSync";
+
 import { Header } from "./components/layout/Header";
 import { Sidebar } from "./components/layout/Sidebar";
 import { DetailSheet, DetailSheetMode } from "@/components/detailSheet";
@@ -57,6 +59,10 @@ export default function App() {
     theme: "dark",
     nlpAutoExtract: true,
   });
+
+  // Gist Sync State
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSyncResult, setLastSyncResult] = useState<string | null>(null);
 
   // Modals & Sheets State
   const [sheetMode, setSheetMode] = useState<DetailSheetMode>(null);
@@ -196,7 +202,7 @@ export default function App() {
 
   const handleToggleEntryStatus = async (entryId: string) => {
     const entry = entries.find((e) => e.id === entryId);
-    if (!entry) return;
+    if (!entry || !entry.type) return;
 
     const isNowCompleted = entry.status !== "completed";
     const updated: TimelineEntry = {
@@ -208,18 +214,23 @@ export default function App() {
   };
 
   const handleDeleteEntry = async (entryId: string) => {
+    const entry = entries.find((e) => e.id === entryId);
+    // Guard: silently skip if the record isn't a valid timeline entry.
+    // Prevents the delete button on a malformed record from silently succeeding
+    // while the row stays rendered.
+    if (!entry || !entry.type) return;
     await appDb.delete("entries", entryId);
   };
 
   const handleUpdateEntryTime = async (entryId: string, newIso: string) => {
     const entry = entries.find((e) => e.id === entryId);
-    if (!entry) return;
+    if (!entry || !entry.type) return;
     await appDb.put("entries", { ...entry, scheduledAt: newIso });
   };
 
   const handleUpdateEntryTitle = async (entryId: string, newTitle: string) => {
     const entry = entries.find((e) => e.id === entryId);
-    if (!entry) return;
+    if (!entry || !entry.type) return;
 
     await appDb.put("entries", { ...entry, title: newTitle });
   };
@@ -560,8 +571,8 @@ export default function App() {
         createdAt: now,
         updatedAt: now,
       });
-    } else {
-      // Timeline entry / Task
+    } else if (item.type) {
+      // Timeline entry / Task — only duplicate if it's actually an entry
       await appDb.put("entries", {
         ...item,
         id: newId,
@@ -634,7 +645,7 @@ export default function App() {
         await appDb.put("events", { ...item, tags: updatedTags });
       } else if (item.content !== undefined && !item.type) {
         await appDb.put("notes", { ...item, tags: updatedTags });
-      } else {
+      } else if (item.type) {
         await appDb.put("entries", { ...item, tags: updatedTags });
       }
     }
@@ -648,7 +659,7 @@ export default function App() {
       await appDb.put("events", { ...item, tags: updatedTags });
     } else if (item.content !== undefined && !item.type) {
       await appDb.put("notes", { ...item, tags: updatedTags });
-    } else {
+    } else if (item.type) {
       await appDb.put("entries", { ...item, tags: updatedTags });
     }
   };
@@ -827,6 +838,112 @@ export default function App() {
   const handleUpdateSettings = async (newSettings: Partial<AppSettings>) => {
     const updated = await appDb.updateSettings(newSettings);
     setSettings(updated);
+  };
+
+  // Gist Sync
+  const handleGistSync = async () => {
+    const cfg = settings.gistSync;
+    if (!cfg?.token) {
+      setLastSyncResult(
+        "Missing GitHub token. Set it in Settings → Gist Sync.",
+      );
+      return;
+    }
+
+    setIsSyncing(true);
+    setLastSyncResult(null);
+
+    const result = await syncWithGist(cfg.token, cfg.gistId);
+
+    if (result.ok) {
+      // Persist the gistId if it was newly created, plus lastSyncedAt
+      await handleUpdateSettings({
+        gistSync: {
+          ...cfg,
+          gistId: result.gistId ?? cfg.gistId,
+          lastSyncedAt: new Date().toISOString(),
+        },
+      });
+      setLastSyncResult(
+        `Synced. ${result.pulled} pulled, ${result.pushed} pushed.`,
+      );
+      await refreshData();
+    } else {
+      setLastSyncResult(`Sync failed: ${result.error}`);
+    }
+
+    setIsSyncing(false);
+  };
+
+  // Gist Push
+  const handleGistPush = async () => {
+    const cfg = settings.gistSync;
+    if (!cfg?.token) {
+      setLastSyncResult(
+        "Missing GitHub token. Set it in Settings → Gist Sync.",
+      );
+      return;
+    }
+
+    setIsSyncing(true);
+    setLastSyncResult(null);
+
+    try {
+      const { gistId: newGistId, pushed } = await pushToGist(
+        cfg.token,
+        cfg.gistId,
+      );
+
+      await handleUpdateSettings({
+        gistSync: {
+          ...cfg,
+          gistId: newGistId,
+          lastSyncedAt: new Date().toISOString(),
+        },
+      });
+
+      setLastSyncResult(`Pushed ${pushed} records to Gist.`);
+    } catch (err: any) {
+      setLastSyncResult(`Push failed: ${err?.message ?? String(err)}`);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // Gist Pull
+  const handleGistPull = async () => {
+    const cfg = settings.gistSync;
+    if (!cfg?.token) {
+      setLastSyncResult(
+        "Missing GitHub token. Set it in Settings → Gist Sync.",
+      );
+      return;
+    }
+    if (!cfg.gistId) {
+      setLastSyncResult("Missing Gist ID. Push first to create one.");
+      return;
+    }
+
+    setIsSyncing(true);
+    setLastSyncResult(null);
+
+    try {
+      const { pulled } = await pullFromGist(cfg.token, cfg.gistId);
+
+      await handleUpdateSettings({
+        gistSync: {
+          ...cfg,
+          lastSyncedAt: new Date().toISOString(),
+        },
+      });
+
+      setLastSyncResult(`Pulled ${pulled} new/updated records from Gist.`);
+      await refreshData();
+    } catch (err: any) {
+      setLastSyncResult(`Pull failed: ${err?.message ?? String(err)}`);
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   // Header quick statistics
@@ -1086,6 +1203,11 @@ export default function App() {
         settings={settings}
         onClose={() => setIsSettingsOpen(false)}
         onUpdateSettings={handleUpdateSettings}
+        onGistSync={handleGistSync}
+        onGistPush={handleGistPush}
+        onGistPull={handleGistPull}
+        isSyncing={isSyncing}
+        lastSyncResult={lastSyncResult}
       />
 
       {/* 5. Create Custom List Modal */}

@@ -153,6 +153,13 @@ export interface AppSettings {
   nlpAutoExtract: boolean;
   showEntryContent?: boolean; // Defaults to true
   timelineDisplayMode?: TimelineDisplayMode; // undefined = "default"
+  gistSync?: {
+    enabled: boolean;
+    token: string; // PAT with `gist` scope
+    gistId: string; // "" = create new on first push
+    lastSyncedAt?: string;
+    autoSyncOnStart?: boolean;
+  };
 }
 
 export type ActiveView =
