@@ -19,7 +19,13 @@ import {
   TimelineEntry,
 } from "./types";
 import { appDb } from "./services/db";
-import { syncWithGist, pushToGist, pullFromGist } from "./services/gistSync";
+
+import {
+  syncWithGist,
+  pushToGist,
+  pullFromGist,
+  purgeOldTombstones,
+} from "./services/gistSync";
 
 import { Header } from "./components/layout/Header";
 import { Sidebar } from "./components/layout/Sidebar";
@@ -187,7 +193,19 @@ export default function App() {
   // All view-feeding state arrays filter tombstones out at load time (see
   // refreshData), so the user still perceives this as a hard delete.
 
-  const softDelete = async (storeName: string, id: string) => {
+  const softDelete = async (
+    storeName:
+      | "entries"
+      | "notes"
+      | "events"
+      | "habits"
+      | "habit_logs"
+      | "lists"
+      | "list_items"
+      | "custom_tabs"
+      | "scratchpad",
+    id: string,
+  ) => {
     const existing = await appDb.get<any>(storeName, id);
     if (!existing) return;
     // If already tombstoned, do nothing (avoid resetting the timestamp)
@@ -978,6 +996,14 @@ export default function App() {
     }
   };
 
+  // Gist Purge Tombstones
+  const handlePurgeTombstones = async (olderThanDays: number = 30) => {
+    const result = await purgeOldTombstones(olderThanDays);
+    // Refresh app state so the purge reflects immediately
+    await refreshData();
+    return result;
+  };
+
   // Header quick statistics
   const activeFocusCount = entries.filter(
     (e) => e.source === "focus-active" && e.status !== "completed",
@@ -1246,6 +1272,7 @@ export default function App() {
         isSyncing={isSyncing}
         lastSyncResult={lastSyncResult}
         initialTab={settingsInitialTab}
+        onPurgeTombstones={handlePurgeTombstones}
       />
 
       {/* 5. Create Custom List Modal */}

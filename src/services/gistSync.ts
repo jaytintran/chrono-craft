@@ -287,3 +287,88 @@ export async function syncWithGist(
     };
   }
 }
+
+// ---------- Tombstone Cleanup/Purge ----------
+
+export interface PurgeResult {
+  purged: number;
+  remaining: number;
+  perStore: Record<string, number>;
+}
+
+/**
+ * Hard-delete tombstones older than `olderThanDays`.
+ * Only safe to call when the user has synced recently — otherwise a device
+ * that was offline may resurrect the deleted record on its next push.
+ */
+export async function purgeOldTombstones(
+  olderThanDays: number = 30,
+): Promise<PurgeResult> {
+  const cutoff = Date.now() - olderThanDays * 24 * 60 * 60 * 1000;
+  const perStore: Record<string, number> = {};
+  let purged = 0;
+  let remaining = 0;
+
+  for (const storeName of SYNC_STORES) {
+    const records = await appDb.getAll<any>(storeName);
+    let storePurged = 0;
+
+    for (const record of records) {
+      if (!record?.deletedAt) continue;
+
+      const deletedAtMs = new Date(record.deletedAt).getTime();
+      const isStale = !isNaN(deletedAtMs) && deletedAtMs < cutoff;
+
+      if (isStale) {
+        await appDb.delete(storeName as any, record.id);
+        storePurged++;
+        purged++;
+      } else {
+        remaining++;
+      }
+    }
+
+    if (storePurged > 0) perStore[storeName] = storePurged;
+  }
+
+  return { purged, remaining, perStore };
+}
+
+/**
+ * Count tombstones without removing anything. Used by the Settings UI to
+ * show how many records are pending cleanup.
+ */
+export async function countTombstones(): Promise<{
+  total: number;
+  stale: number;
+  fresh: number;
+  oldestDays: number | null;
+}> {
+  const cutoff30 = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  let total = 0;
+  let stale = 0;
+  let oldestMs: number | null = null;
+
+  for (const storeName of SYNC_STORES) {
+    const records = await appDb.getAll<any>(storeName);
+    for (const record of records) {
+      if (!record?.deletedAt) continue;
+      total++;
+      const ts = new Date(record.deletedAt).getTime();
+      if (!isNaN(ts)) {
+        if (ts < cutoff30) stale++;
+        if (oldestMs === null || ts < oldestMs) oldestMs = ts;
+      }
+    }
+  }
+
+  return {
+    total,
+    stale,
+    fresh: total - stale,
+    oldestDays:
+      oldestMs === null
+        ? null
+        : Math.floor((Date.now() - oldestMs) / (24 * 60 * 60 * 1000)),
+  };
+}
