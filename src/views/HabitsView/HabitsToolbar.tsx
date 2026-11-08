@@ -23,8 +23,7 @@ export const HabitsToolbar: React.FC<Props> = ({
 }) => {
   return (
     <div className="flex items-center gap-2">
-      {/* Range segmented control */}
-      <div className="flex items-center p-0.5 rounded-xl bg-slate-100 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 text-xs">
+      <div className="flex items-center p-0.5 rounded-xl bg-sunken border border-soft text-xs">
         {(["7d", "14d", "1m"] as HabitsRange[]).map((r) => {
           const on = range === r;
           return (
@@ -34,8 +33,8 @@ export const HabitsToolbar: React.FC<Props> = ({
               onClick={() => onChangeRange(r)}
               className={`px-2.5 py-1 rounded-lg font-mono font-semibold transition-colors cursor-pointer ${
                 on
-                  ? "bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border border-indigo-500/40"
-                  : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 border border-transparent"
+                  ? "bg-accent/15 text-accent border border-accent/40"
+                  : "text-secondary hover:text-primary border border-transparent"
               }`}
             >
               {RANGE_LABELS[r]}
@@ -44,16 +43,15 @@ export const HabitsToolbar: React.FC<Props> = ({
         })}
       </div>
 
-      {/* Mode segmented control */}
-      <div className="flex items-center p-0.5 rounded-xl bg-slate-100 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 text-xs">
+      <div className="flex items-center p-0.5 rounded-xl bg-sunken border border-soft text-xs">
         <button
           type="button"
           onClick={() => onChangeMode("matrix")}
           title="Matrix Grid"
           className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-semibold transition-colors cursor-pointer ${
             mode === "matrix"
-              ? "bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border border-indigo-500/40"
-              : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 border border-transparent"
+              ? "bg-accent/15 text-accent border border-accent/40"
+              : "text-secondary hover:text-primary border border-transparent"
           }`}
         >
           <LayoutGrid className="w-3.5 h-3.5" />
@@ -65,8 +63,8 @@ export const HabitsToolbar: React.FC<Props> = ({
           title="Cards Stack"
           className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-semibold transition-colors cursor-pointer ${
             mode === "cards"
-              ? "bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border border-indigo-500/40"
-              : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 border border-transparent"
+              ? "bg-accent/15 text-accent border border-accent/40"
+              : "text-secondary hover:text-primary border border-transparent"
           }`}
         >
           <Columns3 className="w-3.5 h-3.5" />

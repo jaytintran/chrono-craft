@@ -66,31 +66,31 @@ export const ITEM_STATUSES = [
     id: "inbox",
     label: "Inbox",
     icon: Inbox,
-    on: "bg-slate-500/15 border-slate-400/60 text-slate-300",
+    on: "bg-hover border-strong text-secondary",
   },
   {
     id: "in-progress",
     label: "In Progress",
     icon: PlayCircle,
-    on: "bg-amber-500/15 border-amber-400/60 text-amber-300",
+    on: "bg-warning/15 border-warning/40 text-warning",
   },
   {
     id: "completed",
     label: "Completed",
     icon: CheckCircle2,
-    on: "bg-emerald-500/15 border-emerald-400/60 text-emerald-300",
+    on: "bg-success/15 border-success/40 text-success",
   },
   {
     id: "dropped",
     label: "Dropped",
     icon: MinusCircle,
-    on: "bg-rose-500/15 border-rose-400/60 text-rose-300",
+    on: "bg-danger/15 border-danger/40 text-danger",
   },
   {
     id: "maybe-later",
     label: "Maybe Later",
     icon: Bookmark,
-    on: "bg-violet-500/15 border-violet-400/60 text-violet-300",
+    on: "bg-accent/15 border-accent/40 text-accent",
   },
 ] as const;
 

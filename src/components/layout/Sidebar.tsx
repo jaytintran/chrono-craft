@@ -3,7 +3,7 @@
  * Features primary view links, collapsible Lists accordion with custom list items, and offline status.
  */
 
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   CheckCircle2,
   Bookmark,
@@ -18,9 +18,8 @@ import {
   GraduationCap,
   Folder,
   Database,
-  Sparkles,
-} from 'lucide-react';
-import { ActiveView, CustomList } from '../types';
+} from "lucide-react";
+import { ActiveView, CustomList } from "@/types";
 
 interface SidebarProps {
   activeView: ActiveView;
@@ -47,11 +46,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const getListIcon = (iconName: string) => {
     switch (iconName) {
-      case 'BookOpen':
+      case "BookOpen":
         return <BookOpen className="w-3.5 h-3.5" />;
-      case 'GraduationCap':
+      case "GraduationCap":
         return <GraduationCap className="w-3.5 h-3.5" />;
-      case 'FolderKanban':
+      case "FolderKanban":
         return <FolderKanban className="w-3.5 h-3.5" />;
       default:
         return <Folder className="w-3.5 h-3.5" />;
@@ -59,33 +58,37 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   return (
-    <aside className="hidden md:flex flex-col w-64 shrink-0 bg-slate-50/80 dark:bg-[#0E131E] border-r border-slate-200 dark:border-slate-800/80 select-none">
+    <aside className="hidden md:flex flex-col w-64 shrink-0 bg-sunken border-r border-soft select-none">
       {/* Primary Views Section */}
       <div className="p-3 space-y-1">
-        <div className="px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold">
+        <div className="px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider text-muted font-semibold">
           Execution & Planning
         </div>
 
         {/* 1. Focus View */}
         <button
           type="button"
-          onClick={() => onSelectView('focus')}
+          onClick={() => onSelectView("focus")}
           className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all ${
-            activeView === 'focus'
-              ? 'bg-indigo-600 text-white font-semibold shadow-xs shadow-indigo-600/30'
-              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-800/60'
+            activeView === "focus"
+              ? "bg-accent text-accent-fg font-semibold shadow-xs shadow-accent/30"
+              : "text-secondary hover:bg-hover"
           }`}
         >
           <div className="flex items-center gap-2.5">
-            <CheckCircle2 className={`w-4 h-4 ${activeView === 'focus' ? 'text-white' : 'text-indigo-400'}`} />
+            <CheckCircle2
+              className={`w-4 h-4 ${
+                activeView === "focus" ? "text-accent-fg" : "text-accent"
+              }`}
+            />
             <span>Focus</span>
           </div>
           {activeTaskCount > 0 && (
             <span
               className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono tabular-nums ${
-                activeView === 'focus'
-                  ? 'bg-indigo-700 text-white'
-                  : 'bg-indigo-500/10 text-indigo-400'
+                activeView === "focus"
+                  ? "bg-accent-hover text-accent-fg"
+                  : "bg-accent/10 text-accent"
               }`}
             >
               {activeTaskCount}
@@ -96,36 +99,44 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* 2. Timeline View */}
         <button
           type="button"
-          onClick={() => onSelectView('timeline')}
+          onClick={() => onSelectView("timeline")}
           className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all ${
-            activeView === 'timeline'
-              ? 'bg-indigo-600 text-white font-semibold shadow-xs shadow-indigo-600/30'
-              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-800/60'
+            activeView === "timeline"
+              ? "bg-accent text-accent-fg font-semibold shadow-xs shadow-accent/30"
+              : "text-secondary hover:bg-hover"
           }`}
         >
           <div className="flex items-center gap-2.5">
-            <Bookmark className={`w-4 h-4 ${activeView === 'timeline' ? 'text-white' : 'text-cyan-400'}`} />
+            <Bookmark
+              className={`w-4 h-4 ${
+                activeView === "timeline" ? "text-accent-fg" : "text-info"
+              }`}
+            />
             <span>Timeline</span>
           </div>
-          <span className="text-[10px] font-mono text-slate-400">Live</span>
+          <span className="text-[10px] font-mono text-muted">Live</span>
         </button>
 
         {/* 3. Notes View */}
         <button
           type="button"
-          onClick={() => onSelectView('notes')}
+          onClick={() => onSelectView("notes")}
           className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all ${
-            activeView === 'notes'
-              ? 'bg-indigo-600 text-white font-semibold shadow-xs shadow-indigo-600/30'
-              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-800/60'
+            activeView === "notes"
+              ? "bg-accent text-accent-fg font-semibold shadow-xs shadow-accent/30"
+              : "text-secondary hover:bg-hover"
           }`}
         >
           <div className="flex items-center gap-2.5">
-            <FileText className={`w-4 h-4 ${activeView === 'notes' ? 'text-white' : 'text-amber-400'}`} />
+            <FileText
+              className={`w-4 h-4 ${
+                activeView === "notes" ? "text-accent-fg" : "text-warning"
+              }`}
+            />
             <span>Notes</span>
           </div>
           {totalNotesCount > 0 && (
-            <span className="text-[10px] font-mono tabular-nums text-slate-400">
+            <span className="text-[10px] font-mono tabular-nums text-muted">
               {totalNotesCount}
             </span>
           )}
@@ -134,19 +145,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* 4. Events View */}
         <button
           type="button"
-          onClick={() => onSelectView('events')}
+          onClick={() => onSelectView("events")}
           className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all ${
-            activeView === 'events'
-              ? 'bg-indigo-600 text-white font-semibold shadow-xs shadow-indigo-600/30'
-              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-800/60'
+            activeView === "events"
+              ? "bg-accent text-accent-fg font-semibold shadow-xs shadow-accent/30"
+              : "text-secondary hover:bg-hover"
           }`}
         >
           <div className="flex items-center gap-2.5">
-            <CalendarDays className={`w-4 h-4 ${activeView === 'events' ? 'text-white' : 'text-rose-400'}`} />
+            <CalendarDays
+              className={`w-4 h-4 ${
+                activeView === "events" ? "text-accent-fg" : "text-danger"
+              }`}
+            />
             <span>Events</span>
           </div>
           {totalEventsCount > 0 && (
-            <span className="text-[10px] font-mono tabular-nums text-slate-400">
+            <span className="text-[10px] font-mono tabular-nums text-muted">
               {totalEventsCount}
             </span>
           )}
@@ -155,28 +170,36 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* 5. Habits View */}
         <button
           type="button"
-          onClick={() => onSelectView('habits')}
+          onClick={() => onSelectView("habits")}
           className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all ${
-            activeView === 'habits'
-              ? 'bg-indigo-600 text-white font-semibold shadow-xs shadow-indigo-600/30'
-              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-slate-800/60'
+            activeView === "habits"
+              ? "bg-accent text-accent-fg font-semibold shadow-xs shadow-accent/30"
+              : "text-secondary hover:bg-hover"
           }`}
         >
           <div className="flex items-center gap-2.5">
-            <Flame className={`w-4 h-4 ${activeView === 'habits' ? 'text-white' : 'text-orange-400'}`} />
+            <Flame
+              className={`w-4 h-4 ${
+                activeView === "habits"
+                  ? "text-accent-fg"
+                  : "text-entity-orange"
+              }`}
+            />
             <span>Habits</span>
           </div>
-          <span className="text-[10px] font-mono text-orange-400">Matrix</span>
+          <span className="text-[10px] font-mono text-entity-orange">
+            Matrix
+          </span>
         </button>
       </div>
 
       {/* Collapsible Lists Section */}
       <div className="flex-1 px-3 py-2 overflow-y-auto">
-        <div className="flex items-center justify-between px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold group">
+        <div className="flex items-center justify-between px-3 py-1.5 text-[10px] font-mono uppercase tracking-wider text-muted font-semibold group">
           <button
             type="button"
             onClick={() => setListsCollapsed(!listsCollapsed)}
-            className="flex items-center gap-1.5 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+            className="flex items-center gap-1.5 hover:text-primary transition-colors"
           >
             {listsCollapsed ? (
               <ChevronRight className="w-3 h-3" />
@@ -190,7 +213,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             type="button"
             onClick={onOpenCreateList}
             title="Create new custom list"
-            className="p-0.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
+            className="p-0.5 rounded-md hover:bg-hover text-muted hover:text-primary transition-colors"
           >
             <Plus className="w-3.5 h-3.5" />
           </button>
@@ -200,21 +223,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {!listsCollapsed && (
           <div className="space-y-0.5 mt-1 animate-fadeIn">
             {lists.map((list) => {
-              const isSelected = activeView === 'lists' && selectedListId === list.id;
+              const isSelected =
+                activeView === "lists" && selectedListId === list.id;
               return (
                 <button
                   key={list.id}
                   type="button"
-                  onClick={() => onSelectView('lists', list.id)}
+                  onClick={() => onSelectView("lists", list.id)}
                   className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs transition-colors ${
                     isSelected
-                      ? 'bg-indigo-600 text-white font-medium shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-200'
+                      ? "bg-accent text-accent-fg font-medium shadow-xs"
+                      : "text-secondary hover:bg-hover hover:text-primary"
                   }`}
                 >
                   <div className="flex items-center gap-2 truncate">
                     <span
-                      style={{ color: isSelected ? 'white' : list.color }}
+                      style={{ color: isSelected ? undefined : list.color }}
                       className="shrink-0"
                     >
                       {getListIcon(list.icon)}
@@ -228,7 +252,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               type="button"
               onClick={onOpenCreateList}
-              className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-slate-400 hover:text-indigo-400 transition-colors mt-1"
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-muted hover:text-accent transition-colors mt-1"
             >
               <Plus className="w-3 h-3" />
               <span className="text-[11px]">Add Custom List...</span>
@@ -238,9 +262,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Storage Footer Status */}
-      <div className="p-3 border-t border-slate-200 dark:border-slate-800/80">
-        <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-slate-100/60 dark:bg-slate-900/40 text-[11px] font-mono text-slate-500 dark:text-slate-400">
-          <Database className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+      <div className="p-3 border-t border-soft">
+        <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-hover text-[11px] font-mono text-muted">
+          <Database className="w-3.5 h-3.5 text-success shrink-0" />
           <span className="truncate">IndexedDB · Offline First</span>
         </div>
       </div>

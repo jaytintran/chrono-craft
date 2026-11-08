@@ -1,7 +1,5 @@
 /**
  * ChronoCraft - Settings & Workspace Data Management Modal
- * Redesigned with modern tabbed UI patterns (Preferences, Data & Backup, Storage & System),
- * toggle for "Show Entry Content in Timeline", X-Active limit control, and IndexedDB management.
  */
 
 import React, { useState, useRef, useEffect } from "react";
@@ -12,8 +10,6 @@ import {
   Upload,
   RefreshCw,
   ShieldCheck,
-  Moon,
-  Sun,
   Database,
   Check,
   Eye,
@@ -32,6 +28,7 @@ import {
 import { AppSettings, TimelineDisplayMode } from "../../types";
 import { appDb } from "../../services/db";
 import { countTombstones } from "../../services/gistSync";
+import { ThemePicker } from "../ui/ThemePicker";
 
 type SettingsTab = "preferences" | "backup" | "storage" | "gist";
 
@@ -104,11 +101,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [isPurging, setIsPurging] = useState(false);
   const [purgeThreshold, setPurgeThreshold] = useState<number>(30);
 
-  // Effect A: runs only when the modal transitions from closed → open.
-  // Syncs local form state from the current props and fires the one-time
-  // data loads. Deliberately NOT keyed on `settings`, so subsequent
-  // onUpdateSettings() calls (theme toggle, token edit, etc.) don't reset
-  // the active tab or clobber the user's in-progress form state.
   useEffect(() => {
     if (!isOpen) return;
 
@@ -151,7 +143,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, initialTab]);
 
-  // Effect B: recompute purgeable count whenever the threshold changes
   useEffect(() => {
     if (!isOpen) return;
     countTombstones(purgeThreshold)
@@ -160,6 +151,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   }, [isOpen, purgeThreshold]);
 
   if (!isOpen) return null;
+
+  const deriveFlavor = (theme: AppSettings["theme"]): "dark" | "light" => {
+    switch (theme) {
+      case "light":
+      case "paper":
+        return "light";
+      default:
+        return "dark";
+    }
+  };
 
   const handleApplyPreferences = () => {
     onUpdateSettings({
@@ -257,71 +258,42 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4">
-      {/* Modal Dialog Box */}
-      <div className="relative w-full md:max-w-xl h-[100dvh] md:h-auto bg-white dark:bg-[#111724] rounded-t-3xl md:rounded-2xl shadow-2xl z-10 border-t md:border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-none md:max-h-[90vh] animate-slideInBottom md:animate-scaleUp">
+      <div className="relative w-full md:max-w-xl h-[100dvh] md:h-auto bg-raised rounded-t-3xl md:rounded-2xl shadow-2xl z-10 border-t md:border border-soft overflow-hidden flex flex-col max-h-none md:max-h-[90vh] animate-slideInBottom md:animate-scaleUp">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-3 md:py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-[#0E131E]">
+        <div className="flex items-center justify-between px-6 py-3 md:py-4 border-b border-soft bg-sunken/50">
           <div>
-            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <SlidersHorizontal className="w-4 h-4 text-indigo-500" />
+            <h3 className="text-base font-bold text-primary flex items-center gap-2">
+              <SlidersHorizontal className="w-4 h-4 text-accent" />
               <span>Workspace Preferences & Data</span>
             </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-secondary mt-0.5">
               Configure personal display settings, local backups, and storage
               controls.
             </p>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {/* Quick theme toggle — promoted from the Preferences tab */}
-            {/* <div className="flex items-center gap-0.5 p-0.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-              <button
-                type="button"
-                onClick={() => onUpdateSettings({ theme: "light" })}
-                title="Light mode"
-                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                  settings.theme === "light"
-                    ? "bg-slate-900 dark:bg-slate-800 text-white dark:text-slate-100 shadow-xs"
-                    : "text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-                }`}
-              >
-                <Sun className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => onUpdateSettings({ theme: "dark" })}
-                title="Dark mode"
-                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                  settings.theme === "dark"
-                    ? "bg-slate-900 dark:bg-slate-800 text-white dark:text-slate-100 shadow-xs"
-                    : "text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-                }`}
-              >
-                <Moon className="w-3.5 h-3.5" />
-              </button>
-            </div> */}
-
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg text-muted hover:text-primary hover:bg-hover transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Modern Segmented Navigation Tabs */}
-        <div className="flex w-full overflow-x-scroll items-center gap-2 px-6 pt-3 pb-2 border-b border-slate-200 dark:border-slate-800/80 bg-slate-100/40 dark:bg-slate-900/40">
+        {/* Tabs */}
+        <div className="flex w-full overflow-x-auto scrollbar-none items-center gap-2 px-6 pt-3 pb-2 border-b border-soft bg-sunken/40">
           <button
             type="button"
             onClick={() => setActiveTab("preferences")}
             className={`shrink-0 whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTab === "preferences"
-                ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xs border border-slate-200/80 dark:border-slate-700"
-                : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-300"
+                ? "bg-raised text-primary shadow-xs border border-soft"
+                : "text-secondary hover:text-primary"
             }`}
           >
-            <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-400" />
+            <SlidersHorizontal className="w-3.5 h-3.5 text-accent" />
             <span>Preferences</span>
           </button>
 
@@ -330,11 +302,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             onClick={() => setActiveTab("gist")}
             className={`shrink-0 whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTab === "gist"
-                ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xs border border-slate-200/80 dark:border-slate-700"
-                : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-300"
+                ? "bg-raised text-primary shadow-xs border border-soft"
+                : "text-secondary hover:text-primary"
             }`}
           >
-            <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-400" />
+            <Cloud className="w-3.5 h-3.5 text-accent" />
             <span>Gist Sync</span>
           </button>
 
@@ -343,11 +315,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             onClick={() => setActiveTab("backup")}
             className={`shrink-0 whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTab === "backup"
-                ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xs border border-slate-200/80 dark:border-slate-700"
-                : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-300"
+                ? "bg-raised text-primary shadow-xs border border-soft"
+                : "text-secondary hover:text-primary"
             }`}
           >
-            <Download className="w-3.5 h-3.5 text-cyan-400" />
+            <Download className="w-3.5 h-3.5 text-info" />
             <span>Data & Backup</span>
           </button>
 
@@ -356,79 +328,59 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             onClick={() => setActiveTab("storage")}
             className={`shrink-0 whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTab === "storage"
-                ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xs border border-slate-200/80 dark:border-slate-700"
-                : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-300"
+                ? "bg-raised text-primary shadow-xs border border-soft"
+                : "text-secondary hover:text-primary"
             }`}
           >
-            <Database className="w-3.5 h-3.5 text-emerald-400" />
+            <Database className="w-3.5 h-3.5 text-success" />
             <span>Storage & System</span>
           </button>
         </div>
 
-        {/* Scrollable Tab Content */}
+        {/* Tab Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-5">
-          {/* ================= TAB 1: PREFERENCES ================= */}
+          {/* ================= PREFERENCES ================= */}
           {activeTab === "preferences" && (
             <div className="space-y-4">
-              {/* Theme Preference */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              {/* Theme Picker */}
+              <div className="p-4 rounded-2xl bg-sunken border border-soft space-y-3">
                 <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-primary">
                     Visual Aesthetic Theme
                   </h4>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Switch between Obsidian Dark and Clean Slate Light styling.
+                  <p className="text-xs text-secondary mt-0.5">
+                    Choose the visual palette for the entire workspace. Every
+                    view, card, and control adapts instantly.
                   </p>
                 </div>
-                <div className="flex items-center gap-1.5 p-1 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
-                  <button
-                    type="button"
-                    onClick={() => onUpdateSettings({ theme: "dark" })}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                      settings.theme === "dark"
-                        ? "bg-indigo-600 text-white font-semibold shadow-xs"
-                        : "text-slate-500 hover:text-slate-200"
-                    }`}
-                  >
-                    <Moon className="w-3.5 h-3.5" />
-                    <span>Dark</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onUpdateSettings({ theme: "light" })}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                      settings.theme === "light"
-                        ? "bg-indigo-600 text-white font-semibold shadow-xs"
-                        : "text-slate-500 hover:text-slate-200"
-                    }`}
-                  >
-                    <Sun className="w-3.5 h-3.5" />
-                    <span>Light</span>
-                  </button>
-                </div>
+                <ThemePicker
+                  theme={settings.theme}
+                  flavor={settings.themeFlavor ?? deriveFlavor(settings.theme)}
+                  onChange={(theme, flavor) =>
+                    onUpdateSettings({ theme, themeFlavor: flavor })
+                  }
+                />
               </div>
 
-              {/* Feature: Show Entry Content in Timeline Toggle */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 transition-all">
+              <div className="p-4 rounded-2xl bg-sunken border border-soft">
                 <div className="flex items-center justify-between gap-4">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       {showEntryContent ? (
-                        <Eye className="w-4 h-4 text-indigo-500" />
+                        <Eye className="w-4 h-4 text-accent" />
                       ) : (
-                        <EyeOff className="w-4 h-4 text-slate-400" />
+                        <EyeOff className="w-4 h-4 text-muted" />
                       )}
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-primary">
                         Show Content of Entries in Timeline
                       </h4>
                     </div>
-                    <p className="text-xs text-slate-500 leading-relaxed max-w-sm">
+                    <p className="text-xs text-secondary leading-relaxed max-w-sm">
                       Display descriptions, rich notes, and attached details
                       directly inside Timeline entry cards.
                     </p>
                   </div>
 
-                  {/* Toggle Switch */}
                   <button
                     type="button"
                     onClick={() => {
@@ -437,9 +389,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       onUpdateSettings({ showEntryContent: next });
                     }}
                     className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                      showEntryContent
-                        ? "bg-indigo-600"
-                        : "bg-slate-300 dark:bg-slate-700"
+                      showEntryContent ? "bg-accent" : "bg-strong"
                     }`}
                   >
                     <span
@@ -451,27 +401,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
               </div>
 
-              {/* Focus View X-Active Engine Limit */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-3">
+              <div className="p-4 rounded-2xl bg-sunken border border-soft space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-primary">
                       Focus View X-Active Concurrency Limit
                     </h4>
-                    <p className="text-xs text-slate-500 mt-0.5">
+                    <p className="text-xs text-secondary mt-0.5">
                       Strict limit of concurrent in-flight tasks in Today focus
                       mode.
                     </p>
                   </div>
-                  <div className="px-3 py-1 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400 font-mono font-bold text-xs tabular-nums">
+                  <div className="px-3 py-1 rounded-xl bg-accent/10 border border-accent/20 text-accent font-mono font-bold text-xs tabular-nums">
                     {activeLimit} Tasks
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3 pt-1">
-                  <span className="text-[11px] font-mono text-slate-400">
-                    1
-                  </span>
+                  <span className="text-[11px] font-mono text-muted">1</span>
                   <input
                     type="range"
                     min={1}
@@ -480,21 +427,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     onChange={(e) =>
                       setActiveLimit(parseInt(e.target.value, 10))
                     }
-                    className="flex-1 accent-indigo-500 cursor-pointer"
+                    className="flex-1 accent-accent cursor-pointer"
                   />
-                  <span className="text-[11px] font-mono text-slate-400">
-                    10
-                  </span>
+                  <span className="text-[11px] font-mono text-muted">10</span>
                 </div>
               </div>
 
-              {/* Timeline Entry Style */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-3">
+              <div className="p-4 rounded-2xl bg-sunken border border-soft space-y-3">
                 <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-primary">
                     Timeline Entry Style
                   </h4>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-xs text-secondary mt-0.5">
                     Choose how entries are displayed in the Timeline view.
                   </p>
                 </div>
@@ -531,28 +475,29 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       }}
                       className={`flex flex-col items-start gap-1 p-3 rounded-xl border text-left transition-all cursor-pointer ${
                         displayMode === id
-                          ? "border-indigo-500 bg-indigo-500/10 text-slate-900 dark:text-slate-100"
-                          : "border-slate-200 dark:border-slate-800 text-slate-500 hover:border-indigo-500/40"
+                          ? "border-accent bg-accent/10 text-primary"
+                          : "border-soft text-secondary hover:border-accent/40"
                       }`}
                     >
                       <Icon
-                        className={`w-4 h-4 ${displayMode === id ? "text-indigo-500" : "text-slate-400"}`}
+                        className={`w-4 h-4 ${
+                          displayMode === id ? "text-accent" : "text-muted"
+                        }`}
                       />
                       <span className="text-xs font-semibold">{label}</span>
-                      <span className="text-[10px] text-slate-400">{hint}</span>
+                      <span className="text-[10px] text-muted">{hint}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* NLP Auto-Extraction */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <div className="p-4 rounded-2xl bg-sunken border border-soft flex items-center justify-between">
                 <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-warning" />
                     <span>Natural Language Parser</span>
                   </h4>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-xs text-secondary mt-0.5">
                     Automatically detect time ranges (e.g. "from 1pm to 3pm"),
                     tags, and !high priority from input.
                   </p>
@@ -565,9 +510,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     onUpdateSettings({ nlpAutoExtract: next });
                   }}
                   className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    nlpAutoExtract
-                      ? "bg-indigo-600"
-                      : "bg-slate-300 dark:bg-slate-700"
+                    nlpAutoExtract ? "bg-accent" : "bg-strong"
                   }`}
                 >
                   <span
@@ -580,16 +523,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           )}
 
-          {/* ================= TAB 2: GIST SYNC ================= */}
+          {/* ================= GIST SYNC ================= */}
           {activeTab === "gist" && (
             <div className="space-y-4">
-              <div className="flex items-start gap-3 p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-800 dark:text-indigo-300 text-xs">
-                <ShieldCheck className="w-5 h-5 shrink-0 text-indigo-500 mt-0.5" />
+              <div className="flex items-start gap-3 p-4 rounded-2xl bg-accent/10 border border-accent/20 text-primary text-xs">
+                <ShieldCheck className="w-5 h-5 shrink-0 text-accent mt-0.5" />
                 <div className="space-y-1">
                   <strong className="font-semibold block">
                     Sync via GitHub Gist
                   </strong>
-                  <p className="leading-relaxed opacity-90">
+                  <p className="leading-relaxed text-secondary">
                     Push your local workspace to a private Gist, then pull it on
                     another device. Requires a Personal Access Token with{" "}
                     <code className="font-mono">gist</code> scope. The token is
@@ -598,9 +541,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
               </div>
 
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-3">
+              <div className="p-4 rounded-2xl bg-sunken border border-soft space-y-3">
                 <div>
-                  <label className="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1">
+                  <label className="block text-[11px] font-mono uppercase tracking-wider text-muted mb-1">
                     Personal Access Token
                   </label>
                   <input
@@ -622,16 +565,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       })
                     }
                     placeholder="ghp_..."
-                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3 py-2 rounded-xl bg-raised border border-soft text-xs font-mono text-primary focus:outline-none focus:border-accent"
                   />
-                  <p className="text-[10px] text-slate-400 mt-1">
+                  <p className="text-[10px] text-muted mt-1">
                     Create at github.com/settings/tokens with <code>gist</code>{" "}
                     scope.
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-mono uppercase tracking-wider text-slate-400 mb-1">
+                  <label className="block text-[11px] font-mono uppercase tracking-wider text-muted mb-1">
                     Gist ID (leave empty to auto-create)
                   </label>
                   <input
@@ -653,12 +596,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       })
                     }
                     placeholder="e.g. 2decf6c462d9b4418f2"
-                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3 py-2 rounded-xl bg-raised border border-soft text-xs font-mono text-primary focus:outline-none focus:border-accent"
                   />
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-500">
+                  <span className="text-xs text-secondary">
                     Auto-sync on app start
                   </span>
                   <button
@@ -680,9 +623,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       });
                     }}
                     className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
-                      autoSync
-                        ? "bg-indigo-600"
-                        : "bg-slate-300 dark:bg-slate-700"
+                      autoSync ? "bg-accent" : "bg-strong"
                     }`}
                   >
                     <span
@@ -694,16 +635,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
               </div>
 
-              {/* Split Push / Pull + full Sync */}
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   disabled={isSyncing || !gistToken.trim()}
                   onClick={() => onGistPush?.()}
                   title="Upload local state to the gist (creates it if missing)"
-                  className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 text-slate-700 dark:text-slate-200 text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                  className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-soft bg-surface hover:bg-hover disabled:opacity-40 text-secondary text-xs font-semibold shadow-xs transition-colors cursor-pointer"
                 >
-                  <ArrowUpFromLine className="w-4 h-4 text-indigo-400" />
+                  <ArrowUpFromLine className="w-4 h-4 text-accent" />
                   <span>Push</span>
                 </button>
 
@@ -712,9 +652,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   disabled={isSyncing || !gistToken.trim() || !gistId.trim()}
                   onClick={() => onGistPull?.()}
                   title="Download and merge remote records into local DB"
-                  className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 text-slate-700 dark:text-slate-200 text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                  className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-soft bg-surface hover:bg-hover disabled:opacity-40 text-secondary text-xs font-semibold shadow-xs transition-colors cursor-pointer"
                 >
-                  <ArrowDownToLine className="w-4 h-4 text-emerald-400" />
+                  <ArrowDownToLine className="w-4 h-4 text-success" />
                   <span>Pull</span>
                 </button>
               </div>
@@ -723,7 +663,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 type="button"
                 disabled={isSyncing || !gistToken.trim()}
                 onClick={() => onGistSync?.()}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-accent hover:bg-accent-hover disabled:opacity-40 text-accent-fg text-xs font-semibold shadow-xs transition-colors cursor-pointer"
               >
                 <Cloud
                   className={`w-4 h-4 ${isSyncing ? "animate-pulse" : ""}`}
@@ -734,13 +674,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </button>
 
               {lastSyncResult && (
-                <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-[11px] font-mono text-slate-600 dark:text-slate-400 text-center">
+                <div className="p-3 rounded-xl bg-sunken border border-soft text-[11px] font-mono text-secondary text-center">
                   {lastSyncResult}
                 </div>
               )}
 
               {settings.gistSync?.lastSyncedAt && (
-                <p className="text-[10px] text-slate-400 text-center font-mono">
+                <p className="text-[10px] text-muted text-center font-mono">
                   Last synced:{" "}
                   {new Date(settings.gistSync.lastSyncedAt).toLocaleString()}
                 </p>
@@ -748,17 +688,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           )}
 
-          {/* ================= TAB 3: DATA & BACKUP ================= */}
+          {/* ================= DATA & BACKUP ================= */}
           {activeTab === "backup" && (
             <div className="space-y-4">
-              {/* Privacy Notice */}
-              <div className="flex items-start gap-3 p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-300 text-xs">
-                <ShieldCheck className="w-5 h-5 shrink-0 text-emerald-500 mt-0.5" />
+              <div className="flex items-start gap-3 p-4 rounded-2xl bg-success/10 border border-success/20 text-primary text-xs">
+                <ShieldCheck className="w-5 h-5 shrink-0 text-success mt-0.5" />
                 <div className="space-y-1">
-                  <strong className="font-semibold block text-emerald-700 dark:text-emerald-200">
+                  <strong className="font-semibold block">
                     100% Offline-First & Client-Side Privacy
                   </strong>
-                  <p className="leading-relaxed opacity-90">
+                  <p className="leading-relaxed text-secondary">
                     All your entries, notes, events, habits, and lists live
                     directly inside your local browser's IndexedDB. Export a
                     JSON backup to migrate between computers or keep offsite
@@ -767,13 +706,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
               </div>
 
-              {/* JSON Export Card */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4">
+              <div className="p-4 rounded-2xl bg-sunken border border-soft flex items-center justify-between gap-4">
                 <div className="space-y-0.5">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-primary">
                     Export Full Workspace
                   </h4>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-secondary">
                     Download a comprehensive, human-readable JSON archive of all
                     your data.
                   </p>
@@ -781,20 +719,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <button
                   type="button"
                   onClick={handleExport}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-slate-900 text-xs font-semibold shadow-xs transition-colors cursor-pointer shrink-0"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-app text-xs font-semibold shadow-xs transition-colors cursor-pointer shrink-0"
                 >
-                  <Download className="w-4 h-4 text-indigo-400 dark:text-indigo-600" />
+                  <Download className="w-4 h-4" />
                   <span>Export JSON</span>
                 </button>
               </div>
 
-              {/* JSON Import Card */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4">
+              <div className="p-4 rounded-2xl bg-sunken border border-soft flex items-center justify-between gap-4">
                 <div className="space-y-0.5">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-primary">
                     Restore from Backup
                   </h4>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-secondary">
                     Upload an existing ChronoCraft JSON backup to restore your
                     data.
                   </p>
@@ -802,9 +739,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-semibold shadow-xs transition-colors cursor-pointer shrink-0"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-soft hover:bg-hover text-primary text-xs font-semibold shadow-xs transition-colors cursor-pointer shrink-0"
                 >
-                  <Upload className="w-4 h-4 text-cyan-400" />
+                  <Upload className="w-4 h-4 text-info" />
                   <span>Select File</span>
                 </button>
                 <input
@@ -817,123 +754,92 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
 
               {exportStatus && (
-                <div className="p-3 rounded-xl bg-indigo-500/10 text-indigo-400 text-xs font-mono text-center animate-fadeIn">
+                <div className="p-3 rounded-xl bg-accent/10 text-accent text-xs font-mono text-center animate-fadeIn">
                   {exportStatus}
                 </div>
               )}
               {importStatus && (
-                <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-400 text-xs font-mono text-center animate-fadeIn">
+                <div className="p-3 rounded-xl bg-success/10 text-success text-xs font-mono text-center animate-fadeIn">
                   {importStatus}
                 </div>
               )}
             </div>
           )}
 
-          {/* ================= TAB 4: STORAGE & SYSTEM ================= */}
+          {/* ================= STORAGE & SYSTEM ================= */}
           {activeTab === "storage" && (
             <div className="space-y-4">
-              {/* Storage Telemetry Cards */}
               <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2.5">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-muted mb-2.5">
                   Database Record Counters
                 </h4>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
-                    <span className="text-[10px] font-mono uppercase text-slate-400">
-                      Timeline Entries
-                    </span>
-                    <div className="text-lg font-bold font-mono text-slate-800 dark:text-slate-100 tabular-nums">
-                      {storageStats.entries}
+                  {[
+                    { label: "Timeline Entries", value: storageStats.entries },
+                    { label: "Saved Notes", value: storageStats.notes },
+                    { label: "Calendar Events", value: storageStats.events },
+                    { label: "Active Habits", value: storageStats.habits },
+                    { label: "Sub-List Items", value: storageStats.listItems },
+                  ].map((s) => (
+                    <div
+                      key={s.label}
+                      className="p-3 rounded-xl bg-sunken border border-soft"
+                    >
+                      <span className="text-[10px] font-mono uppercase text-muted">
+                        {s.label}
+                      </span>
+                      <div className="text-lg font-bold font-mono text-primary tabular-nums">
+                        {s.value}
+                      </div>
                     </div>
-                  </div>
-
-                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
-                    <span className="text-[10px] font-mono uppercase text-slate-400">
-                      Saved Notes
-                    </span>
-                    <div className="text-lg font-bold font-mono text-slate-800 dark:text-slate-100 tabular-nums">
-                      {storageStats.notes}
-                    </div>
-                  </div>
-
-                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
-                    <span className="text-[10px] font-mono uppercase text-slate-400">
-                      Calendar Events
-                    </span>
-                    <div className="text-lg font-bold font-mono text-slate-800 dark:text-slate-100 tabular-nums">
-                      {storageStats.events}
-                    </div>
-                  </div>
-
-                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
-                    <span className="text-[10px] font-mono uppercase text-slate-400">
-                      Active Habits
-                    </span>
-                    <div className="text-lg font-bold font-mono text-slate-800 dark:text-slate-100 tabular-nums">
-                      {storageStats.habits}
-                    </div>
-                  </div>
-
-                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 col-span-2 sm:col-span-2">
-                    <span className="text-[10px] font-mono uppercase text-slate-400">
-                      Sub-List Items
-                    </span>
-                    <div className="text-lg font-bold font-mono text-slate-800 dark:text-slate-100 tabular-nums">
-                      {storageStats.listItems}
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </div>
 
-              {/* Status indicator */}
-              <div className="flex items-center gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs text-slate-500">
-                <HardDrive className="w-4 h-4 text-indigo-400" />
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-sunken border border-soft text-xs text-secondary">
+                <HardDrive className="w-4 h-4 text-accent" />
                 <span>
                   Engine: IndexedDB v1 · State Engine Healthy · Persistence
                   Active
                 </span>
               </div>
 
-              {/* Tombstone Cleanup */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                      <Trash2 className="w-3.5 h-3.5 text-amber-400" />
-                      <span>Tombstone Cleanup</span>
-                    </h4>
-                    <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
-                      Deleted items are kept as lightweight "tombstones" so the
-                      deletion propagates to other devices on the next sync. Old
-                      tombstones can be purged once every device has synced.
-                    </p>
-                  </div>
+              <div className="p-4 rounded-2xl bg-sunken border border-soft space-y-3">
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                    <Trash2 className="w-3.5 h-3.5 text-warning" />
+                    <span>Tombstone Cleanup</span>
+                  </h4>
+                  <p className="text-xs text-secondary mt-0.5 leading-relaxed">
+                    Deleted items are kept as lightweight "tombstones" so the
+                    deletion propagates to other devices on the next sync. Old
+                    tombstones can be purged once every device has synced.
+                  </p>
                 </div>
 
-                {/* Stats row */}
                 {tombstoneStats ? (
                   <div className="grid grid-cols-3 gap-2 text-center">
-                    <div className="p-2.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                      <div className="text-[10px] font-mono uppercase text-slate-400">
+                    <div className="p-2.5 rounded-lg bg-raised border border-soft">
+                      <div className="text-[10px] font-mono uppercase text-muted">
                         Total
                       </div>
-                      <div className="text-lg font-bold font-mono tabular-nums text-slate-900 dark:text-slate-100">
+                      <div className="text-lg font-bold font-mono tabular-nums text-primary">
                         {tombstoneStats.total}
                       </div>
                     </div>
-                    <div className="p-2.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                      <div className="text-[10px] font-mono uppercase text-slate-400">
+                    <div className="p-2.5 rounded-lg bg-raised border border-soft">
+                      <div className="text-[10px] font-mono uppercase text-muted">
                         Purgeable
                       </div>
-                      <div className="text-lg font-bold font-mono tabular-nums text-amber-500">
+                      <div className="text-lg font-bold font-mono tabular-nums text-warning">
                         {tombstoneStats.stale}
                       </div>
                     </div>
-                    <div className="p-2.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                      <div className="text-[10px] font-mono uppercase text-slate-400">
+                    <div className="p-2.5 rounded-lg bg-raised border border-soft">
+                      <div className="text-[10px] font-mono uppercase text-muted">
                         Oldest
                       </div>
-                      <div className="text-lg font-bold font-mono tabular-nums text-slate-900 dark:text-slate-100">
+                      <div className="text-lg font-bold font-mono tabular-nums text-primary">
                         {tombstoneStats.oldestDays !== null
                           ? `${tombstoneStats.oldestDays}d`
                           : "—"}
@@ -941,14 +847,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </div>
                   </div>
                 ) : (
-                  <div className="p-2.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-center text-[11px] text-slate-400">
+                  <div className="p-2.5 rounded-lg bg-raised border border-soft text-center text-[11px] text-muted">
                     Counting tombstones…
                   </div>
                 )}
 
-                {/* Threshold control */}
                 <div className="flex items-center justify-between gap-3">
-                  <label className="text-[11px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  <label className="text-[11px] font-mono uppercase tracking-wider text-secondary">
                     Purge older than
                   </label>
                   <select
@@ -956,7 +861,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     onChange={(e) =>
                       setPurgeThreshold(parseInt(e.target.value, 10))
                     }
-                    className="px-2.5 py-1 w-fit rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                    className="px-2.5 py-1 w-fit rounded-lg bg-raised border border-soft text-xs font-mono text-primary focus:outline-none focus:border-accent cursor-pointer"
                   >
                     <option value={0}>All tombstones (right now)</option>
                     <option value={7}>7 days</option>
@@ -969,21 +874,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
 
                 {purgeThreshold === 0 && (
-                  <p className="text-[10px] text-rose-500 dark:text-rose-400 leading-relaxed">
+                  <p className="text-[10px] text-danger leading-relaxed">
                     ⚠ Purges all tombstones immediately. Any device that has not
                     yet synced this deletion will resurrect the item on its next
                     push.
                   </p>
                 )}
 
-                {/* Purge button */}
                 <button
                   type="button"
                   disabled={
                     isPurging || !tombstoneStats || tombstoneStats.stale === 0
                   }
                   onClick={handlePurge}
-                  className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 disabled:opacity-40 disabled:cursor-not-allowed text-amber-700 dark:text-amber-400 border border-amber-500/30 text-xs font-semibold transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-warning/10 hover:bg-warning/20 disabled:opacity-40 disabled:cursor-not-allowed text-warning border border-warning/30 text-xs font-semibold transition-colors cursor-pointer"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   <span>
@@ -996,14 +900,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </button>
 
                 {purgeStatus && (
-                  <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[11px] font-mono text-slate-600 dark:text-slate-400 text-center animate-fadeIn">
+                  <div className="p-2 rounded-lg bg-raised border border-soft text-[11px] font-mono text-secondary text-center animate-fadeIn">
                     {purgeStatus}
                   </div>
                 )}
 
-                {/* Warning */}
                 {tombstoneStats && tombstoneStats.fresh > 0 && (
-                  <p className="text-[10px] text-slate-400 leading-relaxed">
+                  <p className="text-[10px] text-muted leading-relaxed">
                     {tombstoneStats.fresh} tombstone
                     {tombstoneStats.fresh === 1 ? "" : "s"} younger than the
                     threshold will be kept. Only tombstones older than{" "}
@@ -1012,20 +915,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 )}
               </div>
 
-              {/* Danger Zone: Reset Template */}
-              <div className="p-4 rounded-2xl border border-rose-500/20 bg-rose-500/5 space-y-2">
-                <div className="flex items-center gap-2 text-rose-500 font-semibold text-xs uppercase tracking-wider">
+              <div className="p-4 rounded-2xl border border-danger/20 bg-danger/5 space-y-2">
+                <div className="flex items-center gap-2 text-danger font-semibold text-xs uppercase tracking-wider">
                   <AlertTriangle className="w-4 h-4" />
                   <span>Danger Zone</span>
                 </div>
-                <p className="text-xs text-slate-500 leading-relaxed">
+                <p className="text-xs text-secondary leading-relaxed">
                   Resetting replaces current data with the default sample seed
                   template (sample projects, books, habits, and timeline items).
                 </p>
                 <button
                   type="button"
                   onClick={handleResetData}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 text-xs font-semibold transition-colors cursor-pointer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-danger/10 hover:bg-danger/20 text-danger border border-danger/30 text-xs font-semibold transition-colors cursor-pointer"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
                   <span>Reset All Workspace Data</span>
@@ -1034,19 +936,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           )}
         </div>
-        {/* Footer Actions */}
-        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-[#0E131E]">
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-soft bg-sunken/50">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-lg text-xs font-medium text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 transition-colors cursor-pointer"
+            className="px-4 py-2 rounded-lg text-xs font-medium text-secondary hover:text-primary transition-colors cursor-pointer"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={handleApplyPreferences}
-            className="flex items-center gap-1.5 px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-5 py-2 rounded-lg bg-accent hover:bg-accent-hover text-accent-fg text-xs font-semibold shadow-xs transition-all cursor-pointer"
           >
             <Check className="w-3.5 h-3.5" />
             <span>Apply Preferences</span>

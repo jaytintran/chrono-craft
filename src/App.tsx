@@ -17,6 +17,8 @@ import {
   Note,
   ScratchpadCard,
   TimelineEntry,
+  ThemeId,
+  ThemeFlavor,
 } from "./types";
 import { appDb } from "./services/db";
 
@@ -149,13 +151,59 @@ export default function App() {
 
   // Sync Theme with HTML element
   useEffect(() => {
-    if (settings.theme === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-    applyNativeTheme(settings.theme);
-  }, [settings.theme]);
+    const root = document.documentElement;
+
+    // Clear every known theme class first so switching is idempotent.
+    root.classList.remove(
+      "dark",
+      "light",
+      "theme-forest",
+      "theme-sepia",
+      "theme-nord",
+      "theme-tokyo",
+      "theme-cyberpunk",
+      "theme-paper",
+    );
+
+    // Which flavor does each theme default to when no explicit override is set?
+    // Only used as a fallback for legacy users who saved a theme before
+    // `themeFlavor` existed.
+    const THEME_DEFAULT_FLAVOR: Record<ThemeId, ThemeFlavor> = {
+      dark: "dark",
+      light: "light",
+      forest: "dark",
+      sepia: "dark",
+      nord: "dark",
+      tokyo: "dark",
+      cyberpunk: "dark",
+      paper: "light", // Paper's canonical flavor is light — it's a writing theme
+    };
+
+    // Class that identifies the palette. `dark` and `light` are built-in bases
+    // and don't need an extra class; everything else gets `theme-<id>`.
+    const THEME_CLASS: Record<ThemeId, string | null> = {
+      dark: null,
+      light: null,
+      forest: "theme-forest",
+      sepia: "theme-sepia",
+      nord: "theme-nord",
+      tokyo: "theme-tokyo",
+      cyberpunk: "theme-cyberpunk",
+      paper: "theme-paper",
+    };
+
+    // Resolve flavor: explicit override wins; otherwise fall back to the
+    // theme's canonical default.
+    const flavor: ThemeFlavor =
+      settings.themeFlavor ?? THEME_DEFAULT_FLAVOR[settings.theme];
+    const isDark = flavor === "dark";
+
+    root.classList.add(isDark ? "dark" : "light");
+    const themeClass = THEME_CLASS[settings.theme];
+    if (themeClass) root.classList.add(themeClass);
+
+    applyNativeTheme(isDark ? "dark" : "light");
+  }, [settings.theme, settings.themeFlavor]);
 
   // Resolve "tl_<id>" or "<id>" to the Timeline entry that owns a note/event
   const findLinkedEntry = (id: string | undefined, type: "note" | "event") => {
@@ -1037,7 +1085,7 @@ export default function App() {
   }, [notes, events, listItems, entries]);
 
   return (
-    <div className="flex flex-col h-[100dvh] w-full bg-slate-50 dark:bg-[#0B0F17] text-slate-900 dark:text-slate-100 antialiased overflow-hidden transition-colors selection:bg-indigo-500/30 selection:text-indigo-400">
+    <div className="flex flex-col h-[100dvh] w-full bg-app text-primary antialiased overflow-hidden transition-colors selection:bg-accent/30 selection:text-accent">
       {/* 1. Global Header Navigation */}
       <Header
         activeView={activeView}
@@ -1054,7 +1102,6 @@ export default function App() {
         onGistPush={handleGistPush}
         onGistPull={handleGistPull}
       />
-
       {/* 2. Workspace Body: Desktop Sidebar + Main Canvas */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Sidebar on Desktop */}
@@ -1073,7 +1120,7 @@ export default function App() {
         />
 
         {/* Main Viewport Canvas */}
-        <main className="flex-1 flex flex-col min-w-0 bg-white dark:bg-[#0B0F17] overflow-hidden">
+        <main className="flex-1 flex flex-col min-w-0 bg-app overflow-hidden">
           {activeView === "focus" && (
             <FocusView
               entries={entries}
@@ -1244,7 +1291,6 @@ export default function App() {
           )}
         </main>
       </div>
-
       {/* 3. Polymorphic DetailSheet Component */}
       <DetailSheet
         sheetMode={sheetMode}
@@ -1259,7 +1305,6 @@ export default function App() {
         onSaveListItem={handleSaveListItem}
         onDeleteListItem={handleDeleteListItem}
       />
-
       {/* 4. Settings & Workspace Backup Modal */}
       <SettingsModal
         isOpen={isSettingsOpen}
@@ -1274,14 +1319,12 @@ export default function App() {
         initialTab={settingsInitialTab}
         onPurgeTombstones={handlePurgeTombstones}
       />
-
       {/* 5. Create Custom List Modal */}
       <CreateListModal
         isOpen={isCreateListOpen}
         onClose={() => setIsCreateListOpen(false)}
         onCreateList={handleCreateList}
       />
-
       {/* 6. Universal Context Menu */}
       <ContextMenu
         target={contextTarget}

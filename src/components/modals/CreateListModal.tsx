@@ -11,7 +11,7 @@ import {
   FolderKanban,
   Check,
 } from "lucide-react";
-import { CustomList } from "../types";
+import { CustomList } from "@/types";
 import { Keyboard } from "@capacitor/keyboard";
 
 interface CreateListModalProps {
@@ -109,7 +109,7 @@ export const CreateListModal: React.FC<CreateListModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4">
       <div
         onClick={onClose}
-        className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs"
+        className="fixed inset-0 bg-overlay/60 backdrop-blur-xs"
       />
 
       <form
@@ -117,44 +117,42 @@ export const CreateListModal: React.FC<CreateListModalProps> = ({
         style={{
           paddingBottom: keyboardHeight > 0 ? keyboardHeight : undefined,
         }}
-        className="relative w-full md:max-w-sm rounded-t-3xl md:rounded-2xl bg-white dark:bg-[#131926] border-t md:border border-slate-200 dark:border-slate-800 shadow-2xl z-10 flex flex-col max-h-[85dvh] animate-slideInBottom md:animate-scaleUp"
+        className="relative w-full md:max-w-sm rounded-t-3xl md:rounded-2xl bg-raised border-t md:border border-soft shadow-2xl z-10 flex flex-col max-h-[85dvh] animate-slideInBottom md:animate-scaleUp"
       >
         {/* Drag handle (mobile only) */}
         <div className="md:hidden flex justify-center pt-2 pb-1">
-          <div className="w-10 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700" />
+          <div className="w-10 h-1.5 rounded-full bg-strong" />
         </div>
 
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto px-6 pb-4 pt-4 md:pt-6 space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+            <h3 className="text-sm font-bold text-primary">
               {initialList ? "Edit List" : "Create Custom List"}
             </h3>
             <button
               type="button"
               onClick={onClose}
-              className="p-1 rounded-lg text-slate-400 hover:text-slate-100"
+              className="p-1 rounded-lg text-muted hover:text-primary"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
           <div>
-            <label className="block text-xs text-slate-400 mb-1">
-              List Name
-            </label>
+            <label className="block text-xs text-muted mb-1">List Name</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Fitness Goals, Research Papers"
               autoFocus
-              className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-semibold focus:outline-none focus:border-indigo-500 text-slate-900 dark:text-slate-100"
+              className="w-full px-3 py-2 rounded-xl bg-sunken border border-soft text-xs font-semibold focus:outline-none focus:border-accent text-primary"
             />
           </div>
 
           <div>
-            <label className="block text-xs text-slate-400 mb-1">
+            <label className="block text-xs text-muted mb-1">
               Description (Optional)
             </label>
             <input
@@ -162,12 +160,12 @@ export const CreateListModal: React.FC<CreateListModalProps> = ({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="What does this list organize?"
-              className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs focus:outline-none focus:border-indigo-500 text-slate-900 dark:text-slate-100"
+              className="w-full px-3 py-2 rounded-xl bg-sunken border border-soft text-xs focus:outline-none focus:border-accent text-primary"
             />
           </div>
 
           <div>
-            <label className="block text-xs text-slate-400 mb-2">Icon</label>
+            <label className="block text-xs text-muted mb-2">Icon</label>
             <div className="flex items-center gap-2">
               {icons.map((item) => (
                 <button
@@ -176,8 +174,8 @@ export const CreateListModal: React.FC<CreateListModalProps> = ({
                   onClick={() => setIcon(item.name)}
                   className={`p-2 rounded-xl border transition-colors ${
                     icon === item.name
-                      ? "bg-indigo-600 text-white border-indigo-600"
-                      : "border-slate-200 dark:border-slate-800 text-slate-400 hover:border-slate-600"
+                      ? "bg-accent text-accent-fg border-accent"
+                      : "border-soft text-muted hover:border-strong"
                   }`}
                 >
                   {item.icon}
@@ -187,7 +185,7 @@ export const CreateListModal: React.FC<CreateListModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-xs text-slate-400 mb-2">
+            <label className="block text-xs text-muted mb-2">
               Accent Color
             </label>
             <div className="flex items-center gap-2">
@@ -198,9 +196,7 @@ export const CreateListModal: React.FC<CreateListModalProps> = ({
                   onClick={() => setColor(c)}
                   style={{ backgroundColor: c }}
                   className={`w-6 h-6 rounded-full transition-transform ${
-                    color === c
-                      ? "scale-125 ring-2 ring-indigo-500"
-                      : "opacity-80"
+                    color === c ? "scale-125 ring-2 ring-accent" : "opacity-80"
                   }`}
                 />
               ))}
@@ -208,19 +204,19 @@ export const CreateListModal: React.FC<CreateListModalProps> = ({
           </div>
         </div>
 
-        {/* Footer — actions, pinned to bottom of sheet */}
-        <div className="flex items-center justify-end gap-2 px-6 py-3 md:pt-2 border-t border-slate-100 dark:border-slate-800 shrink-0">
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-2 px-6 py-3 md:pt-2 border-t border-soft shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="px-3 py-1.5 rounded-lg text-xs text-slate-400 hover:text-slate-100"
+            className="px-3 py-1.5 rounded-lg text-xs text-muted hover:text-primary"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={!name.trim()}
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-xs disabled:opacity-40"
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-accent hover:bg-accent-hover text-accent-fg text-xs font-semibold shadow-xs disabled:opacity-40"
           >
             <Check className="w-3.5 h-3.5" />
             <span>{initialList ? "Save Changes" : "Create List"}</span>

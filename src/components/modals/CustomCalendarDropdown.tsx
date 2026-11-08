@@ -3,8 +3,8 @@
  * Bespoke mini calendar dropdown with month navigation, day grid, and 'Jump to Today' shortcut.
  */
 
-import React, { useState, useRef, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Sparkles } from 'lucide-react';
+import React, { useState, useRef, useEffect } from "react";
+import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 
 interface CustomCalendarDropdownProps {
   selectedDate: Date;
@@ -22,25 +22,26 @@ export const CustomCalendarDropdown: React.FC<CustomCalendarDropdownProps> = ({
   const [viewDate, setViewDate] = useState<Date>(new Date(selectedDate));
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Sync viewDate when selectedDate changes or modal opens
   useEffect(() => {
     if (isOpen) {
       setViewDate(new Date(selectedDate));
     }
   }, [isOpen, selectedDate]);
 
-  // Click outside listener
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         onClose();
       }
     };
     if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
     }
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isOpen, onClose]);
 
@@ -63,25 +64,24 @@ export const CustomCalendarDropdown: React.FC<CustomCalendarDropdownProps> = ({
     onClose();
   };
 
-  // Month & Year title
-  const monthTitle = viewDate.toLocaleDateString('en-US', {
-    month: 'long',
-    year: 'numeric',
+  const monthTitle = viewDate.toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
   });
 
-  // Calculate calendar grid (Monday to Sunday)
   const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
   const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
 
-  // 0 = Sunday, 1 = Monday, ... 6 = Saturday
-  // Convert so Monday = 0, Sunday = 6
   let firstDayIndex = firstDayOfMonth.getDay() - 1;
   if (firstDayIndex === -1) firstDayIndex = 6;
 
   const totalDays = lastDayOfMonth.getDate();
-  const daysArray: Array<{ dayNum: number; date: Date; isCurrentMonth: boolean }> = [];
+  const daysArray: Array<{
+    dayNum: number;
+    date: Date;
+    isCurrentMonth: boolean;
+  }> = [];
 
-  // Previous month trailing days
   const prevMonthLastDay = new Date(currentYear, currentMonth, 0).getDate();
   for (let i = firstDayIndex - 1; i >= 0; i--) {
     const d = prevMonthLastDay - i;
@@ -92,7 +92,6 @@ export const CustomCalendarDropdown: React.FC<CustomCalendarDropdownProps> = ({
     });
   }
 
-  // Current month days
   for (let d = 1; d <= totalDays; d++) {
     daysArray.push({
       dayNum: d,
@@ -101,7 +100,6 @@ export const CustomCalendarDropdown: React.FC<CustomCalendarDropdownProps> = ({
     });
   }
 
-  // Next month leading days to complete full grid (multiples of 7)
   const remaining = (7 - (daysArray.length % 7)) % 7;
   for (let d = 1; d <= remaining; d++) {
     daysArray.push({
@@ -117,11 +115,11 @@ export const CustomCalendarDropdown: React.FC<CustomCalendarDropdownProps> = ({
   return (
     <div
       ref={dropdownRef}
-      className="absolute left-0 sm:left-auto top-full mt-2 w-72 rounded-2xl bg-white dark:bg-[#111724] border border-slate-200 dark:border-slate-800 shadow-2xl p-4 z-50 animate-scaleUp text-slate-900 dark:text-slate-100"
+      className="absolute left-0 sm:left-auto top-full mt-2 w-72 rounded-2xl bg-raised border border-soft shadow-2xl p-4 z-50 animate-scaleUp text-primary"
     >
       {/* Month & Navigation Header */}
       <div className="flex items-center justify-between mb-3 px-1">
-        <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 font-sans">
+        <h4 className="text-xs font-bold text-primary font-sans">
           {monthTitle}
         </h4>
 
@@ -130,7 +128,7 @@ export const CustomCalendarDropdown: React.FC<CustomCalendarDropdownProps> = ({
             type="button"
             onClick={handlePrevMonth}
             title="Previous Month"
-            className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+            className="p-1 rounded-lg hover:bg-hover text-muted hover:text-primary transition-colors"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -138,7 +136,7 @@ export const CustomCalendarDropdown: React.FC<CustomCalendarDropdownProps> = ({
             type="button"
             onClick={handleNextMonth}
             title="Next Month"
-            className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+            className="p-1 rounded-lg hover:bg-hover text-muted hover:text-primary transition-colors"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -147,10 +145,10 @@ export const CustomCalendarDropdown: React.FC<CustomCalendarDropdownProps> = ({
 
       {/* Weekday Labels (Mon - Sun) */}
       <div className="grid grid-cols-7 gap-1 text-center mb-1">
-        {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map((w) => (
+        {["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map((w) => (
           <span
             key={w}
-            className="text-[10px] font-mono uppercase text-slate-400 dark:text-slate-500 font-semibold py-1"
+            className="text-[10px] font-mono uppercase text-muted font-semibold py-1"
           >
             {w}
           </span>
@@ -173,12 +171,12 @@ export const CustomCalendarDropdown: React.FC<CustomCalendarDropdownProps> = ({
               }}
               className={`h-7 w-7 mx-auto rounded-lg text-xs font-mono flex items-center justify-center transition-all cursor-pointer ${
                 isSelected
-                  ? 'bg-indigo-600 text-white font-bold shadow-xs scale-105'
+                  ? "bg-accent text-accent-fg font-bold shadow-xs scale-105"
                   : isToday
-                  ? 'border border-indigo-500 text-indigo-500 dark:text-indigo-400 font-semibold bg-indigo-500/10'
-                  : item.isCurrentMonth
-                  ? 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
-                  : 'text-slate-300 dark:text-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/40'
+                    ? "border border-accent text-accent font-semibold bg-accent/10"
+                    : item.isCurrentMonth
+                      ? "text-primary hover:bg-hover"
+                      : "text-muted hover:bg-hover/60"
               }`}
             >
               {item.dayNum}
@@ -188,13 +186,13 @@ export const CustomCalendarDropdown: React.FC<CustomCalendarDropdownProps> = ({
       </div>
 
       {/* Footer: Jump to Today */}
-      <div className="pt-3 mt-3 border-t border-slate-100 dark:border-slate-800/80">
+      <div className="pt-3 mt-3 border-t border-soft">
         <button
           type="button"
           onClick={handleJumpToToday}
-          className="w-full py-1.5 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+          className="w-full py-1.5 px-3 rounded-xl bg-hover hover:bg-accent/15 text-secondary hover:text-accent text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
         >
-          <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+          <Sparkles className="w-3.5 h-3.5 text-accent" />
           <span>Jump to Today</span>
         </button>
       </div>

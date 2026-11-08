@@ -89,8 +89,8 @@ export const MultiGroupFilterPopover: React.FC<
         onClick={() => setOpen((o) => !o)}
         className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border shadow-xs text-xs font-medium transition-colors cursor-pointer ${
           active
-            ? "bg-indigo-500/10 border-indigo-500/40 text-indigo-300"
-            : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-400 dark:hover:border-slate-700"
+            ? "bg-accent/10 border-accent/40 text-accent"
+            : "bg-surface border-soft text-secondary hover:border-strong"
         }`}
       >
         {triggerIcon}
@@ -98,20 +98,18 @@ export const MultiGroupFilterPopover: React.FC<
           {triggerLabel}
         </span>
         <ChevronDown
-          className={`w-3.5 h-3.5 text-slate-400 transition-transform ${
+          className={`w-3.5 h-3.5 text-muted transition-transform ${
             open ? "rotate-180" : ""
           }`}
         />
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-1.5 z-40 w-56 rounded-xl bg-white dark:bg-[#111724] border border-slate-200 dark:border-slate-800 shadow-2xl p-1">
+        <div className="absolute left-0 top-full mt-1.5 z-40 w-56 rounded-xl bg-raised border border-soft shadow-2xl p-1">
           {groups.map((g, gi) => (
             <React.Fragment key={g.key}>
-              {gi > 0 && (
-                <div className="my-1 border-t border-slate-200 dark:border-slate-800" />
-              )}
-              <div className="px-2 pt-1 pb-1 text-[10px] font-mono uppercase tracking-wider text-slate-400">
+              {gi > 0 && <div className="my-1 border-t border-soft" />}
+              <div className="px-2 pt-1 pb-1 text-[10px] font-mono uppercase tracking-wider text-muted">
                 {g.label}
               </div>
               {g.options.map((o) => {
@@ -123,8 +121,8 @@ export const MultiGroupFilterPopover: React.FC<
                     onClick={() => onChange(g.key, o.value)}
                     className={`w-full flex items-center justify-between gap-3 px-2.5 py-1.5 rounded-lg text-xs text-left transition-colors cursor-pointer ${
                       selected
-                        ? "bg-indigo-500/15 text-indigo-300 font-medium"
-                        : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                        ? "bg-accent/15 text-accent font-medium"
+                        : "text-secondary hover:bg-hover"
                     }`}
                   >
                     <span className="flex items-center gap-2 min-w-0">

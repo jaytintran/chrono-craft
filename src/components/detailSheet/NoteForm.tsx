@@ -79,7 +79,7 @@ export const NoteForm = React.forwardRef<NoteFormHandle, NoteFormProps>(
             // Shift+Enter is left alone → produces a manual line break in the title
           }}
           placeholder="Untitled note"
-          className="text-2xl font-semibold text-slate-900 dark:text-slate-100 placeholder-slate-300 dark:placeholder-slate-600 leading-tight"
+          className="text-2xl font-semibold text-primary placeholder-muted leading-tight"
         />
 
         <MetaRow

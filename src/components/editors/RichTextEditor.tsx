@@ -29,7 +29,6 @@ export const stripHtml = (html = "") => {
   return (doc.body.textContent || "").replace(/\s+/g, " ").trim();
 };
 
-// Legacy plain-text notes -> paragraphs
 const toHtml = (v: string) =>
   !v || v.trim().startsWith("<")
     ? v
@@ -59,12 +58,12 @@ const Btn = ({
     type="button"
     title={title}
     disabled={disabled}
-    onMouseDown={(e) => e.preventDefault()} // keep editor focus
+    onMouseDown={(e) => e.preventDefault()}
     onClick={onClick}
     className={`p-1.5 rounded-md transition-colors disabled:opacity-30 ${
       active
-        ? "bg-indigo-500/15 text-indigo-400"
-        : "text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/60 dark:hover:bg-slate-800"
+        ? "bg-accent/15 text-accent"
+        : "text-muted hover:text-primary hover:bg-hover"
     }`}
   >
     {children}
@@ -92,7 +91,6 @@ export const RichTextEditor: React.FC<Props> = ({
   slashRef.current = slash;
   const editorRef = useRef<Editor | null>(null);
 
-  // Re-assigned every render so it always sees the current `sel`
   const keyRef = useRef<(e: KeyboardEvent) => boolean>(() => false);
   keyRef.current = (e) => {
     const s = slashRef.current;
@@ -132,7 +130,7 @@ export const RichTextEditor: React.FC<Props> = ({
       Placeholder.configure({ placeholder }),
     ],
     content: toHtml(value),
-    shouldRerenderOnTransaction: true, // keeps toolbar active-states live
+    shouldRerenderOnTransaction: true,
     editorProps: {
       attributes: {
         style: `min-height:${typeof minHeight === "number" ? `${minHeight}px` : minHeight}`,
@@ -141,7 +139,6 @@ export const RichTextEditor: React.FC<Props> = ({
         const ed = editorRef.current;
         const text = event.clipboardData?.getData("text/plain") ?? "";
         const html = event.clipboardData?.getData("text/html") ?? "";
-        // Only intercept raw-text pastes; rich HTML pastes already work natively
         if (!ed || html || ed.isActive("codeBlock") || !looksLikeMarkdown(text))
           return false;
         ed.commands.insertContent(text, { contentType: "markdown" });
@@ -152,7 +149,6 @@ export const RichTextEditor: React.FC<Props> = ({
   });
   editorRef.current = editor;
 
-  // Sync when the sheet switches to a different note/item
   useEffect(() => {
     if (!editor) return;
     const next = toHtml(value);
@@ -171,17 +167,16 @@ export const RichTextEditor: React.FC<Props> = ({
       className={
         seamless
           ? ""
-          : "rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 transition-colors"
+          : "rounded-xl bg-sunken border border-soft focus-within:border-accent focus-within:ring-1 focus-within:ring-accent transition-colors"
       }
     >
       <div
         className={`sticky top-0 z-10 flex items-center gap-0.5 ${
           seamless
-            ? "py-1.5 bg-white dark:bg-[#111724] border-b border-slate-200/70 dark:border-slate-800/70"
-            : "px-2 py-1.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 rounded-t-xl"
+            ? "py-1.5 bg-raised border-b border-soft/70"
+            : "px-2 py-1.5 border-b border-soft bg-sunken rounded-t-xl"
         }`}
       >
-        {" "}
         <Btn
           title="Heading"
           active={editor.isActive("heading", { level: 2 })}
@@ -217,7 +212,7 @@ export const RichTextEditor: React.FC<Props> = ({
         >
           <Code className="w-4 h-4" />
         </Btn>
-        <span className="w-px h-4 mx-1 bg-slate-200 dark:bg-slate-700" />
+        <span className="w-px h-4 mx-1 bg-strong" />
         <Btn
           title="Bullet list"
           active={editor.isActive("bulletList")}
@@ -266,14 +261,12 @@ export const RichTextEditor: React.FC<Props> = ({
       <div
         className={
           seamless
-            ? "pt-4 text-[15px] text-slate-900 dark:text-slate-100"
-            : "px-3.5 py-3 text-sm text-slate-900 dark:text-slate-100"
+            ? "pt-4 text-[15px] text-primary"
+            : "px-3.5 py-3 text-sm text-primary"
         }
       >
-        {" "}
         <EditorContent editor={editor} />
       </div>
-      {/* SLASH SUB-COMPONENT */}
       {slash &&
         slash.items.length > 0 &&
         slash.rect &&
@@ -286,7 +279,7 @@ export const RichTextEditor: React.FC<Props> = ({
                 ? { top: slash.rect.top - 6, transform: "translateY(-100%)" }
                 : { top: slash.rect.bottom + 6 }),
             }}
-            className="z-[60] w-64 max-h-72 overflow-y-auto p-1 rounded-xl bg-white dark:bg-[#111724] border border-slate-200 dark:border-slate-800 shadow-2xl"
+            className="z-[60] w-64 max-h-72 overflow-y-auto p-1 rounded-xl bg-raised border border-soft shadow-2xl"
           >
             {slash.items.map((item, i) => {
               const Icon = item.icon;
@@ -298,19 +291,17 @@ export const RichTextEditor: React.FC<Props> = ({
                   onMouseEnter={() => setSel(i)}
                   onClick={() => slash.command(item)}
                   className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors ${
-                    i === sel
-                      ? "bg-indigo-500/15 text-indigo-300"
-                      : "text-slate-600 dark:text-slate-300"
+                    i === sel ? "bg-accent/15 text-accent" : "text-secondary"
                   }`}
                 >
-                  <span className="p-1.5 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                  <span className="p-1.5 rounded-md bg-sunken border border-soft">
                     <Icon className="w-4 h-4" />
                   </span>
                   <span className="min-w-0">
                     <span className="block text-xs font-semibold">
                       {item.title}
                     </span>
-                    <span className="block text-[11px] text-slate-400 truncate">
+                    <span className="block text-[11px] text-muted truncate">
                       {item.hint}
                     </span>
                   </span>

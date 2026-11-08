@@ -36,14 +36,14 @@ export const MetaRow: React.FC<MetaRowProps> = ({
         return (
           <span
             key={id}
-            className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/30"
+            className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium bg-accent/10 text-accent border border-accent/30"
           >
             <Folder className="w-3 h-3" />
             {l.name}
             <button
               type="button"
               onClick={() => onToggleListId(id)}
-              className="hover:text-rose-400"
+              className="hover:text-danger"
             >
               <X className="w-3 h-3" />
             </button>
@@ -54,13 +54,13 @@ export const MetaRow: React.FC<MetaRowProps> = ({
       {tags.map((t) => (
         <span
           key={t}
-          className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-mono bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
+          className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-mono bg-hover text-secondary border border-soft"
         >
           #{t}
           <button
             type="button"
             onClick={() => onRemoveTag(t)}
-            className="hover:text-rose-400"
+            className="hover:text-danger"
           >
             <X className="w-3 h-3" />
           </button>
@@ -71,7 +71,7 @@ export const MetaRow: React.FC<MetaRowProps> = ({
         <button
           type="button"
           onClick={() => setListMenuOpen((o) => !o)}
-          className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] text-slate-400 hover:text-slate-200 border border-dashed border-slate-300 dark:border-slate-700 hover:border-indigo-500/50 transition-colors cursor-pointer"
+          className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] text-muted hover:text-primary border border-dashed border-strong hover:border-accent/50 transition-colors cursor-pointer"
         >
           <Folder className="w-3 h-3" /> List
         </button>
@@ -81,7 +81,7 @@ export const MetaRow: React.FC<MetaRowProps> = ({
               className="fixed inset-0 z-10"
               onClick={() => setListMenuOpen(false)}
             />
-            <div className="absolute left-0 top-full mt-1.5 z-20 w-52 max-h-56 overflow-y-auto p-1 rounded-xl bg-white dark:bg-[#111724] border border-slate-200 dark:border-slate-800 shadow-2xl">
+            <div className="absolute left-0 top-full mt-1.5 z-20 w-52 max-h-56 overflow-y-auto p-1 rounded-xl bg-raised border border-soft shadow-2xl">
               {availableLists.map((list) => {
                 const on = listIds.includes(list.id);
                 return (
@@ -91,8 +91,8 @@ export const MetaRow: React.FC<MetaRowProps> = ({
                     onClick={() => onToggleListId(list.id)}
                     className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-left transition-colors ${
                       on
-                        ? "bg-indigo-500/15 text-indigo-300 font-medium"
-                        : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                        ? "bg-accent/15 text-accent font-medium"
+                        : "text-secondary hover:bg-hover"
                     }`}
                   >
                     <Folder className="w-3.5 h-3.5 shrink-0" />
@@ -118,7 +118,7 @@ export const MetaRow: React.FC<MetaRowProps> = ({
         }}
         onBlur={commitTag}
         placeholder="+ Tag"
-        className="w-16 focus:w-32 transition-all bg-transparent text-[11px] font-mono text-slate-700 dark:text-slate-300 placeholder-slate-400 focus:outline-none px-1 py-1"
+        className="w-16 focus:w-32 transition-all bg-transparent text-[11px] font-mono text-secondary placeholder-muted focus:outline-none px-1 py-1"
       />
     </div>
   );

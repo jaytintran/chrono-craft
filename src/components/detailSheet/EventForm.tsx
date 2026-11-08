@@ -66,7 +66,6 @@ export const EventForm = React.forwardRef<EventFormHandle, EventFormProps>(
       isAchievement,
     ]);
 
-    // ----- schedule helpers -----
     const splitDT = (v: string) => {
       const [d = "", t = ""] = v.split("T");
       return { d, t: t || "09:00" };
@@ -102,7 +101,7 @@ export const EventForm = React.forwardRef<EventFormHandle, EventFormProps>(
     const endInvalid = durMins < 0;
 
     const dtInput =
-      "px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500 dark:[color-scheme:dark]";
+      "px-2.5 py-1.5 rounded-lg bg-raised border border-soft text-xs font-mono text-primary focus:outline-none focus:border-accent";
 
     React.useImperativeHandle(ref, () => ({
       collect: () => ({
@@ -121,7 +120,6 @@ export const EventForm = React.forwardRef<EventFormHandle, EventFormProps>(
 
     return (
       <div className="space-y-4">
-        {/* Title */}
         <TitleInput
           value={title}
           onChange={setTitle}
@@ -134,22 +132,21 @@ export const EventForm = React.forwardRef<EventFormHandle, EventFormProps>(
             }
           }}
           placeholder="Untitled Event"
-          className="text-2xl font-semibold text-slate-900 dark:text-slate-100 placeholder-slate-300 dark:placeholder-slate-600 leading-tight"
+          className="text-2xl font-semibold text-primary placeholder-muted leading-tight"
         />
 
-        {/* Classification */}
-        <div className="inline-flex p-0.5 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+        <div className="inline-flex p-0.5 rounded-xl bg-sunken border border-soft">
           {(
             [
               {
                 id: "official",
                 label: "Official",
-                on: "bg-indigo-600 text-white shadow-xs",
+                on: "bg-accent text-accent-fg shadow-xs",
               },
               {
                 id: "personal",
                 label: "Personal",
-                on: "bg-rose-600 text-white shadow-xs",
+                on: "bg-danger text-white shadow-xs",
               },
             ] as const
           ).map((opt) => (
@@ -160,7 +157,7 @@ export const EventForm = React.forwardRef<EventFormHandle, EventFormProps>(
               className={`px-3 py-1.5 rounded-[10px] text-xs font-medium transition-colors cursor-pointer ${
                 category === opt.id
                   ? opt.on
-                  : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                  : "text-secondary hover:text-primary"
               }`}
             >
               {opt.label}
@@ -168,12 +165,10 @@ export const EventForm = React.forwardRef<EventFormHandle, EventFormProps>(
           ))}
         </div>
 
-        {/* Schedule card */}
-        <div className="rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 divide-y divide-slate-200 dark:divide-slate-800">
-          {/* All-day */}
+        <div className="rounded-2xl bg-sunken border border-soft divide-y divide-soft">
           <div className="flex items-center justify-between px-4 py-3">
-            <div className="flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-slate-300">
-              <Calendar className="w-3.5 h-3.5 text-slate-400" />
+            <div className="flex items-center gap-2 text-xs font-medium text-secondary">
+              <Calendar className="w-3.5 h-3.5 text-muted" />
               All-day milestone
             </div>
             <button
@@ -182,7 +177,7 @@ export const EventForm = React.forwardRef<EventFormHandle, EventFormProps>(
               aria-checked={allDay}
               onClick={() => setAllDay((v) => !v)}
               className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${
-                allDay ? "bg-indigo-600" : "bg-slate-300 dark:bg-slate-700"
+                allDay ? "bg-accent" : "bg-strong"
               }`}
             >
               <span
@@ -193,9 +188,8 @@ export const EventForm = React.forwardRef<EventFormHandle, EventFormProps>(
             </button>
           </div>
 
-          {/* Start */}
           <div className="flex items-center gap-3 px-4 py-3">
-            <span className="w-10 text-[11px] font-mono uppercase text-slate-400">
+            <span className="w-10 text-[11px] font-mono uppercase text-muted">
               Start
             </span>
             <input
@@ -218,11 +212,10 @@ export const EventForm = React.forwardRef<EventFormHandle, EventFormProps>(
             )}
           </div>
 
-          {/* End */}
           {!allDay && (
             <div>
               <div className="flex items-center gap-3 px-4 py-3">
-                <span className="w-10 text-[11px] font-mono uppercase text-slate-400">
+                <span className="w-10 text-[11px] font-mono uppercase text-muted">
                   End
                 </span>
                 <input
@@ -231,7 +224,7 @@ export const EventForm = React.forwardRef<EventFormHandle, EventFormProps>(
                   onChange={(e) =>
                     handleEndChange(e.target.value, splitDT(endAt).t)
                   }
-                  className={`${dtInput} flex-1 ${endInvalid ? "!border-rose-500" : ""}`}
+                  className={`${dtInput} flex-1 ${endInvalid ? "!border-danger" : ""}`}
                 />
                 <input
                   type="time"
@@ -239,13 +232,13 @@ export const EventForm = React.forwardRef<EventFormHandle, EventFormProps>(
                   onChange={(e) =>
                     handleEndChange(splitDT(endAt).d, e.target.value)
                   }
-                  className={`${dtInput} w-28 ${endInvalid ? "!border-rose-500" : ""}`}
+                  className={`${dtInput} w-28 ${endInvalid ? "!border-danger" : ""}`}
                 />
               </div>
               <div className="pb-3 space-y-1.5">
                 <div className="flex items-center gap-1.5 text-[11px] font-mono pl-[4.25rem]">
                   {endInvalid && (
-                    <span className="text-rose-400">End is before start</span>
+                    <span className="text-danger">End is before start</span>
                   )}
                 </div>
                 <div className="flex flex-wrap items-center gap-1 pl-[4.25rem]">
@@ -263,8 +256,8 @@ export const EventForm = React.forwardRef<EventFormHandle, EventFormProps>(
                         onClick={() => setDuration(m)}
                         className={`px-2 py-0.5 rounded-md border text-[11px] font-mono transition-colors cursor-pointer ${
                           durMins === m
-                            ? "bg-indigo-500/15 border-indigo-500/40 text-indigo-300"
-                            : "border-slate-200 dark:border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-500"
+                            ? "bg-accent/15 border-accent/40 text-accent"
+                            : "border-soft text-muted hover:text-primary hover:border-strong"
                         }`}
                       >
                         {label}
@@ -277,7 +270,6 @@ export const EventForm = React.forwardRef<EventFormHandle, EventFormProps>(
           )}
         </div>
 
-        {/* Lists + tags */}
         {!isAchievement && (
           <MetaRow
             tags={tags}
@@ -295,9 +287,8 @@ export const EventForm = React.forwardRef<EventFormHandle, EventFormProps>(
           />
         )}
 
-        {/* Description */}
         <div>
-          <div className="text-[11px] font-mono uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
+          <div className="text-[11px] font-mono uppercase tracking-wider text-muted mb-1">
             Description & Context
           </div>
           <RichTextEditor

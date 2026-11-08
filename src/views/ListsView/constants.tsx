@@ -1,4 +1,4 @@
-import { FilterGroup } from "@/src/components/ui/MultiGroupFilterPopover";
+import { FilterGroup } from "@/components/ui/MultiGroupFilterPopover";
 import {
   AlignJustify,
   Bookmark,
@@ -122,18 +122,12 @@ export const LISTS_FILTER_GROUPS: FilterGroup[] = [
 ];
 
 export const STATUS_PILL_MAP: Record<string, string> = {
-  inbox:
-    "bg-slate-500/15 text-slate-600 dark:text-slate-300 border-slate-400/30",
-  "in-progress":
-    "bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-400/30",
-  completed:
-    "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border-emerald-400/30",
-  dropped: "bg-rose-500/15 text-rose-600 dark:text-rose-300 border-rose-400/30",
-  "maybe-later":
-    "bg-violet-500/15 text-violet-600 dark:text-violet-300 border-violet-400/30",
-  __none__:
-    "bg-slate-500/10 text-slate-500 dark:text-slate-400 border-slate-400/20",
+  inbox: "bg-hover text-secondary border-strong",
+  "in-progress": "bg-warning/15 text-warning border-warning/30",
+  completed: "bg-success/15 text-success border-success/30",
+  dropped: "bg-danger/15 text-danger border-danger/30",
+  "maybe-later": "bg-accent/15 text-accent border-accent/30",
+  __none__: "bg-hover text-muted border-soft",
 };
 
-export const TAG_PILL_FALLBACK =
-  "bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border-indigo-400/30";
+export const TAG_PILL_FALLBACK = "bg-accent/15 text-accent border-accent/30";

@@ -47,7 +47,6 @@ export const HabitForm = React.forwardRef<HabitFormHandle, HabitFormProps>(
       }),
     }));
 
-    // ----- streak math (verbatim from DetailSheet.tsx) -----
     const logDatesSet = new Set(logs.map((l) => l.date));
     let currentStreak = 0;
     const today = new Date();
@@ -88,11 +87,9 @@ export const HabitForm = React.forwardRef<HabitFormHandle, HabitFormProps>(
 
     return (
       <div className="space-y-6">
-        {" "}
-        {/* Title & Description */}
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-medium uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
+            <label className="block text-xs font-medium uppercase tracking-wider text-muted mb-1.5">
               Habit Name
             </label>
             <input
@@ -100,12 +97,12 @@ export const HabitForm = React.forwardRef<HabitFormHandle, HabitFormProps>(
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g., Deep Work 90min Block"
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 text-base font-semibold focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-sunken border border-soft text-primary text-base font-semibold focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">
+            <label className="block text-xs font-medium uppercase tracking-wider text-muted mb-1.5">
               Purpose & Motivation
             </label>
             <input
@@ -113,13 +110,13 @@ export const HabitForm = React.forwardRef<HabitFormHandle, HabitFormProps>(
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="e.g., Single-task focus without distractions or tabs"
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 text-sm focus:outline-none focus:border-indigo-500"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-sunken border border-soft text-primary text-sm focus:outline-none focus:border-accent"
             />
           </div>
         </div>
-        {/* Accent Color Picker */}
+
         <div>
-          <label className="block text-xs font-medium uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">
+          <label className="block text-xs font-medium uppercase tracking-wider text-muted mb-2">
             Accent Color
           </label>
           <div className="flex items-center gap-3">
@@ -131,7 +128,7 @@ export const HabitForm = React.forwardRef<HabitFormHandle, HabitFormProps>(
                 style={{ backgroundColor: c }}
                 className={`w-7 h-7 rounded-full transition-transform cursor-pointer flex items-center justify-center ${
                   color === c
-                    ? "scale-120 ring-2 ring-white ring-offset-2 dark:ring-offset-slate-900"
+                    ? "scale-120 ring-2 ring-white ring-offset-2 ring-offset-app"
                     : "opacity-80 hover:opacity-100"
                 }`}
               >
@@ -140,58 +137,52 @@ export const HabitForm = React.forwardRef<HabitFormHandle, HabitFormProps>(
             ))}
           </div>
         </div>
-        {/* Habit Streak Metrics Telemetry (if existing habit) */}
+
         {!isNew && (
-          <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 space-y-4">
+          <div className="p-4 rounded-xl bg-sunken border border-soft space-y-4">
             <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                <BarChart2 className="w-3.5 h-3.5 text-indigo-400" />
+              <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted">
+                <BarChart2 className="w-3.5 h-3.5 text-accent" />
                 Streak Analytics
               </span>
-              <span className="flex items-center gap-1 text-xs font-mono font-medium text-amber-400">
-                <Flame className="w-3.5 h-3.5 fill-amber-400/20" />
+              <span className="flex items-center gap-1 text-xs font-mono font-medium text-warning">
+                <Flame className="w-3.5 h-3.5 fill-warning/20" />
                 {currentStreak} Day Streak
               </span>
             </div>
 
             <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="p-2.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                <div className="text-[11px] text-slate-400">Current Streak</div>
-                <div className="text-lg font-bold font-mono tabular-nums text-slate-900 dark:text-slate-100">
-                  {currentStreak}d
+              {[
+                { label: "Current Streak", value: `${currentStreak}d` },
+                { label: "30d Adherence", value: `${completionRate30}%` },
+                { label: "Total Recorded", value: logs.length },
+              ].map((s) => (
+                <div
+                  key={s.label}
+                  className="p-2.5 rounded-lg bg-raised border border-soft"
+                >
+                  <div className="text-[11px] text-muted">{s.label}</div>
+                  <div className="text-lg font-bold font-mono tabular-nums text-primary">
+                    {s.value}
+                  </div>
                 </div>
-              </div>
-              <div className="p-2.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                <div className="text-[11px] text-slate-400">30d Adherence</div>
-                <div className="text-lg font-bold font-mono tabular-nums text-slate-900 dark:text-slate-100">
-                  {completionRate30}%
-                </div>
-              </div>
-              <div className="p-2.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                <div className="text-[11px] text-slate-400">Total Recorded</div>
-                <div className="text-lg font-bold font-mono tabular-nums text-slate-900 dark:text-slate-100">
-                  {logs.length}
-                </div>
-              </div>
+              ))}
             </div>
 
-            {/* 30-Day Punch Card Visualizer */}
             <div>
-              <div className="text-[11px] text-slate-400 mb-1.5 flex justify-between">
+              <div className="text-[11px] text-muted mb-1.5 flex justify-between">
                 <span>30-Day Matrix Punchstrip</span>
-                <span className="font-mono text-[10px] text-slate-500">
+                <span className="font-mono text-[10px] text-muted">
                   Past 30 Days
                 </span>
               </div>
-              <div className="grid grid-cols-10 gap-1.5 p-2 rounded-lg bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
+              <div className="grid grid-cols-10 gap-1.5 p-2 rounded-lg bg-raised border border-soft">
                 {past30Days.map((d) => (
                   <div
                     key={d.dateStr}
                     title={`${d.dateStr}: ${d.completed ? "Completed" : "Missed"}`}
                     className={`h-5 rounded-xs flex items-center justify-center text-[9px] font-mono transition-colors ${
-                      d.completed
-                        ? "text-white"
-                        : "bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600"
+                      d.completed ? "text-white" : "bg-hover text-muted"
                     }`}
                     style={{
                       backgroundColor: d.completed ? color : undefined,
@@ -204,19 +195,18 @@ export const HabitForm = React.forwardRef<HabitFormHandle, HabitFormProps>(
             </div>
           </div>
         )}
-        {/* Schedule Type & Cadence Settings */}
+
         <div className="space-y-3">
-          <label className="block text-xs font-medium uppercase tracking-wider text-slate-400 dark:text-slate-500">
+          <label className="block text-xs font-medium uppercase tracking-wider text-muted">
             Frequency & Cadence
           </label>
 
-          {/* Dropdown / Radio selection */}
           <select
             value={scheduleType}
             onChange={(e) =>
               setScheduleType(e.target.value as HabitScheduleType)
             }
-            className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm font-medium text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500"
+            className="w-full px-3 py-2 rounded-xl bg-sunken border border-soft text-sm font-medium text-primary focus:outline-none focus:border-accent"
           >
             <option value="everyday">Everyday (7 days / week)</option>
             <option value="bi-weekly">Bi-weekly (2 days / week)</option>
@@ -225,10 +215,9 @@ export const HabitForm = React.forwardRef<HabitFormHandle, HabitFormProps>(
             <option value="custom">Custom Day of the Week</option>
           </select>
 
-          {/* Custom Days Multi-selector (Shown when custom is selected) */}
           {scheduleType === "custom" && (
-            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-2 animate-fadeIn">
-              <span className="block text-[11px] font-medium text-slate-500">
+            <div className="p-3.5 rounded-xl bg-sunken border border-soft space-y-2 animate-fadeIn">
+              <span className="block text-[11px] font-medium text-secondary">
                 Choose which days this habit applies:
               </span>
               <div className="flex items-center justify-between gap-1">
@@ -241,8 +230,8 @@ export const HabitForm = React.forwardRef<HabitFormHandle, HabitFormProps>(
                       onClick={() => toggleCustomDay(day.index)}
                       className={`flex-1 py-2 rounded-lg text-xs font-mono font-semibold transition-all ${
                         isSelected
-                          ? "bg-indigo-600 text-white shadow-xs"
-                          : "bg-white dark:bg-slate-800 text-slate-500 hover:text-slate-200 border border-slate-200 dark:border-slate-700"
+                          ? "bg-accent text-accent-fg shadow-xs"
+                          : "bg-raised text-secondary hover:text-primary border border-soft"
                       }`}
                     >
                       {day.name}

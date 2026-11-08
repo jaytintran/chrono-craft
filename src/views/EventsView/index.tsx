@@ -1,7 +1,5 @@
 /**
  * ChronoCraft - Events View Component
- * Features an intuitive options choosing area with persistent filtering and sorting via localStorage,
- * Official vs Personal event categorization, and DetailSheet integration.
  */
 
 import React, { useState, useEffect } from "react";
@@ -16,7 +14,7 @@ import {
   MoreVertical,
   Trophy,
 } from "lucide-react";
-import { CalendarEvent, CustomList, TimelineEntry } from "../../types";
+import { CalendarEvent, TimelineEntry } from "../../types";
 import { RichContent } from "../../components/editors/RichContent";
 import {
   MultiGroupFilterPopover,
@@ -53,36 +51,33 @@ interface EventsFilterStorage {
   timeframeFilter: EventTimeframeFilter;
 }
 
-type CombinedCategoryTimeframe =
-  `${EventCategoryFilter}:${EventTimeframeFilter}`;
-
 const EVENT_FILTER_GROUPS: FilterGroup[] = [
   {
     key: "category",
     label: "Category",
-    icon: <CalendarDays className="w-3.5 h-3.5 text-slate-400" />,
+    icon: <CalendarDays className="w-3.5 h-3.5 text-muted" />,
     options: [
       {
         value: "all",
         label: "All Events",
-        icon: <CalendarDays className="w-3.5 h-3.5 text-slate-400" />,
+        icon: <CalendarDays className="w-3.5 h-3.5 text-muted" />,
       },
       {
         value: "official",
         label: "Official",
-        icon: <Building2 className="w-3.5 h-3.5 text-indigo-400" />,
+        icon: <Building2 className="w-3.5 h-3.5 text-accent" />,
       },
       {
         value: "personal",
         label: "Personal",
-        icon: <User className="w-3.5 h-3.5 text-rose-400" />,
+        icon: <User className="w-3.5 h-3.5 text-danger" />,
       },
     ],
   },
   {
     key: "timeframe",
     label: "Timeframe",
-    icon: <Clock className="w-3.5 h-3.5 text-cyan-400" />,
+    icon: <Clock className="w-3.5 h-3.5 text-info" />,
     options: [
       { value: "all", label: "All Dates" },
       { value: "upcoming", label: "Upcoming" },
@@ -93,7 +88,7 @@ const EVENT_FILTER_GROUPS: FilterGroup[] = [
   {
     key: "sort",
     label: "Sort",
-    icon: <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />,
+    icon: <ArrowUpDown className="w-3.5 h-3.5 text-muted" />,
     options: [
       { value: "date-asc", label: "Date (Earliest First)" },
       { value: "date-desc", label: "Date (Latest First)" },
@@ -116,15 +111,12 @@ export const EventsView: React.FC<EventsViewProps> = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
-  // Persistent Filter & Sort State from localStorage
   const [filterOptions, setFilterOptions] = useState<EventsFilterStorage>(
     () => {
       try {
         const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-          return JSON.parse(saved);
-        }
-      } catch (e) {
+        if (saved) return JSON.parse(saved);
+      } catch {
         // fallback
       }
       return {
@@ -136,16 +128,14 @@ export const EventsView: React.FC<EventsViewProps> = ({
   );
   const [showAchievementsOnly, setShowAchievementsOnly] = useState(false);
 
-  // Save to localStorage on change
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(filterOptions));
     } catch (e) {
-      console.error("Failed to save events filter options to localStorage", e);
+      console.error("Failed to save events filter options", e);
     }
   }, [filterOptions]);
 
-  // Convert timeline event entries to CalendarEvent shape
   const syntheticTimelineEvents: CalendarEvent[] = timelineEvents.map((te) => ({
     id: `tl_${te.id}`,
     title: te.title,
@@ -178,14 +168,12 @@ export const EventsView: React.FC<EventsViewProps> = ({
 
       if (!matchesSearch) return false;
 
-      // Achievements only show when the toggle is on; normal events hide while it's on
       if (showAchievementsOnly) {
         if (!ev.isAchievement) return false;
       } else {
         if (ev.isAchievement) return false;
       }
 
-      // Category filter (official vs personal)
       const evCategory = ev.category || "personal";
       if (
         filterOptions.categoryFilter !== "all" &&
@@ -194,7 +182,6 @@ export const EventsView: React.FC<EventsViewProps> = ({
         return false;
       }
 
-      // Timeframe filter
       const eventDateStr = ev.startAt.split("T")[0];
       const isEventToday = eventDateStr === todayStr;
       const eventTime = new Date(ev.startAt).getTime();
@@ -241,45 +228,42 @@ export const EventsView: React.FC<EventsViewProps> = ({
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
-      {/* Top Header */}
-      <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800/80 bg-white/50 dark:bg-[#0B0F17]/50 backdrop-blur-xs shrink-0 flex flex-wrap items-center justify-between gap-4">
+      {/* Header */}
+      <div className="px-6 py-4 border-b border-soft bg-app/50 backdrop-blur-xs shrink-0 flex flex-wrap items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <CalendarDays className="w-5 h-5 text-rose-400" />
-            <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
+            <CalendarDays className="w-5 h-5 text-danger" />
+            <h2 className="text-base font-bold text-primary">
               Events & Scheduled Milestones
             </h2>
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-secondary mt-0.5">
             Manage official and personal milestones with persistent control
             options.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Search Bar */}
           <div className="relative">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search events..."
-              className="pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500 w-44 sm:w-56"
+              className="pl-8 pr-3 py-1.5 rounded-xl border border-soft bg-surface text-xs text-primary focus:outline-none focus:border-accent w-44 sm:w-56"
             />
           </div>
 
-          {/* + New Event Button */}
           <button
             type="button"
             onClick={() => setIsDatePickerOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-accent hover:bg-accent-hover text-accent-fg text-xs font-semibold shadow-xs transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>New Event</span>
           </button>
 
-          {/* Show Events Button */}
           <button
             type="button"
             onClick={() => setShowAchievementsOnly((v) => !v)}
@@ -290,8 +274,8 @@ export const EventsView: React.FC<EventsViewProps> = ({
             }
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
               showAchievementsOnly
-                ? "bg-amber-500/15 text-amber-500 border-amber-500/40"
-                : "border-slate-200 dark:border-slate-800 text-slate-500 hover:text-amber-400 hover:border-amber-500/40"
+                ? "bg-warning/15 text-warning border-warning/40"
+                : "border-soft text-secondary hover:text-warning hover:border-warning/40"
             }`}
           >
             <Trophy className="w-4 h-4" />
@@ -300,10 +284,9 @@ export const EventsView: React.FC<EventsViewProps> = ({
         </div>
       </div>
 
-      {/* Controlling Options Area (Persistent via localStorage) */}
-      <div className="px-6 py-3 border-b border-slate-200 dark:border-slate-800/80 bg-slate-50/70 dark:bg-[#0E131E] flex flex-wrap items-center justify-between gap-3 shrink-0">
+      {/* Filter row */}
+      <div className="px-6 py-3 border-b border-soft bg-sunken/70 flex flex-wrap items-center justify-between gap-3 shrink-0">
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          {/* Category, Timeframe, Sorting Multi Selector */}
           <MultiGroupFilterPopover
             groups={EVENT_FILTER_GROUPS}
             selections={{
@@ -316,7 +299,10 @@ export const EventsView: React.FC<EventsViewProps> = ({
             onChange={(groupKey, value) => {
               setFilterOptions((p) => {
                 if (groupKey === "category")
-                  return { ...p, categoryFilter: value as EventCategoryFilter };
+                  return {
+                    ...p,
+                    categoryFilter: value as EventCategoryFilter,
+                  };
                 if (groupKey === "timeframe")
                   return {
                     ...p,
@@ -330,18 +316,17 @@ export const EventsView: React.FC<EventsViewProps> = ({
           />
         </div>
 
-        {/* Counter */}
-        <div className="text-xs font-mono text-slate-400 tabular-nums">
+        <div className="text-xs font-mono text-muted tabular-nums">
           {showAchievementsOnly ? "Achievements" : "Events"}:{" "}
           {filteredEvents.length}
         </div>
       </div>
 
-      {/* Events List */}
+      {/* Events list */}
       <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6">
         <div className="max-w-6xl mx-auto space-y-4">
           {filteredEvents.length === 0 ? (
-            <div className="p-12 text-center rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 text-xs text-slate-400">
+            <div className="p-12 text-center rounded-2xl border border-dashed border-soft text-xs text-muted">
               {showAchievementsOnly
                 ? "No achievements yet. Promote a log, event, or completed task via its context menu."
                 : "No events found matching your active options. Try adjusting the category or timeframe."}
@@ -365,21 +350,21 @@ export const EventsView: React.FC<EventsViewProps> = ({
                   onClick={() => onOpenEditEvent(event)}
                   onContextMenu={(e) => {
                     e.preventDefault();
-                    if (onOpenContextMenu) {
-                      onOpenContextMenu(event, { x: e.clientX, y: e.clientY });
-                    }
+                    onOpenContextMenu?.(event, {
+                      x: e.clientX,
+                      y: e.clientY,
+                    });
                   }}
                   className={`group p-4 rounded-2xl border transition-all cursor-pointer flex items-start justify-between gap-4 shadow-xs hover:shadow-md ${
                     isAchievement
-                      ? "bg-amber-500/5 dark:bg-[#1A1508] border-amber-500/40 hover:border-amber-500/70"
+                      ? "bg-warning/5 border-warning/40 hover:border-warning/70"
                       : isUnresolved
-                        ? "bg-amber-500/[0.03] border-amber-500/30 hover:border-amber-500/60"
+                        ? "bg-warning/[0.03] border-warning/30 hover:border-warning/60"
                         : isToday
-                          ? "bg-rose-500/5 dark:bg-[#15121D] border-rose-500/30 hover:border-rose-500/60"
-                          : "bg-white dark:bg-[#131926] border-slate-200 dark:border-slate-800/80 hover:border-indigo-500/40"
+                          ? "bg-danger/5 border-danger/30 hover:border-danger/60"
+                          : "bg-raised border-soft hover:border-accent/40"
                   } ${isDone ? "opacity-50" : ""} ${isMissed ? "opacity-40" : ""}`}
                 >
-                  {/* Left Date Badge Box — doubles as the resolve button */}
                   <button
                     type="button"
                     onClick={(e) => {
@@ -396,25 +381,25 @@ export const EventsView: React.FC<EventsViewProps> = ({
                     }
                     className={`flex flex-col items-center justify-center w-14 py-2 rounded-xl shrink-0 text-center border transition-colors cursor-pointer ${
                       isAchievement
-                        ? "bg-amber-500/10 dark:bg-amber-500/5 border-amber-500/40 text-amber-500 hover:border-amber-500/70"
+                        ? "bg-warning/10 border-warning/40 text-warning hover:border-warning/70"
                         : isDone
-                          ? "bg-emerald-500/10 dark:bg-emerald-500/5 border-emerald-500/40 text-emerald-400 hover:border-emerald-500/70"
+                          ? "bg-success/10 border-success/40 text-success hover:border-success/70"
                           : isMissed
-                            ? "bg-rose-500/10 dark:bg-rose-500/5 border-rose-500/40 text-rose-400 hover:border-rose-500/70"
+                            ? "bg-danger/10 border-danger/40 text-danger hover:border-danger/70"
                             : isUnresolved
-                              ? "bg-amber-500/10 dark:bg-amber-500/5 border-amber-500/40 hover:border-amber-500/70"
-                              : "bg-slate-100 dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-emerald-500/60"
+                              ? "bg-warning/10 border-warning/40 hover:border-warning/70"
+                              : "bg-sunken border-soft hover:border-success/60"
                     }`}
                   >
                     <span
                       className={`text-[10px] font-mono uppercase font-semibold ${
                         isAchievement
-                          ? "text-amber-500/80"
+                          ? "text-warning/80"
                           : isDone
-                            ? "text-emerald-500/80"
+                            ? "text-success/80"
                             : isMissed
-                              ? "text-rose-500/80"
-                              : "text-slate-400"
+                              ? "text-danger/80"
+                              : "text-muted"
                       }`}
                     >
                       {new Date(event.startAt).toLocaleDateString("en-US", {
@@ -424,63 +409,66 @@ export const EventsView: React.FC<EventsViewProps> = ({
                     <span
                       className={`text-base font-bold font-mono tabular-nums ${
                         isAchievement
-                          ? "text-amber-500"
+                          ? "text-warning"
                           : isDone
-                            ? "text-emerald-400"
+                            ? "text-success"
                             : isMissed
-                              ? "text-rose-400"
-                              : "text-slate-900 dark:text-slate-100"
+                              ? "text-danger"
+                              : "text-primary"
                       }`}
                     >
                       {new Date(event.startAt).getDate()}
                     </span>
                   </button>
 
-                  {/* Center Content */}
                   <div className="flex-1 min-w-0 space-y-1">
                     <div className="flex items-center gap-2">
                       <h3
                         className={`font-semibold text-sm truncate transition-colors ${
                           isAchievement
-                            ? "text-amber-600 dark:text-amber-400"
+                            ? "text-warning"
                             : isDone || isMissed
-                              ? "line-through text-slate-400 dark:text-slate-500"
-                              : event.title
-                                ? "text-slate-900 dark:text-slate-100 group-hover:text-rose-500"
-                                : "text-slate-400 dark:text-slate-500"
+                              ? "line-through text-muted"
+                              : "text-primary group-hover:text-danger"
                         }`}
                       >
-                        {event.title || "Untitled Event"}
+                        {event.title ? (
+                          event.title
+                        ) : (
+                          <span className="text-muted italic font-normal">
+                            Untitled Event
+                          </span>
+                        )}
                       </h3>
 
                       {isAchievement && (
-                        <span className="px-1.5 py-0.2 rounded text-[10px] font-mono uppercase tracking-wider bg-amber-500/15 text-amber-500 border border-amber-500/30 inline-flex items-center gap-1">
+                        <span className="px-1.5 py-0.2 rounded text-[10px] font-mono uppercase tracking-wider bg-warning/15 text-warning border border-warning/30 inline-flex items-center gap-1">
                           <Trophy className="w-2.5 h-2.5" />
                           Achievement
                         </span>
                       )}
 
                       {isUnresolved && (
-                        <span className="px-1.5 py-0.2 rounded text-[10px] font-mono uppercase tracking-wider bg-amber-500/15 text-amber-500 border border-amber-500/30 inline-flex items-center gap-1">
+                        <span className="px-1.5 py-0.2 rounded text-[10px] font-mono uppercase tracking-wider bg-warning/15 text-warning border border-warning/30 inline-flex items-center gap-1">
                           Unresolved
                         </span>
                       )}
 
                       {isMissed && (
-                        <span className="px-1.5 py-0.2 rounded text-[10px] font-mono uppercase tracking-wider bg-rose-500/15 text-rose-400 border border-rose-500/30 inline-flex items-center gap-1">
+                        <span className="px-1.5 py-0.2 rounded text-[10px] font-mono uppercase tracking-wider bg-danger/15 text-danger border border-danger/30 inline-flex items-center gap-1">
                           Missed
                         </span>
                       )}
 
                       {isToday && (
-                        <span className="px-1.5 py-0.2 rounded-md text-[10px] font-mono font-bold bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                        <span className="px-1.5 py-0.2 rounded-md text-[10px] font-mono font-bold bg-danger/10 text-danger border border-danger/20">
                           Today
                         </span>
                       )}
                     </div>
 
                     {isAchievement && (
-                      <div className="flex items-center gap-1 text-[11px] font-mono text-amber-600 dark:text-amber-400">
+                      <div className="flex items-center gap-1 text-[11px] font-mono text-warning">
                         <Trophy className="w-3 h-3" />
                         <span>
                           Achieved{" "}
@@ -497,25 +485,24 @@ export const EventsView: React.FC<EventsViewProps> = ({
                     {event.description && (
                       <RichContent
                         content={event.description}
-                        className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-sans"
+                        className="text-xs text-secondary leading-relaxed font-sans"
                       />
                     )}
 
-                    {/* Metadata line */}
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-mono pt-1">
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-secondary font-mono pt-1">
                       {!isAchievement && (
                         <span
-                          className={`px-1.5 py-0.2 rounded text-[10px] font-mono uppercase tracking-wider ${
+                          className={`px-1.5 py-0.2 rounded text-[10px] font-mono uppercase tracking-wider border ${
                             isOfficial
-                              ? "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20"
-                              : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                              ? "bg-accent/10 text-accent border-accent/20"
+                              : "bg-danger/10 text-danger border-danger/20"
                           }`}
                         >
                           {isOfficial ? "Official" : "Personal"}
                         </span>
                       )}
 
-                      <span className="flex items-center gap-1 text-cyan-600 dark:text-cyan-400">
+                      <span className="flex items-center gap-1 text-info">
                         <Clock className="w-3 h-3" />
                         <span>
                           {formatEventTime(
@@ -528,10 +515,8 @@ export const EventsView: React.FC<EventsViewProps> = ({
 
                       {event.tags.length > 0 && (
                         <>
-                          <span className="text-slate-300 dark:text-slate-700">
-                            ·
-                          </span>
-                          <span className="text-slate-400">
+                          <span className="text-muted">·</span>
+                          <span className="text-muted">
                             {event.tags.map((t) => `#${t}`).join(" ")}
                           </span>
                         </>
@@ -539,24 +524,21 @@ export const EventsView: React.FC<EventsViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Actions: 3-Dot Trigger + Delete */}
                   <div className="flex items-center gap-1 shrink-0">
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (onOpenContextMenu) {
-                          const rect = (
-                            e.currentTarget as HTMLElement
-                          ).getBoundingClientRect();
-                          onOpenContextMenu(event, {
-                            x: rect.left,
-                            y: rect.bottom + 4,
-                          });
-                        }
+                        const rect = (
+                          e.currentTarget as HTMLElement
+                        ).getBoundingClientRect();
+                        onOpenContextMenu?.(event, {
+                          x: rect.left,
+                          y: rect.bottom + 4,
+                        });
                       }}
                       title="More options (or right click)"
-                      className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                      className="p-1.5 text-muted hover:text-primary hover:bg-hover rounded-lg transition-colors cursor-pointer"
                     >
                       <MoreVertical className="w-3.5 h-3.5" />
                     </button>
@@ -568,7 +550,6 @@ export const EventsView: React.FC<EventsViewProps> = ({
         </div>
       </div>
 
-      {/* Pre-creation date picker */}
       <EventDatePickerModal
         isOpen={isDatePickerOpen}
         onClose={() => setIsDatePickerOpen(false)}

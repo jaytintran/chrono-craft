@@ -73,7 +73,7 @@ export const InlineTitle: React.FC<InlineTitleProps> = ({
             setEditing(true);
           }
         }}
-        className={`min-w-0 cursor-text rounded px-1 -mx-1 hover:bg-slate-200/60 dark:hover:bg-slate-700/40 transition-colors ${className}`}
+        className={`min-w-0 cursor-text rounded px-1 -mx-1 hover:bg-hover transition-colors ${className}`}
       >
         {value}
       </span>
@@ -96,7 +96,7 @@ export const InlineTitle: React.FC<InlineTitleProps> = ({
           inputRef.current?.blur();
         }
       }}
-      className={`min-w-[10rem] flex-1 bg-transparent outline-none border-b border-indigo-500/60 px-1 -mx-1 ${className}`}
+      className={`min-w-[10rem] flex-1 bg-transparent outline-none border-b border-accent/60 px-1 -mx-1 ${className}`}
     />
   );
 };

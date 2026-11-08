@@ -38,8 +38,6 @@ export const TodayTab: React.FC<TodayTabProps> = ({
   onOpenSettings,
   onOpenContextMenu,
 }) => {
-  const isEngineAtCapacity = activeEntries.length >= settings.xActiveLimit;
-
   const [keyboardHeight, setKeyboardHeight] = React.useState(0);
 
   React.useEffect(() => {
@@ -60,15 +58,9 @@ export const TodayTab: React.FC<TodayTabProps> = ({
     };
   }, []);
 
-  const formatCompletedTime = (isoString?: string) => {
-    if (!isoString) return "";
-    return new Date(isoString).toLocaleTimeString([], {
-      hour: "numeric",
-      minute: "2-digit",
-    });
-  };
+  const isEngineAtCapacity = activeEntries.length >= settings.xActiveLimit;
 
-  const formatScheduledTime = (isoString?: string) => {
+  const formatTime = (isoString?: string) => {
     if (!isoString) return "";
     return new Date(isoString).toLocaleTimeString([], {
       hour: "numeric",
@@ -85,25 +77,22 @@ export const TodayTab: React.FC<TodayTabProps> = ({
           : undefined
       }
     >
-      {" "}
-      {/* ---- Section 1: Anchors ---- */}
-      {/* Section 1: Anchors (Scheduled Entries) */}
+      {/* Anchors */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Anchor className="w-4 h-4 text-cyan-400" />
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+            <Anchor className="w-4 h-4 text-info" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-primary">
               Anchors | Daily Schedule
             </h3>
           </div>
-          <span className="text-[11px] font-mono text-slate-400">
+          <span className="text-[11px] font-mono text-muted">
             {anchorEntries.length} Scheduled
           </span>
         </div>
 
-        {/* Dedicated NLP Input Bar for Anchors */}
         <NLPInputBar
-          placeholder="Join the board meeting at 2pm..."
+          placeholder='e.g. "Standup in 30 mins", "Board meeting at 2pm", "Yoga at 6pm"'
           defaultType="event"
           showTypeSwitcher={false}
           buttonLabel="Schedule Anchor"
@@ -120,10 +109,9 @@ export const TodayTab: React.FC<TodayTabProps> = ({
           }}
         />
 
-        {/* Anchors List */}
         <div className="space-y-2 mt-2">
           {anchorEntries.length === 0 ? (
-            <div className="p-4 rounded-xl border border-dashed border-slate-200 dark:border-slate-800/80 text-center text-xs text-slate-400">
+            <div className="p-4 rounded-xl border border-dashed border-soft text-center text-xs text-muted">
               No hard schedule anchors set for today. Add key meetings or fixed
               timeblocks above.
             </div>
@@ -133,35 +121,33 @@ export const TodayTab: React.FC<TodayTabProps> = ({
                 key={anchor.id}
                 onContextMenu={(e) => {
                   e.preventDefault();
-                  if (onOpenContextMenu) {
-                    onOpenContextMenu(anchor, {
-                      x: e.clientX,
-                      y: e.clientY,
-                    });
-                  }
+                  onOpenContextMenu?.(anchor, {
+                    x: e.clientX,
+                    y: e.clientY,
+                  });
                 }}
-                className="group flex items-center justify-between p-3.5 rounded-xl bg-white dark:bg-[#131926] border border-slate-200 dark:border-slate-800/80 hover:border-cyan-500/40 transition-all shadow-xs"
+                className="group flex items-center justify-between p-3.5 rounded-xl bg-raised border border-soft hover:border-info/40 transition-all shadow-xs"
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <button
                     type="button"
                     onClick={() => onToggleEntryStatus(anchor.id)}
-                    className="text-slate-400 hover:text-emerald-500 transition-colors shrink-0 cursor-pointer"
+                    className="text-muted hover:text-success transition-colors shrink-0 cursor-pointer"
                   >
                     <Circle className="w-4 h-4" />
                   </button>
                   <div className="min-w-0">
-                    <div className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+                    <div className="text-sm font-semibold text-primary truncate">
                       {anchor.title}
                     </div>
                     {anchor.scheduledAt && (
-                      <div className="flex items-center gap-1.5 text-xs font-mono text-cyan-600 dark:text-cyan-400 mt-0.5">
+                      <div className="flex items-center gap-1.5 text-xs font-mono text-info mt-0.5">
                         <Clock className="w-3 h-3" />
-                        <span>{formatScheduledTime(anchor.scheduledAt)}</span>
+                        <span>{formatTime(anchor.scheduledAt)}</span>
                         {anchor.tags.length > 0 && (
                           <>
-                            <span className="text-slate-400">·</span>
-                            <span className="text-slate-500">
+                            <span className="text-muted">·</span>
+                            <span className="text-secondary">
                               {anchor.tags.map((t) => `#${t}`).join(" ")}
                             </span>
                           </>
@@ -176,25 +162,22 @@ export const TodayTab: React.FC<TodayTabProps> = ({
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (onOpenContextMenu) {
-                        const rect = (
-                          e.currentTarget as HTMLElement
-                        ).getBoundingClientRect();
-                        onOpenContextMenu(anchor, {
-                          x: rect.left,
-                          y: rect.bottom + 4,
-                        });
-                      }
+                      const rect = (
+                        e.currentTarget as HTMLElement
+                      ).getBoundingClientRect();
+                      onOpenContextMenu?.(anchor, {
+                        x: rect.left,
+                        y: rect.bottom + 4,
+                      });
                     }}
-                    className="p-1 text-slate-400 hover:text-slate-200 transition-colors"
+                    className="p-1 text-muted hover:text-primary transition-colors"
                   >
                     <MoreVertical className="w-3.5 h-3.5" />
                   </button>
                   <button
                     type="button"
                     onClick={() => onDeleteEntry(anchor.id)}
-                    className="opacity-60 md:opacity-0 md:group-hover:opacity-100
- p-1.5 text-slate-400 hover:text-rose-500 transition-opacity"
+                    className="opacity-60 md:opacity-0 md:group-hover:opacity-100 p-1.5 text-muted hover:text-danger transition-opacity"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -204,23 +187,23 @@ export const TodayTab: React.FC<TodayTabProps> = ({
           )}
         </div>
       </div>
-      {/* ---- Section 2: X-Active Engine ---- */}
-      {/* Section 2: X-Active Engine (Immediate Tasks) */}
-      <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-slate-800/60">
+
+      {/* X-Active */}
+      <div className="space-y-3 pt-4 border-t border-soft">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Zap className="w-4 h-4 text-indigo-400" />
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+            <Zap className="w-4 h-4 text-accent" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-primary">
               {settings.xActiveLimit}-Active Max Tasks
             </h3>
           </div>
 
           <div className="flex items-center gap-2">
             <span
-              className={`text-[0.5rem] md:text-[0.6rem] font-mono font-bold tabular-nums px-2 py-0.5 rounded-md ${
+              className={`text-[0.5rem] md:text-[0.6rem] font-mono font-bold tabular-nums px-2 py-0.5 rounded-md border ${
                 isEngineAtCapacity
-                  ? "bg-rose-500/10 text-rose-400 border border-rose-500/20"
-                  : "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20"
+                  ? "bg-danger/10 text-danger border-danger/20"
+                  : "bg-accent/10 text-accent border-accent/20"
               }`}
             >
               {activeEntries.length} / {settings.xActiveLimit} ACTIVE
@@ -229,14 +212,13 @@ export const TodayTab: React.FC<TodayTabProps> = ({
               type="button"
               onClick={onOpenSettings}
               title="Change X-Active limit in settings"
-              className="p-1 text-slate-400 hover:text-indigo-400 transition-colors"
+              className="p-1 text-muted hover:text-accent transition-colors"
             >
               <Sliders className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
 
-        {/* Dedicated NLP Input Bar for X-Active Tasks */}
         <NLPInputBar
           placeholder={
             isEngineAtCapacity
@@ -265,45 +247,40 @@ export const TodayTab: React.FC<TodayTabProps> = ({
           }}
         />
 
-        {/* Active Tasks List */}
         <div className="space-y-2 mt-2">
           {activeEntries.length === 0 ? (
-            <div className="p-4 rounded-xl border border-dashed border-slate-200 dark:border-slate-800/80 text-center text-xs text-slate-400">
+            <div className="p-4 rounded-xl border border-dashed border-soft text-center text-xs text-muted">
               No active tasks currently engaged. Populate your immediate focus
               queue above.
             </div>
           ) : (
-            activeEntries.map((task, idx) => (
+            activeEntries.map((task) => (
               <div
                 key={task.id}
                 onContextMenu={(e) => {
                   e.preventDefault();
-                  if (onOpenContextMenu) {
-                    onOpenContextMenu(task, {
-                      x: e.clientX,
-                      y: e.clientY,
-                    });
-                  }
+                  onOpenContextMenu?.(task, {
+                    x: e.clientX,
+                    y: e.clientY,
+                  });
                 }}
-                className="group flex items-center justify-between p-3.5 rounded-xl bg-white dark:bg-[#131926] border border-slate-200 dark:border-slate-800/80 hover:border-indigo-500/40 transition-all shadow-xs"
+                className="group flex items-center justify-between p-3.5 rounded-xl bg-raised border border-soft hover:border-accent/40 transition-all shadow-xs"
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <button
                     type="button"
                     onClick={() => onToggleEntryStatus(task.id)}
                     title="Click to complete task"
-                    className="text-slate-400 hover:text-emerald-500 hover:scale-110 transition-all shrink-0 cursor-pointer p-0.5"
+                    className="text-muted hover:text-success hover:scale-110 transition-all shrink-0 cursor-pointer p-0.5"
                   >
                     <Circle className="w-4 h-4" />
                   </button>
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
-                        {task.title}
-                      </span>
-                    </div>
+                    <span className="text-sm font-semibold text-primary truncate block">
+                      {task.title}
+                    </span>
                     {task.tags.length > 0 && (
-                      <div className="text-xs text-slate-500 mt-0.5">
+                      <div className="text-xs text-secondary mt-0.5">
                         {task.tags.map((t) => `#${t}`).join(" ")}
                       </div>
                     )}
@@ -315,25 +292,22 @@ export const TodayTab: React.FC<TodayTabProps> = ({
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (onOpenContextMenu) {
-                        const rect = (
-                          e.currentTarget as HTMLElement
-                        ).getBoundingClientRect();
-                        onOpenContextMenu(task, {
-                          x: rect.left,
-                          y: rect.bottom + 4,
-                        });
-                      }
+                      const rect = (
+                        e.currentTarget as HTMLElement
+                      ).getBoundingClientRect();
+                      onOpenContextMenu?.(task, {
+                        x: rect.left,
+                        y: rect.bottom + 4,
+                      });
                     }}
-                    className="p-1 text-slate-400 hover:text-slate-200 transition-colors"
+                    className="p-1 text-muted hover:text-primary transition-colors"
                   >
                     <MoreVertical className="w-3.5 h-3.5" />
                   </button>
                   <button
                     type="button"
                     onClick={() => onDeleteEntry(task.id)}
-                    className="opacity-60 md:opacity-0 md:group-hover:opacity-100
- p-1.5 text-slate-400 hover:text-rose-500 transition-opacity"
+                    className="opacity-60 md:opacity-0 md:group-hover:opacity-100 p-1.5 text-muted hover:text-danger transition-opacity"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -343,22 +317,21 @@ export const TodayTab: React.FC<TodayTabProps> = ({
           )}
         </div>
       </div>
-      {/* ---- Section 3: Completed ---- */}
-      {/* Section 3: Completed Entries */}
-      <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-slate-800/60">
+
+      {/* Completed */}
+      <div className="space-y-3 pt-4 border-t border-soft">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+            <CheckCircle2 className="w-4 h-4 text-success" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-primary">
               Completed (Anchors & Active Work)
             </h3>
           </div>
-          <span className="text-[11px] font-mono text-emerald-400">
+          <span className="text-[11px] font-mono text-success">
             {completedEntries.length} Done Today
           </span>
         </div>
 
-        {/* Dedicated NLP Input Bar to directly log completed work */}
         <NLPInputBar
           placeholder="Log completed actions here for gratitude..."
           defaultType="log"
@@ -380,10 +353,9 @@ export const TodayTab: React.FC<TodayTabProps> = ({
           }}
         />
 
-        {/* Completed List */}
         <div className="space-y-2 mt-2">
           {completedEntries.length === 0 ? (
-            <div className="p-4 rounded-xl border border-dashed border-slate-200 dark:border-slate-800/80 text-center text-xs text-slate-400">
+            <div className="p-4 rounded-xl border border-dashed border-soft text-center text-xs text-muted">
               Checked-off tasks and anchors will appear here with completed
               timestamps and stream to your Timeline spine.
             </div>
@@ -391,23 +363,23 @@ export const TodayTab: React.FC<TodayTabProps> = ({
             completedEntries.map((done) => (
               <div
                 key={done.id}
-                className="group flex items-center justify-between p-3.5 rounded-xl bg-slate-50 dark:bg-[#101520] border border-slate-200 dark:border-slate-800/60 opacity-80 hover:opacity-100 transition-all"
+                className="group flex items-center justify-between p-3.5 rounded-xl bg-sunken border border-soft opacity-80 hover:opacity-100 transition-all"
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <button
                     type="button"
                     onClick={() => onToggleEntryStatus(done.id)}
                     title="Click to restore to active queue"
-                    className="text-emerald-500 hover:text-slate-400 transition-colors shrink-0"
+                    className="text-success hover:text-muted transition-colors shrink-0"
                   >
                     <CheckCircle2 className="w-4 h-4" />
                   </button>
                   <div className="min-w-0">
-                    <span className="text-sm text-slate-500 line-through truncate block">
+                    <span className="text-sm text-muted line-through truncate block">
                       {done.title}
                     </span>
-                    <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 mt-0.5 block">
-                      Completed at {formatCompletedTime(done.completedAt)}
+                    <span className="text-[11px] font-mono text-success mt-0.5 block">
+                      Completed at {formatTime(done.completedAt)}
                     </span>
                   </div>
                 </div>
@@ -415,8 +387,7 @@ export const TodayTab: React.FC<TodayTabProps> = ({
                 <button
                   type="button"
                   onClick={() => onDeleteEntry(done.id)}
-                  className="opacity-60 md:opacity-0 md:group-hover:opacity-100
- p-1.5 text-slate-400 hover:text-rose-500 transition-opacity"
+                  className="opacity-60 md:opacity-0 md:group-hover:opacity-100 p-1.5 text-muted hover:text-danger transition-opacity"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -424,7 +395,7 @@ export const TodayTab: React.FC<TodayTabProps> = ({
             ))
           )}
         </div>
-      </div>{" "}
+      </div>
     </div>
   );
 };

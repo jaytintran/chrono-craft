@@ -1,7 +1,5 @@
 /**
  * ChronoCraft - Polymorphic DetailSheet Shell
- * Renders the slide-over chrome and dispatches to the correct form.
- * Field state lives inside each form component and is collected via refs.
  */
 
 import React, { useEffect, useRef, useState } from "react";
@@ -43,7 +41,6 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
   onSaveListItem,
   onDeleteListItem,
 }) => {
-  // Global Detail Sheet States & Refs
   const noteRef = useRef<NoteFormHandle>(null);
   const eventRef = useRef<EventFormHandle>(null);
   const habitRef = useRef<HabitFormHandle>(null);
@@ -54,7 +51,6 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
   const savedSnapshotRef = useRef<string>("");
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
-  // Reset snapshot when a different item opens (or when sheet closes)
   useEffect(() => {
     savedSnapshotRef.current = "";
     if (saveTimerRef.current) {
@@ -67,8 +63,6 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
     (sheetMode as any)?.isNew,
   ]);
 
-  // ESC to close (with autosave flush in edit mode)
-  // ESC to close (with autosave flush in edit mode)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
@@ -76,12 +70,10 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
         !(e.target as HTMLElement).closest?.(".tiptap")
       ) {
         if (sheetMode && !sheetMode.isNew) {
-          // Inline flush: cancel pending timer, then persist current draft.
           if (saveTimerRef.current) {
             clearTimeout(saveTimerRef.current);
             saveTimerRef.current = null;
           }
-          // Fire the appropriate saver if the form is mounted
           const ref =
             sheetMode.type === "note"
               ? noteRef
@@ -111,12 +103,10 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
 
   if (!sheetMode) return null;
 
-  // Unified close: flush edits in edit mode, discard in create mode
   const handleClose = () => {
     if (sheetMode && !sheetMode.isNew) flushAutosave();
     onClose();
   };
-  // Rename old handleDelete -> performDelete; keep its body, drop the window.confirm
   const performDelete = () => {
     if (!sheetMode) return;
     const id = sheetMode.data.id;
@@ -129,16 +119,6 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
     onClose();
   };
 
-  const saveLabel =
-    sheetMode.type === "habit"
-      ? "Save Habit"
-      : sheetMode.type === "event"
-        ? "Save Event"
-        : sheetMode.type === "list_item"
-          ? "Save Item"
-          : "Save Note";
-
-  // Snapshot for "did anything actually change?" comparison
   const snapshotOf = (val: unknown): string => {
     try {
       return JSON.stringify(val ?? null);
@@ -147,7 +127,6 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
     }
   };
 
-  // Build the current draft from the active form's ref
   const collectCurrentDraft = ():
     | { kind: "note"; payload: Partial<Note> }
     | { kind: "event"; payload: Partial<CalendarEvent> }
@@ -177,7 +156,6 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
     }
   };
 
-  // Fire the appropriate onSave* once if the draft differs from the last saved snapshot.
   const commitOnce = () => {
     if (!sheetMode || sheetMode.isNew) return;
     const collected = collectCurrentDraft();
@@ -203,7 +181,6 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
     }
   };
 
-  // Debounced autosave — called by each form on every field change
   const scheduleAutosave = () => {
     if (!sheetMode || sheetMode.isNew) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -213,7 +190,6 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
     }, 500);
   };
 
-  // Synchronous flush used when the user closes mid-edit
   const flushAutosave = () => {
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current);
@@ -223,23 +199,23 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
   };
 
   const header = (
-    <div className="flex items-center justify-between gap-3 px-4 md:px-6 py-3 md:py-4 border-b border-slate-200 dark:border-slate-800 shrink-0">
+    <div className="flex items-center justify-between gap-3 px-4 md:px-6 py-3 md:py-4 border-b border-soft shrink-0">
       <div className="flex items-center gap-2 min-w-0">
         <button
           type="button"
           onClick={handleClose}
           aria-label="Back"
-          className="md:hidden p-1.5 -ml-1 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          className="md:hidden p-1.5 -ml-1 rounded-lg text-secondary hover:text-primary hover:bg-hover transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
 
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 min-w-0">
-          <span className="font-mono text-[10px] md:text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+          <span className="font-mono text-[10px] md:text-xs font-semibold uppercase tracking-wider text-muted">
             {sheetMode.isNew ? "Create New" : "Edit"}
           </span>
-          <span className="text-slate-300 dark:text-slate-700">·</span>
-          <span className="text-xs font-semibold uppercase tracking-wider text-indigo-500 dark:text-indigo-400 break-words">
+          <span className="text-muted">·</span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-accent break-words">
             {sheetMode.type}
           </span>
         </div>
@@ -252,7 +228,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
             onClick={() => setIsDeleteOpen(true)}
             title="Delete"
             aria-label="Delete"
-            className="p-1.5 rounded-lg border border-transparent text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 hover:border-rose-500/30 transition-colors"
+            className="p-1.5 rounded-lg border border-transparent text-muted hover:text-danger hover:bg-danger/10 hover:border-danger/30 transition-colors"
           >
             <Trash2 className="w-4 h-4" />
           </button>
@@ -264,31 +240,31 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
             title={isNotePinned ? "Pinned to top" : "Pin note"}
             className={`p-1.5 rounded-lg border transition-colors ${
               isNotePinned
-                ? "bg-amber-500/10 text-amber-500 border-amber-500/30"
-                : "text-slate-400 hover:text-slate-200 border-transparent hover:border-slate-700"
+                ? "bg-warning/10 text-warning border-warning/30"
+                : "text-muted hover:text-primary border-transparent hover:border-strong"
             }`}
           >
             <Pin className="w-4 h-4" />
           </button>
         )}
         {sheetMode.type === "event" && sheetMode.data.completedAt && (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 text-[10px] font-mono uppercase tracking-wider">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-success/10 text-success border border-success/30 text-[10px] font-mono uppercase tracking-wider">
             <Check className="w-3 h-3" /> Attended
           </span>
         )}
         {sheetMode.type === "event" && sheetMode.data.missedAt && (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-500 border border-rose-500/30 text-[10px] font-mono uppercase tracking-wider">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-danger/10 text-danger border border-danger/30 text-[10px] font-mono uppercase tracking-wider">
             Missed
           </span>
         )}
         {sheetMode.type === "event" && sheetMode.data.isAchievement && (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/30 text-[10px] font-mono uppercase tracking-wider">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-warning/10 text-warning border border-warning/30 text-[10px] font-mono uppercase tracking-wider">
             <Trophy className="w-3 h-3" /> Achievement
           </span>
         )}
         <button
           onClick={handleClose}
-          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          className="p-1.5 rounded-lg text-muted hover:text-primary hover:bg-hover transition-colors"
         >
           <X className="w-5 h-5" />
         </button>
@@ -337,28 +313,27 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
 
   return (
     <>
-      {/* ================= MOBILE: FULL-SCREEN PANEL ================= */}
-      <div className="md:hidden fixed inset-0 z-50 bg-white dark:bg-[#111724] flex flex-col animate-slideInRight">
+      <div className="md:hidden fixed inset-0 z-50 bg-raised flex flex-col animate-slideInRight">
         {header}
         {body}
       </div>
 
-      {/* ================= DESKTOP: CENTERED MODAL ================= */}
       <div className="hidden md:flex fixed inset-0 z-50 items-center justify-center p-6">
         <div
           onClick={handleClose}
-          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity duration-300"
+          className="fixed inset-0 bg-overlay/60 backdrop-blur-xs transition-opacity duration-300"
         />
 
         <div
-          className={`relative w-full ${sheetMode.type === "habit" ? "max-w-lg" : "max-w-3xl"} bg-white dark:bg-[#111724] rounded-2xl shadow-2xl flex flex-col z-10 border border-slate-200 dark:border-slate-800 animate-scaleUp overflow-hidden max-h-[85vh]`}
+          className={`relative w-full ${
+            sheetMode.type === "habit" ? "max-w-lg" : "max-w-3xl"
+          } bg-raised rounded-2xl shadow-2xl flex flex-col z-10 border border-soft animate-scaleUp overflow-hidden max-h-[85vh]`}
         >
           {header}
           {body}
         </div>
       </div>
 
-      {/* Delete Confirmation Box */}
       <ConfirmDialog
         isOpen={isDeleteOpen}
         title={`Delete this ${sheetMode.type.replace("_", " ")}?`}

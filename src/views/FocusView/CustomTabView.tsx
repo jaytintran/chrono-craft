@@ -12,7 +12,7 @@ interface CustomTabViewProps {
   onDeleteEntry: (entryId: string) => Promise<void>;
   onEditTab: (tab: CustomFocusTab) => void;
   onDeleteTab: (tabId: string) => Promise<void>;
-  onSwitchAway: () => void; // called after deletion to reset activeTab to "today"
+  onSwitchAway: () => void;
 }
 
 export const CustomTabView: React.FC<CustomTabViewProps> = ({
@@ -28,11 +28,6 @@ export const CustomTabView: React.FC<CustomTabViewProps> = ({
 }) => {
   return (
     <div className="max-w-6xl mx-auto space-y-6 animate-fadeIn">
-      {/* ---- Custom Tab Banner Header ---- */}
-      {/* ... paste existing banner JSX, replacing:
-              - setEditingTab(currentCustomTab)  →  onEditTab(currentCustomTab)
-              - onDeleteCustomTab(...) + setActiveTab("today")
-                →  onDeleteTab(...); onSwitchAway();  inside the confirm block  */}
       <div
         className="p-6 rounded-2xl text-white shadow-lg flex items-center justify-between"
         style={{ backgroundColor: currentCustomTab.bgColor }}
@@ -61,14 +56,13 @@ export const CustomTabView: React.FC<CustomTabViewProps> = ({
                 onSwitchAway();
               }
             }}
-            className="p-1.5 rounded-lg bg-black/20 hover:bg-rose-500 text-white transition-colors"
+            className="p-1.5 rounded-lg bg-black/20 hover:bg-danger text-white transition-colors"
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
 
-      {/* ---- Dedicated Input Bar ---- */}
       <NLPInputBar
         placeholder={`Add task to ${currentCustomTab.name}... (e.g., "Refine mockups at 4pm !high")`}
         defaultType="task"
@@ -87,10 +81,10 @@ export const CustomTabView: React.FC<CustomTabViewProps> = ({
           });
         }}
       />
-      {/* ---- Custom Tab Entries List ---- */}
+
       <div className="space-y-2">
         {customTabEntries.length === 0 ? (
-          <div className="p-6 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 text-center text-xs text-slate-400">
+          <div className="p-6 rounded-2xl border border-dashed border-soft text-center text-xs text-muted">
             No tasks in this custom queue yet. Add entries using the input bar
             above.
           </div>
@@ -98,16 +92,16 @@ export const CustomTabView: React.FC<CustomTabViewProps> = ({
           customTabEntries.map((item) => (
             <div
               key={item.id}
-              className="group flex items-center justify-between p-3.5 rounded-xl bg-white dark:bg-[#131926] border border-slate-200 dark:border-slate-800 hover:border-indigo-500/40 transition-all shadow-xs"
+              className="group flex items-center justify-between p-3.5 rounded-xl bg-raised border border-soft hover:border-accent/40 transition-all shadow-xs"
             >
               <div className="flex items-center gap-3 min-w-0">
                 <button
                   type="button"
                   onClick={() => onToggleEntryStatus(item.id)}
-                  className="text-slate-400 hover:text-emerald-500 transition-colors"
+                  className="text-muted hover:text-success transition-colors"
                 >
                   {item.status === "completed" ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                    <CheckCircle2 className="w-4 h-4 text-success" />
                   ) : (
                     <Circle className="w-4 h-4" />
                   )}
@@ -115,8 +109,8 @@ export const CustomTabView: React.FC<CustomTabViewProps> = ({
                 <span
                   className={`text-sm font-semibold truncate ${
                     item.status === "completed"
-                      ? "line-through text-slate-400"
-                      : "text-slate-900 dark:text-slate-100"
+                      ? "line-through text-muted"
+                      : "text-primary"
                   }`}
                 >
                   {item.title}
@@ -126,8 +120,7 @@ export const CustomTabView: React.FC<CustomTabViewProps> = ({
               <button
                 type="button"
                 onClick={() => onDeleteEntry(item.id)}
-                className="opacity-60 md:opacity-0 md:group-hover:opacity-100
- p-1.5 text-slate-400 hover:text-rose-500 transition-opacity"
+                className="opacity-60 md:opacity-0 md:group-hover:opacity-100 p-1.5 text-muted hover:text-danger transition-opacity"
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>

@@ -46,10 +46,10 @@ function formatAgo(iso?: string): string {
 }
 
 const SYNC_DOT_CLASS: Record<SyncState, string> = {
-  synced: "bg-emerald-500",
-  stale: "bg-amber-500",
-  error: "bg-rose-500",
-  off: "bg-slate-400",
+  synced: "bg-success",
+  stale: "bg-warning",
+  error: "bg-danger",
+  off: "bg-muted",
 };
 
 interface HeaderProps {
@@ -73,7 +73,6 @@ interface SyncControlProps {
   onPush: () => Promise<void> | void;
   onPull: () => Promise<void> | void;
   onOpenSettings: () => void;
-  /** Compact mode = mobile strip (smaller paddings, shorter labels) */
   compact?: boolean;
 }
 
@@ -94,14 +93,14 @@ const SyncControl: React.FC<SyncControlProps> = ({
       <button
         type="button"
         onClick={onOpenSettings}
-        className={`flex items-center gap-1.5 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-indigo-500/60 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors cursor-pointer ${
+        className={`flex items-center gap-1.5 rounded-lg border border-dashed border-strong text-secondary hover:border-accent/60 hover:text-accent transition-colors cursor-pointer ${
           compact
             ? "px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider"
             : "px-2.5 py-1 text-[11px] font-mono uppercase tracking-wider"
         }`}
         title="Set up Gist Sync"
       >
-        <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+        <span className="w-1.5 h-1.5 rounded-full bg-muted" />
         <span>Set up sync</span>
       </button>
     );
@@ -131,9 +130,7 @@ const SyncControl: React.FC<SyncControlProps> = ({
         />
         <span
           className={`truncate ${
-            state === "error"
-              ? "text-rose-500 dark:text-rose-400"
-              : "text-slate-500 dark:text-slate-400"
+            state === "error" ? "text-danger" : "text-secondary"
           }`}
         >
           {statusText}
@@ -147,11 +144,11 @@ const SyncControl: React.FC<SyncControlProps> = ({
           disabled={isSyncing}
           onClick={() => onPush()}
           title="Push local state to Gist"
-          className={`flex items-center gap-1 rounded-md md:border md:border-slate-200 md:dark:border-slate-700 md:bg-white md:dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer ${
+          className={`flex items-center gap-1 rounded-md md:border md:border-soft md:bg-surface text-secondary hover:bg-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer ${
             compact ? "px-1.5 py-0.5 text-[10px]" : "px-2 py-1 text-[10px]"
           } font-semibold uppercase tracking-wider`}
         >
-          <ArrowUpFromLine className="w-3 h-3 text-indigo-400" />
+          <ArrowUpFromLine className="w-3 h-3 text-accent" />
           <span>Push</span>
         </button>
 
@@ -165,11 +162,11 @@ const SyncControl: React.FC<SyncControlProps> = ({
               ? "Pull remote changes into local DB"
               : "Push first to create a Gist, then Pull becomes available"
           }
-          className={`flex items-center gap-1 rounded-md md:border md:border-slate-200 md:dark:border-slate-700 md:bg-white md:dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer ${
+          className={`flex items-center gap-1 rounded-md md:border md:border-soft md:bg-surface text-secondary hover:bg-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer ${
             compact ? "px-1.5 py-0.5 text-[10px]" : "px-2 py-1 text-[10px]"
           } font-semibold uppercase tracking-wider`}
         >
-          <ArrowDownToLine className="w-3 h-3 text-emerald-400" />
+          <ArrowDownToLine className="w-3 h-3 text-success" />
           <span>Pull</span>
         </button>
       </div>
@@ -198,32 +195,32 @@ export const Header: React.FC<HeaderProps> = ({
     {
       id: "focus",
       label: "Focus",
-      icon: <CheckCircle2 className="w-4 h-4 text-indigo-400" />,
+      icon: <CheckCircle2 className="w-4 h-4 text-accent" />,
     },
     {
       id: "timeline",
       label: "Timeline",
-      icon: <Bookmark className="w-4 h-4 text-cyan-400" />,
+      icon: <Bookmark className="w-4 h-4 text-info" />,
     },
     {
       id: "notes",
       label: "Notes",
-      icon: <FileText className="w-4 h-4 text-amber-400" />,
+      icon: <FileText className="w-4 h-4 text-warning" />,
     },
     {
       id: "events",
       label: "Events",
-      icon: <CalendarDays className="w-4 h-4 text-rose-400" />,
+      icon: <CalendarDays className="w-4 h-4 text-danger" />,
     },
     {
       id: "habits",
       label: "Habits",
-      icon: <Flame className="w-4 h-4 text-orange-400" />,
+      icon: <Flame className="w-4 h-4 text-entity-orange" />,
     },
     {
       id: "lists",
       label: "Lists",
-      icon: <FolderKanban className="w-4 h-4 text-emerald-400" />,
+      icon: <FolderKanban className="w-4 h-4 text-success" />,
     },
   ];
 
@@ -238,9 +235,9 @@ export const Header: React.FC<HeaderProps> = ({
   }).format(new Date());
 
   return (
-    <header className="sticky top-0 z-30 bg-white/90 dark:bg-[#0B0F17]/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800/80 transition-colors pt-[env(safe-area-inset-top)]">
+    <header className="sticky top-0 z-30 bg-app/90 backdrop-blur-md border-b border-soft transition-colors pt-[env(safe-area-inset-top)]">
       {/* Mobile-only: sync strip above the nav tabs */}
-      <div className="md:hidden w-full h-8 flex items-center justify-between gap-2 px-4 border-b border-slate-200 dark:border-slate-800/80 bg-white/90 dark:bg-[#0B0F17]/90">
+      <div className="md:hidden w-full h-8 flex items-center justify-between gap-2 px-4 border-b border-soft bg-app/90">
         <SyncControl
           settings={settings}
           isSyncing={isSyncing}
@@ -258,21 +255,19 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center gap-4 max-md:hidden">
           {/* Brand Logo & Title */}
           <div className="flex items-center gap-2.5 shrink-0">
-            <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-sm shadow-indigo-500/20">
+            <div className="w-7 h-7 rounded-lg bg-accent flex items-center justify-center text-accent-fg shadow-sm shadow-accent/20">
               <Sparkles className="w-4 h-4" />
             </div>
-            <span className="font-bold text-base tracking-tight text-slate-900 dark:text-slate-100">
+            <span className="font-bold text-base tracking-tight text-primary">
               ChronoCraft
             </span>
           </div>
 
           {/* Separator on Desktop */}
-          <div className="hidden md:flex items-center text-slate-300 dark:text-slate-700">
-            /
-          </div>
+          <div className="hidden md:flex items-center text-muted">/</div>
 
           {/* Desktop Breadcrumb indicator */}
-          <div className="hidden md:flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+          <div className="hidden md:flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-secondary">
             {currentOption.icon}
             <span>{currentOption.label} View</span>
           </div>
@@ -295,8 +290,8 @@ export const Header: React.FC<HeaderProps> = ({
                   onClick={() => onSelectView(opt.id)}
                   className={`flex-1 min-w-0 h-12 flex flex-col items-center justify-center gap-0.5 rounded-lg text-[9px] sm:text-[10px] font-semibold transition-all cursor-pointer ${
                     isActive
-                      ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xs"
-                      : "text-slate-500 dark:text-slate-400 active:bg-slate-200/60 dark:active:bg-slate-800/60"
+                      ? "bg-raised text-primary shadow-xs"
+                      : "text-secondary active:bg-hover"
                   }`}
                 >
                   <span className={isActive ? "" : "opacity-60"}>
@@ -314,10 +309,10 @@ export const Header: React.FC<HeaderProps> = ({
               type="button"
               onClick={onOpenSettings}
               aria-label="Open settings"
-              className="flex-1 min-w-0 h-12 flex flex-col items-center justify-center gap-0.5 rounded-lg text-[9px] sm:text-[10px] font-semibold text-slate-500 dark:text-slate-400 active:bg-slate-200/60 dark:active:bg-slate-800/60 transition-all cursor-pointer"
+              className="flex-1 min-w-0 h-12 flex flex-col items-center justify-center gap-0.5 rounded-lg text-[9px] sm:text-[10px] font-semibold text-secondary active:bg-hover transition-all cursor-pointer"
             >
               <span className="opacity-60">
-                <Sliders className="w-4 h-4 text-slate-400" />
+                <Sliders className="w-4 h-4 text-muted" />
               </span>
               <span className="truncate max-w-full px-0.5">Settings</span>
             </button>
@@ -325,37 +320,37 @@ export const Header: React.FC<HeaderProps> = ({
         </nav>
 
         {/* Zone 2: Date & Executive Progress Overview */}
-        <div className="hidden lg:flex items-center gap-4 text-xs font-mono text-slate-500 dark:text-slate-400">
+        <div className="hidden lg:flex items-center gap-4 text-xs font-mono text-secondary">
           <div className="flex items-center gap-1.5">
-            <Calendar className="w-3.5 h-3.5 text-indigo-400" />
-            <span className="tabular-nums font-sans font-medium text-slate-700 dark:text-slate-300">
+            <Calendar className="w-3.5 h-3.5 text-accent" />
+            <span className="tabular-nums font-sans font-medium text-primary">
               {todayFormatted}
             </span>
           </div>
-          <span className="text-slate-300 dark:text-slate-700">·</span>
+          <span className="text-muted">·</span>
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-indigo-500" />
+            <span className="w-2 h-2 rounded-full bg-accent" />
             <span>
               Active:{" "}
-              <strong className="tabular-nums text-slate-900 dark:text-slate-100">
+              <strong className="tabular-nums text-primary">
                 {activeTaskCount}
               </strong>
               /{settings.xActiveLimit}
             </span>
           </div>
-          <span className="text-slate-300 dark:text-slate-700">·</span>
+          <span className="text-muted">·</span>
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            <span className="w-2 h-2 rounded-full bg-success" />
             <span>
               Done Today:{" "}
-              <strong className="tabular-nums text-slate-900 dark:text-slate-100">
+              <strong className="tabular-nums text-primary">
                 {completedTodayCount}
               </strong>
             </span>
           </div>
         </div>
 
-        {/* Zone 3: Settings) */}
+        {/* Zone 3: Sync + Settings */}
         <div className="flex items-center gap-2 shrink-0 max-md:hidden">
           {/* Desktop: inline sync control */}
           <SyncControl
@@ -372,18 +367,18 @@ export const Header: React.FC<HeaderProps> = ({
             type="button"
             onClick={onOpenSettings}
             title="Workspace Settings & Database"
-            className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold uppercase tracking-wider text-secondary hover:text-primary hover:bg-hover transition-colors cursor-pointer"
           >
-            <Sliders className="w-4 h-4 text-indigo-400" />
+            <Sliders className="w-4 h-4 text-accent" />
             <span>Settings</span>
           </button>
 
-          {/* Mobile fallback: keep a compact icon just in case the tab strip is scrolled off */}
+          {/* Mobile fallback: compact icon */}
           <button
             type="button"
             onClick={onOpenSettings}
             title="Workspace Settings & Database"
-            className="md:hidden p-2 rounded-xl text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            className="md:hidden p-2 rounded-xl text-secondary hover:text-primary hover:bg-hover transition-colors cursor-pointer"
           >
             <Sliders className="w-4 h-4" />
           </button>

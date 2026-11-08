@@ -11,29 +11,22 @@ interface ScratchpadTabProps {
   onSendScratchpadToTimeline: (card: ScratchpadCard) => Promise<void>;
 }
 
-// Dark theme palette — deep, saturated hues (current design).
 const SCRATCH_COLORS_DARK = [
-  "#1E293B", // slate
-  "#1E3A8A", // indigo
-  "#064E3B", // emerald
-  "#701A75", // fuchsia
-  "#78350F", // amber
+  "#1E293B",
+  "#1E3A8A",
+  "#064E3B",
+  "#701A75",
+  "#78350F",
 ];
 
-// Light theme palette — pastel equivalents of the dark set.
-// Same hue families, much higher lightness so they read as colored paper
-// rather than solid blocks against a white page.
 const SCRATCH_COLORS_LIGHT = [
-  "#E2E8F0", // slate-200
-  "#C7D2FE", // indigo-200
-  "#A7F3D0", // emerald-200
-  "#F5D0FE", // fuchsia-200
-  "#FDE68A", // amber-200
+  "#E2E8F0",
+  "#C7D2FE",
+  "#A7F3D0",
+  "#F5D0FE",
+  "#FDE68A",
 ];
 
-// Maps a dark-theme color → its light-theme counterpart.
-// Used so an existing card whose `color` is one of the dark values still
-// renders correctly in light mode.
 const DARK_TO_LIGHT: Record<string, string> = {
   "#1E293B": "#E2E8F0",
   "#1E3A8A": "#C7D2FE",
@@ -41,6 +34,7 @@ const DARK_TO_LIGHT: Record<string, string> = {
   "#701A75": "#F5D0FE",
   "#78350F": "#FDE68A",
 };
+
 export const ScratchpadTab: React.FC<ScratchpadTabProps> = ({
   scratchpadCards,
   onAddScratchpad,
@@ -84,33 +78,30 @@ export const ScratchpadTab: React.FC<ScratchpadTabProps> = ({
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 animate-fadeIn">
-      {/* ---- Quick Note Input Bar ---- */}
       <form
         onSubmit={handleSubmit}
-        className="p-4 rounded-2xl bg-white dark:bg-[#131926] border border-slate-200 dark:border-slate-800 shadow-md space-y-3"
+        className="p-4 rounded-2xl bg-raised border border-soft shadow-md space-y-3"
       >
         <input
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Title..."
-          className="w-full bg-transparent text-sm font-semibold text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none"
+          className="w-full bg-transparent text-sm font-semibold text-primary placeholder-muted focus:outline-none"
         />
         <textarea
           rows={3}
           value={body}
           onChange={(e) => setBody(e.target.value)}
           placeholder="Take a quick note or brain dump..."
-          className="w-full bg-transparent text-xs text-slate-700 dark:text-slate-300 placeholder-slate-400 focus:outline-none resize-none leading-relaxed"
+          className="w-full bg-transparent text-xs text-secondary placeholder-muted focus:outline-none resize-none leading-relaxed"
         />
 
-        <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
+        <div className="flex items-center justify-between pt-2 border-t border-soft">
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-mono text-slate-400">Color:</span>
+            <span className="text-[11px] font-mono text-muted">Color:</span>
             {(isDarkTheme ? SCRATCH_COLORS_DARK : SCRATCH_COLORS_LIGHT).map(
               (c, i) => {
-                // Canonical (dark) color stays the stored value regardless of theme —
-                // so the same card looks right on both themes without migrating data.
                 const canonical = SCRATCH_COLORS_DARK[i];
                 const on = color === canonical;
                 return (
@@ -121,9 +112,9 @@ export const ScratchpadTab: React.FC<ScratchpadTabProps> = ({
                     style={{ backgroundColor: c }}
                     className={`w-5 h-5 rounded-full border transition-transform ${
                       on
-                        ? "scale-125 ring-2 ring-indigo-500"
+                        ? "scale-125 ring-2 ring-accent"
                         : "opacity-80 hover:opacity-100"
-                    } ${isDarkTheme ? "border-slate-700" : "border-slate-300"}`}
+                    } ${isDarkTheme ? "border-strong" : "border-soft"}`}
                   />
                 );
               },
@@ -133,7 +124,7 @@ export const ScratchpadTab: React.FC<ScratchpadTabProps> = ({
           <button
             type="submit"
             disabled={!title.trim() && !body.trim()}
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-xs font-semibold cursor-pointer shadow-xs"
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-accent hover:bg-accent-hover disabled:opacity-40 text-accent-fg text-xs font-semibold cursor-pointer shadow-xs"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Pin Note</span>
@@ -141,7 +132,6 @@ export const ScratchpadTab: React.FC<ScratchpadTabProps> = ({
         </div>
       </form>
 
-      {/* ---- Note Cards Grid ---- */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {scratchpadCards.map((card) => {
           const storedColor = card.color || "#1E293B";
@@ -174,10 +164,10 @@ export const ScratchpadTab: React.FC<ScratchpadTabProps> = ({
                     }
                     className={`p-1 rounded-md transition-colors ${
                       card.isPinned
-                        ? "text-amber-400"
+                        ? "text-warning"
                         : isDarkTheme
                           ? "text-white/40 hover:text-white"
-                          : "text-slate-500 hover:text-slate-700"
+                          : "text-secondary hover:text-primary"
                     }`}
                   >
                     <Pin className="w-3.5 h-3.5" />
@@ -186,14 +176,13 @@ export const ScratchpadTab: React.FC<ScratchpadTabProps> = ({
 
                 <p
                   className={`text-xs whitespace-pre-wrap leading-relaxed ${
-                    isDarkTheme ? "text-white/80" : "text-slate-700"
+                    isDarkTheme ? "text-white/80" : "text-secondary"
                   }`}
                 >
                   {stripHtml(card.content)}
                 </p>
               </div>
 
-              {/* Card Actions */}
               <div
                 className={`flex items-center justify-between pt-4 mt-2 border-t text-xs ${
                   isDarkTheme ? "border-white/10" : "border-black/5"
@@ -205,7 +194,7 @@ export const ScratchpadTab: React.FC<ScratchpadTabProps> = ({
                   className={`flex items-center gap-1 text-[11px] font-mono transition-colors ${
                     isDarkTheme
                       ? "text-cyan-300 hover:text-cyan-200"
-                      : "text-cyan-600 hover:text-cyan-700"
+                      : "text-info hover:text-info/80"
                   }`}
                 >
                   <ArrowRight className="w-3 h-3" />
@@ -218,7 +207,7 @@ export const ScratchpadTab: React.FC<ScratchpadTabProps> = ({
                   className={`opacity-60 md:opacity-0 md:group-hover:opacity-100 p-1 transition-opacity ${
                     isDarkTheme
                       ? "text-white/50 hover:text-rose-400"
-                      : "text-slate-500 hover:text-rose-500"
+                      : "text-secondary hover:text-danger"
                   }`}
                 >
                   <Trash2 className="w-3.5 h-3.5" />

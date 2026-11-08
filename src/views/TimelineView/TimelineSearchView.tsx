@@ -1,8 +1,5 @@
 /**
  * ChronoCraft - Timeline Search Sub-View
- * Renders matched entries across ALL dates, grouped by day with sticky
- * day headers. Fully editable: reuse TimelineEntryRow so title/timestamp/
- * context-menu/complete-check all work identically to the main timeline.
  */
 
 import React, { useMemo } from "react";
@@ -41,7 +38,6 @@ interface TimelineSearchViewProps {
   displayMode: TimelineDisplayMode;
   showEntryContent: boolean;
   onExit: () => void;
-
   onToggleEntryStatus: (entryId: string) => Promise<void>;
   onDeleteEntry: (entryId: string) => Promise<void>;
   onUpdateEntryTitle?: (entryId: string, newTitle: string) => Promise<void>;
@@ -72,7 +68,6 @@ export const TimelineSearchView: React.FC<TimelineSearchViewProps> = ({
   onOpenContextMenu,
   onOpenTimePicker,
 }) => {
-  // Match across title, content (raw + stripped HTML), tags, type, source
   const matched = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return [];
@@ -96,7 +91,6 @@ export const TimelineSearchView: React.FC<TimelineSearchViewProps> = ({
     });
   }, [entries, query]);
 
-  // Group by day; newest day first, entries within a day chronological.
   const groups = useMemo(() => {
     const map = new Map<string, TimelineEntry[]>();
     for (const e of matched) {
@@ -107,14 +101,10 @@ export const TimelineSearchView: React.FC<TimelineSearchViewProps> = ({
     return Array.from(map.entries())
       .sort((a, b) => b[0].localeCompare(a[0]))
       .map(([dateKey, list]) => {
-        // Within a day, split time blocks into start/end markers so their
-        // markers still render correctly. We reuse the same item shape
-        // that TimelineView uses.
         const items: ProcessedTimelineItem[] = [];
         const dayTimeBlocks = list.filter(
           (e) => e.type === "timeblock" && e.timeBlock,
         );
-        const blockIds = new Set(dayTimeBlocks.map((e) => e.id));
         for (const e of list) {
           if (e.type === "timeblock" && e.timeBlock) {
             items.push({
@@ -135,8 +125,6 @@ export const TimelineSearchView: React.FC<TimelineSearchViewProps> = ({
               id: e.id,
               originalEntry: e,
               sortTime: t,
-              // If a returned entry belongs to a block also returned on this
-              // day, mark it as contained so it renders indented.
               containedInBlock: dayTimeBlocks.find((tb) => {
                 if (!tb.timeBlock) return false;
                 const s = new Date(tb.timeBlock.startIso).getTime();
@@ -146,8 +134,6 @@ export const TimelineSearchView: React.FC<TimelineSearchViewProps> = ({
             });
           }
         }
-        // Silence unused warning for blockIds in case of future use
-        void blockIds;
         return { dateKey, heading: formatDayHeading(dateKey), items };
       });
   }, [matched]);
@@ -156,11 +142,10 @@ export const TimelineSearchView: React.FC<TimelineSearchViewProps> = ({
 
   return (
     <div className="max-w-3xl mx-auto">
-      {/* Search-mode banner: count + X to exit */}
-      <div className="mb-4 flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-xs">
+      <div className="mb-4 flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl bg-accent/10 border border-accent/30 text-xs">
         <div className="flex items-center gap-2 min-w-0">
-          <Search className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-          <span className="font-mono text-indigo-300">
+          <Search className="w-3.5 h-3.5 text-accent shrink-0" />
+          <span className="font-mono text-accent">
             {total} {total === 1 ? "match" : "matches"} for{" "}
             <span className="font-bold">"{query.trim()}"</span>
           </span>
@@ -169,7 +154,7 @@ export const TimelineSearchView: React.FC<TimelineSearchViewProps> = ({
           type="button"
           onClick={onExit}
           title="Exit search (Esc)"
-          className="flex items-center gap-1 px-2 py-1 rounded-lg text-indigo-400 hover:text-indigo-200 hover:bg-indigo-500/20 transition-colors shrink-0"
+          className="flex items-center gap-1 px-2 py-1 rounded-lg text-accent hover:bg-accent/20 transition-colors shrink-0"
         >
           <X className="w-3.5 h-3.5" />
           <span className="font-semibold">Close</span>
@@ -177,9 +162,9 @@ export const TimelineSearchView: React.FC<TimelineSearchViewProps> = ({
       </div>
 
       {total === 0 ? (
-        <div className="p-10 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 text-center text-xs text-slate-400">
-          <SearchX className="w-8 h-8 mx-auto mb-2 text-slate-400" />
-          <p className="font-semibold text-slate-700 dark:text-slate-300">
+        <div className="p-10 rounded-2xl border border-dashed border-soft text-center text-xs text-muted">
+          <SearchX className="w-8 h-8 mx-auto mb-2 text-muted" />
+          <p className="font-semibold text-primary">
             No entries match "{query.trim()}"
           </p>
           <p className="mt-1 text-[11px]">
@@ -190,19 +175,17 @@ export const TimelineSearchView: React.FC<TimelineSearchViewProps> = ({
         <div className="space-y-6">
           {groups.map((g) => (
             <section key={g.dateKey} className="relative">
-              {/* Sticky day heading */}
-              <div className="sticky top-0 z-10 -mx-2 px-2 py-1.5 mb-3 bg-white/90 dark:bg-[#0B0F17]/90 backdrop-blur-md border-b border-slate-200/70 dark:border-slate-800/70">
-                <span className="text-[11px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              <div className="sticky top-0 z-10 -mx-2 px-2 py-1.5 mb-3 bg-app/90 backdrop-blur-md border-b border-soft/70">
+                <span className="text-[11px] font-mono uppercase tracking-wider text-secondary">
                   {g.heading}
                 </span>
-                <span className="ml-2 text-[10px] font-mono text-slate-400">
+                <span className="ml-2 text-[10px] font-mono text-muted">
                   · {g.items.length}
                 </span>
               </div>
 
-              {/* Day rows with their own spine */}
               <div className="relative pl-1">
-                <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-linear-to-b from-indigo-500/40 via-slate-300 dark:via-slate-800 to-transparent" />
+                <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-accent/40 via-soft to-transparent" />
                 <div className="space-y-3">
                   {g.items.map((item) => (
                     <TimelineEntryRow

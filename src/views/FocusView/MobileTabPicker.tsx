@@ -1,5 +1,5 @@
 import React from "react";
-import { Plus, MoreVertical, Pencil } from "lucide-react";
+import { Plus, Pencil } from "lucide-react";
 import { CustomFocusTab } from "../../types";
 
 interface MobileTabPickerProps {
@@ -27,19 +27,19 @@ export const MobileTabPicker: React.FC<MobileTabPickerProps> = ({
     <div className="fixed inset-0 z-50 md:hidden">
       <div
         onClick={onClose}
-        className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs"
+        className="fixed inset-0 bg-overlay/60 backdrop-blur-xs"
       />
-      <div className="fixed bottom-0 inset-x-0 bg-white dark:bg-[#111724] border-t border-slate-200 dark:border-slate-800 rounded-t-3xl shadow-2xl p-5 pb-8 space-y-3 animate-slideInBottom">
+      <div className="fixed bottom-0 inset-x-0 bg-raised border-t border-soft rounded-t-3xl shadow-2xl p-5 pb-8 space-y-3 animate-slideInBottom">
         <div className="flex flex-col items-center space-y-2">
-          <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700" />
+          <div className="w-12 h-1.5 rounded-full bg-strong" />
           <div className="w-full flex items-center justify-between pt-1">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 font-mono">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted font-mono">
               Focus Tabs
             </span>
             <button
               type="button"
               onClick={onClose}
-              className="p-1 rounded-lg text-slate-400 hover:text-slate-200"
+              className="p-1 rounded-lg text-muted hover:text-primary"
             >
               <Plus className="w-4 h-4 rotate-45" />
             </button>
@@ -48,7 +48,7 @@ export const MobileTabPicker: React.FC<MobileTabPickerProps> = ({
 
         <div className="space-y-1">
           {customTabs.length === 0 ? (
-            <p className="text-xs text-slate-400 italic px-2 py-3">
+            <p className="text-xs text-muted italic px-2 py-3">
               No custom tabs yet.
             </p>
           ) : (
@@ -59,8 +59,8 @@ export const MobileTabPicker: React.FC<MobileTabPickerProps> = ({
                   key={tab.id}
                   className={`flex items-center gap-2 px-3 py-2.5 rounded-xl transition-colors ${
                     isActive
-                      ? "bg-indigo-500/10 border border-indigo-500/30"
-                      : "hover:bg-slate-100 dark:hover:bg-slate-800/60"
+                      ? "bg-accent/10 border border-accent/30"
+                      : "hover:bg-hover"
                   }`}
                 >
                   <button
@@ -77,9 +77,7 @@ export const MobileTabPicker: React.FC<MobileTabPickerProps> = ({
                     />
                     <span
                       className={`text-sm truncate ${
-                        isActive
-                          ? "font-semibold text-indigo-600 dark:text-indigo-400"
-                          : "text-slate-900 dark:text-slate-100"
+                        isActive ? "font-semibold text-accent" : "text-primary"
                       }`}
                     >
                       {tab.name}
@@ -91,7 +89,7 @@ export const MobileTabPicker: React.FC<MobileTabPickerProps> = ({
                       onClose();
                       onEditTab(tab);
                     }}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-100"
+                    className="p-1.5 rounded-lg text-muted hover:text-primary"
                     title="Edit tab"
                   >
                     <Pencil className="w-3.5 h-3.5" />
@@ -108,7 +106,7 @@ export const MobileTabPicker: React.FC<MobileTabPickerProps> = ({
             onClose();
             onCreateNew();
           }}
-          className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold"
+          className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-accent hover:bg-accent-hover text-accent-fg text-xs font-semibold"
         >
           <Plus className="w-3.5 h-3.5" />
           <span>New Custom Tab</span>

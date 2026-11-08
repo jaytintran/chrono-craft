@@ -1,12 +1,5 @@
 /**
  * ChronoCraft - Lists View Component
- * 3 default views (Projects, Books, Courses) and custom lists with unified sub-view architecture.
- * Features:
- * - Hidden tab navigation on desktop (sidebar navigation only); visible horizontal scroll on mobile.
- * - Header card without progress bar, displaying collection-level 5-status metrics:
- *   (Inbox, In Progress, Completed, Dropped, Maybe Later).
- * - Leftmost icon button on every entry opens StatusPickerPopover for 1-click status assignment.
- * - Context menu trigger on right click, 3-dot icon, and mobile touch long-press.
  */
 
 import React, { useState, useEffect } from "react";
@@ -108,7 +101,6 @@ export const ListsView: React.FC<ListsViewProps> = ({
   onCreateLinkedNote,
   onCreateLinkedEvent,
 }) => {
-  // Current active list
   const activeList =
     lists.find((l) => l.id === selectedListId) || lists[0] || null;
 
@@ -117,7 +109,6 @@ export const ListsView: React.FC<ListsViewProps> = ({
     ...lists.filter((l) => l.type === "custom"),
   ];
 
-  // View Mode: stacked (default), grid (2 cols), or compact (dense rows)
   const [viewMode, setViewMode] = useState<"stacked" | "grid" | "compact">(
     () => {
       if (typeof window !== "undefined") {
@@ -128,8 +119,6 @@ export const ListsView: React.FC<ListsViewProps> = ({
       return "stacked";
     },
   );
-
-  // Goup By Options
 
   const [groupBy, setGroupBy] = useState<GroupBy>(() => {
     if (typeof window !== "undefined") {
@@ -146,7 +135,6 @@ export const ListsView: React.FC<ListsViewProps> = ({
       localStorage.setItem("chronocraft_lists_group_by", g);
   };
 
-  // Sub-Group Options
   const [subGroupBy, setSubGroupBy] = useState<SubGroupBy>(() => {
     if (typeof window !== "undefined") {
       const v = localStorage.getItem("chronocraft_lists_subgroup_by");
@@ -160,7 +148,6 @@ export const ListsView: React.FC<ListsViewProps> = ({
     localStorage.setItem("chronocraft_lists_subgroup_by", g);
   };
 
-  // View Mode Options
   const handleSetViewMode = (mode: "stacked" | "grid" | "compact") => {
     setViewMode(mode);
     if (typeof window !== "undefined") {
@@ -168,7 +155,6 @@ export const ListsView: React.FC<ListsViewProps> = ({
     }
   };
 
-  // New item draft
   const [newItemTitle, setNewItemTitle] = useState("");
   const [newItemInitialStatus, setNewItemInitialStatus] = useState<
     "inbox" | "in-progress" | "maybe-later"
@@ -183,7 +169,6 @@ export const ListsView: React.FC<ListsViewProps> = ({
     [newItemTitle],
   );
 
-  // Status picker popover state
   const [activeStatusPicker, setActiveStatusPicker] = useState<{
     itemId: string;
     status: ListItemStatus;
@@ -199,23 +184,18 @@ export const ListsView: React.FC<ListsViewProps> = ({
 
   if (!activeList) {
     return (
-      <div className="flex-1 flex items-center justify-center p-8 text-xs text-slate-400">
+      <div className="flex-1 flex items-center justify-center p-8 text-xs text-muted">
         No lists found. Create your first list using "+ Add Custom List".
       </div>
     );
   }
 
-  // Items for this list
   const currentItems = listItems.filter((i) => i.listId === activeList.id);
 
-  // All distinct tags present on this list's items, alphabetically sorted.
-  // Computed from currentItems (not filteredItems) so the chip set stays
-  // stable while a filter is active — you can always click the same chip off.
   const allTags = Array.from(
     new Set(currentItems.flatMap((i) => i.tags || [])),
   ).sort((a, b) => a.localeCompare(b));
 
-  // Status breakdown metrics for the collection header card
   const inboxCount = currentItems.filter(
     (i) => i.status === "inbox" || i.status === "todo",
   ).length;
@@ -232,9 +212,7 @@ export const ListsView: React.FC<ListsViewProps> = ({
     (i) => i.status === "maybe-later",
   ).length;
 
-  // Filtered items
   const filteredItems = currentItems.filter((i) => {
-    // 1. Status Filter
     if (filterStatus !== "all") {
       if (
         filterStatus === "inbox" &&
@@ -256,7 +234,6 @@ export const ListsView: React.FC<ListsViewProps> = ({
         return false;
     }
 
-    // 2. Search Query Filter
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       const haystack = [
@@ -272,7 +249,6 @@ export const ListsView: React.FC<ListsViewProps> = ({
       if (!haystack.includes(q)) return false;
     }
 
-    // 3. Tag filter (single-select)
     if (selectedTagFilter && !(i.tags || []).includes(selectedTagFilter)) {
       return false;
     }
@@ -280,7 +256,6 @@ export const ListsView: React.FC<ListsViewProps> = ({
     return true;
   });
 
-  // Notes and events linked to this list
   const linkedNotes = notes.filter((n) => n.listIds.includes(activeList.id));
   const linkedEvents = events.filter((e) => e.listIds.includes(activeList.id));
 
@@ -331,7 +306,6 @@ export const ListsView: React.FC<ListsViewProps> = ({
     }
   };
 
-  // Collapsible group sections (keyed by group key)
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => {
     if (typeof window === "undefined") return new Set();
     try {
@@ -356,23 +330,23 @@ export const ListsView: React.FC<ListsViewProps> = ({
   };
 
   const inputBar = (
-    <div className="sticky bottom-0 z-20 shrink-0 px-4 md:px-12 py-3.5 bg-white/95 dark:bg-[#0B0F17]/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800/80 shadow-xl">
+    <div className="sticky bottom-0 z-20 shrink-0 px-4 md:px-12 py-3.5 bg-app/95 backdrop-blur-md border-t border-soft shadow-xl">
       <form
         onSubmit={handleCreateItem}
-        className="flex items-center gap-2 p-1.5 rounded-2xl bg-white dark:bg-[#131926] border border-slate-200 dark:border-slate-800 shadow-sm"
+        className="flex items-center gap-2 p-1.5 rounded-2xl bg-raised border border-soft shadow-sm"
       >
         <TagAutocompleteInput
           value={newItemTitle}
           onChange={setNewItemTitle}
           availableTags={allTags}
           placeholder={`Add new ${activeList.name.toLowerCase().replace(/s$/, "")}... use #tag to tag it`}
-          className="flex-1 min-w-[180px] w-full bg-transparent text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none px-2 py-1 font-sans"
+          className="flex-1 min-w-[180px] w-full bg-transparent text-sm text-primary placeholder-muted focus:outline-none px-2 py-1 font-sans"
         />
 
         <button
           type="submit"
           disabled={!newItemTitle.trim()}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer shrink-0"
+          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-accent hover:bg-accent-hover disabled:opacity-40 text-accent-fg text-xs font-semibold shadow-xs transition-all cursor-pointer shrink-0"
         >
           <Plus className="w-3.5 h-3.5" />
           <span>Add</span>
@@ -381,11 +355,11 @@ export const ListsView: React.FC<ListsViewProps> = ({
 
       {parsedNewItem.tags.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5 mt-2 px-1 text-[10px] font-mono">
-          <span className="text-slate-400 uppercase tracking-wider">Tags:</span>
+          <span className="text-muted uppercase tracking-wider">Tags:</span>
           {parsedNewItem.tags.map((t) => (
             <span
               key={t}
-              className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-indigo-500/15 text-indigo-500 dark:text-indigo-300 border border-indigo-500/30"
+              className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-accent/15 text-accent border border-accent/30"
             >
               #{t}
             </span>
@@ -395,7 +369,6 @@ export const ListsView: React.FC<ListsViewProps> = ({
     </div>
   );
 
-  // ---- renderSubGroups ---
   const renderSubGroups = (items: ListItem[], keyBy: "tag" | "status") => {
     const sub: Record<string, ListItem[]> = {};
     for (const it of items) {
@@ -439,7 +412,7 @@ export const ListsView: React.FC<ListsViewProps> = ({
 
       return (
         <div key={k} className="space-y-1.5">
-          <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-slate-400">
+          <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-muted">
             <span>{label}</span>
             <span className="tabular-nums">· {list.length}</span>
           </div>
@@ -463,9 +436,9 @@ export const ListsView: React.FC<ListsViewProps> = ({
 
   return (
     <div className="relative flex-1 flex flex-col h-full overflow-hidden">
-      {/* 1. Mobile-Only Horizontal List Switcher Tabs (Hidden on Desktop) */}
-      <div className="px-3 pt-3 pb-2 border-b border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#0B0F17] shrink-0 flex md:hidden">
-        <div className="flex items-stretch w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900/60 p-0.5 overflow-x-auto scrollbar-none">
+      {/* Mobile list picker */}
+      <div className="px-3 pt-3 pb-2 border-b border-soft bg-app shrink-0 flex md:hidden">
+        <div className="flex items-stretch w-full rounded-xl border border-soft bg-sunken p-0.5 overflow-x-auto scrollbar-none">
           {orderedLists.map((list) => {
             const isCurrent = list.id === activeList.id;
             return (
@@ -475,8 +448,8 @@ export const ListsView: React.FC<ListsViewProps> = ({
                 onClick={() => onSelectList(list.id)}
                 className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-all ${
                   isCurrent
-                    ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xs"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                    ? "bg-raised text-primary shadow-xs"
+                    : "text-secondary hover:text-primary"
                 }`}
               >
                 <span
@@ -499,7 +472,7 @@ export const ListsView: React.FC<ListsViewProps> = ({
           <button
             type="button"
             onClick={onOpenCreateList}
-            className="shrink-0 flex items-center justify-center px-2.5 py-1.5 rounded-lg text-slate-500 hover:text-indigo-500 transition-colors"
+            className="shrink-0 flex items-center justify-center px-2.5 py-1.5 rounded-lg text-muted hover:text-accent transition-colors"
             title="New list"
             aria-label="New list"
           >
@@ -508,12 +481,11 @@ export const ListsView: React.FC<ListsViewProps> = ({
         </div>
       </div>
 
-      {/* 2. Main Canvas */}
+      {/* Main canvas */}
       <div className="flex-1 overflow-y-auto px-4 md:px-12 pt-6 pb-28">
         <div className="w-full space-y-4">
-          {/* Header Card — Option B layout */}
-          <div className="rounded-2xl bg-white dark:bg-[#131926] border border-slate-200 dark:border-slate-800/80 shadow-xs overflow-hidden">
-            {/* Row 1: Identity + options menu */}
+          {/* Header card */}
+          <div className="rounded-2xl bg-raised border border-soft shadow-xs overflow-hidden">
             <div className="flex items-center gap-3 px-4 py-3">
               <div
                 className="p-2 rounded-xl shrink-0"
@@ -527,48 +499,37 @@ export const ListsView: React.FC<ListsViewProps> = ({
 
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline gap-2">
-                  <h2 className="text-base font-bold tracking-tight text-slate-900 dark:text-slate-100 truncate">
+                  <h2 className="text-base font-bold tracking-tight text-primary truncate">
                     {activeList.name}
                   </h2>
-                  <span className="text-[11px] font-mono text-slate-400 shrink-0">
+                  <span className="text-[11px] font-mono text-muted shrink-0">
                     {currentItems.length}
                   </span>
                 </div>
                 {activeList.description && (
-                  <p className="text-[11px] text-slate-500 truncate">
+                  <p className="text-[11px] text-secondary truncate">
                     {activeList.description}
                   </p>
                 )}
               </div>
 
-              {/* List options menu */}
               {activeList.type === "custom" && (
                 <div className="flex items-center gap-1 shrink-0">
                   <button
                     type="button"
-                    disabled={activeList.type !== "custom"}
                     onClick={() => setIsEditListOpen(true)}
-                    title={
-                      activeList.type !== "custom"
-                        ? "Default lists can't be edited"
-                        : "Edit list"
-                    }
+                    title="Edit list"
                     aria-label="Edit list"
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                    className="p-1.5 rounded-lg text-muted hover:text-primary hover:bg-hover transition-colors cursor-pointer"
                   >
                     <Pencil className="w-3.5 h-3.5" />
                   </button>
                   <button
                     type="button"
-                    disabled={activeList.type !== "custom"}
-                    title={
-                      activeList.type !== "custom"
-                        ? "Default lists can't be deleted"
-                        : "Delete list"
-                    }
+                    title="Delete list"
                     aria-label="Delete list"
                     onClick={() => setIsDeleteListOpen(true)}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 transition-colors cursor-pointer disabled:cursor-not-allowed"
+                    className="p-1.5 rounded-lg text-muted hover:text-danger hover:bg-danger/10 transition-colors cursor-pointer"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -576,8 +537,7 @@ export const ListsView: React.FC<ListsViewProps> = ({
               )}
             </div>
 
-            {/* Row 2: Status metrics strip */}
-            <div className="flex items-center gap-1 px-3 py-2 border-t border-slate-100 dark:border-slate-800/60 overflow-x-auto">
+            <div className="flex items-center gap-1 px-3 py-2 border-t border-soft overflow-x-auto">
               {(
                 [
                   {
@@ -585,40 +545,40 @@ export const ListsView: React.FC<ListsViewProps> = ({
                     label: "Inbox",
                     count: inboxCount,
                     icon: Inbox,
-                    color: "text-slate-500 dark:text-slate-400",
-                    on: "bg-slate-500/15 border-slate-400/50 text-slate-700 dark:text-slate-300",
+                    color: "text-secondary",
+                    on: "bg-hover border-strong text-primary",
                   },
                   {
                     id: "in-progress",
                     label: "Active",
                     count: inProgressCount,
                     icon: PlayCircle,
-                    color: "text-amber-500 dark:text-amber-400",
-                    on: "bg-amber-500/15 border-amber-400/50 text-amber-700 dark:text-amber-300",
+                    color: "text-warning",
+                    on: "bg-warning/15 border-warning/40 text-warning",
                   },
                   {
                     id: "completed",
                     label: "Done",
                     count: completedCount,
                     icon: CheckCircle2,
-                    color: "text-emerald-500 dark:text-emerald-400",
-                    on: "bg-emerald-500/15 border-emerald-400/50 text-emerald-700 dark:text-emerald-300",
+                    color: "text-success",
+                    on: "bg-success/15 border-success/40 text-success",
                   },
                   {
                     id: "dropped",
                     label: "Dropped",
                     count: droppedCount,
                     icon: MinusCircle,
-                    color: "text-rose-500 dark:text-rose-400",
-                    on: "bg-rose-500/15 border-rose-400/50 text-rose-700 dark:text-rose-300",
+                    color: "text-danger",
+                    on: "bg-danger/15 border-danger/40 text-danger",
                   },
                   {
                     id: "maybe-later",
                     label: "Later",
                     count: maybeLaterCount,
                     icon: Bookmark,
-                    color: "text-violet-500 dark:text-violet-400",
-                    on: "bg-violet-500/15 border-violet-400/50 text-violet-700 dark:text-violet-300",
+                    color: "text-accent",
+                    on: "bg-accent/15 border-accent/40 text-accent",
                   },
                 ] as const
               ).map((m) => {
@@ -633,14 +593,14 @@ export const ListsView: React.FC<ListsViewProps> = ({
                     className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border text-xs transition-colors cursor-pointer shrink-0 ${
                       on
                         ? m.on
-                        : "border-transparent text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-200"
+                        : "border-transparent text-secondary hover:bg-hover hover:text-primary"
                     }`}
                   >
                     <Icon className={`w-3.5 h-3.5 ${m.color}`} />
                     <span className="font-mono font-semibold tabular-nums">
                       {m.count}
                     </span>
-                    <span className="text-[11px] text-slate-500">
+                    <span className="text-[11px] text-secondary">
                       {m.label}
                     </span>
                   </button>
@@ -649,17 +609,16 @@ export const ListsView: React.FC<ListsViewProps> = ({
             </div>
           </div>
 
-          {/* Sub-Tabs: Items | Linked Notes | Linked Events */}
+          {/* Sub-tabs */}
           <div className="flex items-center justify-between gap-3 pb-1">
-            {/* Desktop: Horizontal Sub-Tabs */}
             <div className="hidden md:flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setActiveSubTab("items")}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer whitespace-nowrap border ${
                   activeSubTab === "items"
-                    ? "bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border-indigo-500/40 font-semibold shadow-xs"
-                    : "border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
+                    ? "bg-accent/15 text-accent border-accent/40 font-semibold shadow-xs"
+                    : "border-transparent text-secondary hover:text-primary"
                 }`}
               >
                 Tracked Items
@@ -673,8 +632,8 @@ export const ListsView: React.FC<ListsViewProps> = ({
                 onClick={() => setActiveSubTab("linked-notes")}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer whitespace-nowrap border ${
                   activeSubTab === "linked-notes"
-                    ? "bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-500/40 font-semibold shadow-xs"
-                    : "border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
+                    ? "bg-warning/15 text-warning border-warning/40 font-semibold shadow-xs"
+                    : "border-transparent text-secondary hover:text-primary"
                 }`}
               >
                 <FileText className="w-3.5 h-3.5" />
@@ -689,8 +648,8 @@ export const ListsView: React.FC<ListsViewProps> = ({
                 onClick={() => setActiveSubTab("linked-events")}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer whitespace-nowrap border ${
                   activeSubTab === "linked-events"
-                    ? "bg-rose-500/15 text-rose-600 dark:text-rose-300 border-rose-500/40 font-semibold shadow-xs"
-                    : "border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
+                    ? "bg-danger/15 text-danger border-danger/40 font-semibold shadow-xs"
+                    : "border-transparent text-secondary hover:text-primary"
                 }`}
               >
                 <CalendarDays className="w-3.5 h-3.5" />
@@ -700,37 +659,6 @@ export const ListsView: React.FC<ListsViewProps> = ({
                 </span>
               </button>
             </div>
-
-            {/* Mobile: Sub-Tab Dropdown */}
-            {/* <div className="flex md:hidden min-w-0">
-              <FilterSelect
-                icon={
-                  activeSubTab === "items" ? (
-                    <LayoutList className="w-3.5 h-3.5 text-indigo-400" />
-                  ) : activeSubTab === "linked-notes" ? (
-                    <FileText className="w-3.5 h-3.5 text-amber-400" />
-                  ) : (
-                    <CalendarDays className="w-3.5 h-3.5 text-rose-400" />
-                  )
-                }
-                value={activeSubTab}
-                onChange={(v) => setActiveSubTab(v as any)}
-                options={[
-                  {
-                    value: "items",
-                    label: `Tracked Items (${currentItems.length})`,
-                  },
-                  {
-                    value: "linked-notes",
-                    label: `Linked Notes (${linkedNotes.length})`,
-                  },
-                  {
-                    value: "linked-events",
-                    label: `Linked Events (${linkedEvents.length})`,
-                  },
-                ]}
-              />
-            </div> */}
 
             <div className="flex max-sm:w-full max-md:justify-between gap-2">
               <MultiGroupFilterPopover
@@ -757,7 +685,6 @@ export const ListsView: React.FC<ListsViewProps> = ({
                 }}
               />
 
-              {/* Search Bar */}
               <div className="md:max-w-sm">
                 <SearchBar
                   value={searchQuery}
@@ -768,56 +695,18 @@ export const ListsView: React.FC<ListsViewProps> = ({
             </div>
           </div>
 
-          {/* Filter Band — matches the visual language of NotesView / EventsView */}
+          {/* Tag filter band */}
           {activeSubTab === "items" && allTags.length > 1 && (
-            <div className="-mx-4 md:-mx-12 px-4 md:px-12 py-3 border-y border-slate-200 dark:border-slate-800/80 bg-slate-50/70 dark:bg-[#0E131E] flex flex-wrap items-center justify-between gap-3">
-              {/* Tag filter strip — visible only when Items sub-tab is active and >1 tag exists */}
-              {allTags.length > 1 && (
-                <div className="md:hidden -mx-4 px-4 py-2 border-slate-200 dark:border-slate-800/80 bg-slate-50/70 dark:bg-[#0E131E]">
-                  {/* Mobile: full-bleed horizontal scroller, sits directly under filter band */}
-                  <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedTagFilter(null)}
-                      className={`shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer border ${
-                        selectedTagFilter === null
-                          ? "bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border-indigo-500/40 font-semibold"
-                          : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 border-transparent"
-                      }`}
-                    >
-                      All
-                    </button>
-                    {allTags.map((t) => {
-                      const on = selectedTagFilter === t;
-                      return (
-                        <button
-                          key={t}
-                          type="button"
-                          onClick={() => setSelectedTagFilter(on ? null : t)}
-                          className={`shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer border ${
-                            on
-                              ? "bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border-indigo-500/40 font-semibold"
-                              : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 border-transparent"
-                          }`}
-                        >
-                          #{t}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Tag filter strip — desktop: inline wrap, subtle, above sections */}
-              {allTags.length > 1 && (
-                <div className="hidden md:flex items-center gap-1.5 flex-wrap">
+            <div className="-mx-4 md:-mx-12 px-4 md:px-12 py-3 border-y border-soft bg-sunken/70 flex flex-wrap items-center justify-between gap-3">
+              <div className="md:hidden -mx-4 px-4 py-2 border-soft bg-sunken/70">
+                <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
                   <button
                     type="button"
                     onClick={() => setSelectedTagFilter(null)}
                     className={`shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer border ${
                       selectedTagFilter === null
-                        ? "bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border-indigo-500/40 font-semibold"
-                        : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 border-transparent"
+                        ? "bg-accent/15 text-accent border-accent/40 font-semibold"
+                        : "text-secondary hover:text-primary border-transparent"
                     }`}
                   >
                     All
@@ -831,8 +720,8 @@ export const ListsView: React.FC<ListsViewProps> = ({
                         onClick={() => setSelectedTagFilter(on ? null : t)}
                         className={`shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer border ${
                           on
-                            ? "bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 border-indigo-500/40 font-semibold"
-                            : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 border-transparent"
+                            ? "bg-accent/15 text-accent border-accent/40 font-semibold"
+                            : "text-secondary hover:text-primary border-transparent"
                         }`}
                       >
                         #{t}
@@ -840,26 +729,56 @@ export const ListsView: React.FC<ListsViewProps> = ({
                     );
                   })}
                 </div>
-              )}
+              </div>
+
+              <div className="hidden md:flex items-center gap-1.5 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setSelectedTagFilter(null)}
+                  className={`shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer border ${
+                    selectedTagFilter === null
+                      ? "bg-accent/15 text-accent border-accent/40 font-semibold"
+                      : "text-secondary hover:text-primary border-transparent"
+                  }`}
+                >
+                  All
+                </button>
+                {allTags.map((t) => {
+                  const on = selectedTagFilter === t;
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setSelectedTagFilter(on ? null : t)}
+                      className={`shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-mono uppercase tracking-wider transition-colors cursor-pointer border ${
+                        on
+                          ? "bg-accent/15 text-accent border-accent/40 font-semibold"
+                          : "text-secondary hover:text-primary border-transparent"
+                      }`}
+                    >
+                      #{t}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
 
-          {/* ================= SUB-TAB 1: ITEMS ================= */}
+          {/* Items sub-tab */}
           {activeSubTab === "items" && (
             <div className="space-y-8">
               {filteredItems.length === 0 ? (
-                <div className="p-12 text-center rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 text-xs text-slate-400 bg-white/40 dark:bg-[#131926]/40">
-                  <p className="font-semibold text-slate-700 dark:text-slate-300">
+                <div className="p-12 text-center rounded-2xl border border-dashed border-soft text-xs text-muted bg-raised/40">
+                  <p className="font-semibold text-primary">
                     No items found for the selected status.
                   </p>
-                  <p className="mt-1 text-[11px] text-slate-400">
+                  <p className="mt-1 text-[11px] text-muted">
                     Add new entries using the bottom input bar, or adjust your
                     filter.
                   </p>
                 </div>
               ) : (
                 (() => {
-                  // AFTER
                   if (groupBy === "none") {
                     return (
                       <ItemsGrid
@@ -887,7 +806,6 @@ export const ListsView: React.FC<ListsViewProps> = ({
                     if (groupBy === "tag") {
                       key = it.tags?.[0]?.toLowerCase() || "__none__";
                     } else {
-                      // status — normalize legacy todo/done
                       key =
                         it.status === "todo"
                           ? "inbox"
@@ -904,7 +822,6 @@ export const ListsView: React.FC<ListsViewProps> = ({
                       .filter((k) => k !== "__none__")
                       .sort((a, b) => a.localeCompare(b));
                   } else {
-                    // status — canonical order, not alphabetical
                     keys = CANONICAL_STATUS_ORDER.filter((k) => groups[k]);
                   }
                   if (groups.__none__) keys.push("__none__");
@@ -923,7 +840,6 @@ export const ListsView: React.FC<ListsViewProps> = ({
 
                     return (
                       <section key={key} className="space-y-3">
-                        {/* Collapsible header */}
                         <button
                           type="button"
                           onClick={() => toggleCollapsedGroup(key)}
@@ -931,7 +847,7 @@ export const ListsView: React.FC<ListsViewProps> = ({
                           className="group flex items-center gap-2 w-full text-left cursor-pointer"
                         >
                           <ChevronDown
-                            className={`w-3.5 h-3.5 text-slate-400 transition-transform shrink-0 ${
+                            className={`w-3.5 h-3.5 text-muted transition-transform shrink-0 ${
                               isCollapsed ? "-rotate-90" : ""
                             }`}
                           />
@@ -940,12 +856,11 @@ export const ListsView: React.FC<ListsViewProps> = ({
                           >
                             {title}
                           </h3>
-                          <span className="text-[10px] font-mono text-slate-400 tabular-nums">
+                          <span className="text-[10px] font-mono text-muted tabular-nums">
                             · {items.length}
                           </span>
-                          <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800/80" />
+                          <div className="flex-1 h-px bg-soft" />
                         </button>
-                        {/* Collapsible content */}
 
                         {!isCollapsed &&
                           (effectiveSub === "none" ? (
@@ -966,7 +881,7 @@ export const ListsView: React.FC<ListsViewProps> = ({
                               onOpenContextMenu={onOpenContextMenu}
                             />
                           ) : (
-                            <div className="space-y-4 pl-2 border-l border-slate-200/70 dark:border-slate-800/60">
+                            <div className="space-y-4 pl-2 border-l border-soft">
                               {renderSubGroups(items, effectiveSub)}
                             </div>
                           ))}
@@ -978,7 +893,7 @@ export const ListsView: React.FC<ListsViewProps> = ({
             </div>
           )}
 
-          {/* ================= SUB-TAB 2: LINKED NOTES ================= */}
+          {/* Linked notes */}
           {activeSubTab === "linked-notes" && (
             <div className="space-y-3">
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
@@ -992,21 +907,27 @@ export const ListsView: React.FC<ListsViewProps> = ({
                   <div
                     key={note.id}
                     onClick={() => onOpenEditNote(note)}
-                    className="p-4 rounded-xl bg-white dark:bg-[#131926] border border-slate-200 dark:border-slate-800/80 hover:border-indigo-500/40 shadow-xs cursor-pointer space-y-2 transition-all flex flex-col justify-between"
+                    className="p-4 rounded-xl bg-raised border border-soft hover:border-accent/40 shadow-xs cursor-pointer space-y-2 transition-all flex flex-col justify-between"
                   >
                     <div className="space-y-2">
-                      <h4 className="font-semibold text-sm text-slate-900 dark:text-slate-100 line-clamp-1">
-                        {note.title}
+                      <h4 className="font-semibold text-sm text-primary line-clamp-1">
+                        {note.title ? (
+                          note.title
+                        ) : (
+                          <span className="text-muted italic font-normal">
+                            Untitled Note
+                          </span>
+                        )}
                       </h4>
-                      <p className="text-xs text-slate-500 line-clamp-3 leading-relaxed">
+                      <p className="text-xs text-secondary line-clamp-3 leading-relaxed">
                         {stripHtml(note.content)}
                       </p>
                     </div>
 
-                    <div className="pt-2 mt-1 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between gap-2 text-[10px] font-mono text-slate-400">
+                    <div className="pt-2 mt-1 border-t border-soft flex items-center justify-between gap-2 text-[10px] font-mono text-muted">
                       <span>Created {formatCreatedDate(note.createdAt)}</span>
                       {note.tags.length > 0 && (
-                        <span className="text-slate-400 truncate max-w-[50%] text-right">
+                        <span className="text-secondary truncate max-w-[50%] text-right">
                           {note.tags.map((t) => `#${t}`).join(" ")}
                         </span>
                       )}
@@ -1016,7 +937,7 @@ export const ListsView: React.FC<ListsViewProps> = ({
               </div>
 
               {linkedNotes.length === 0 && (
-                <p className="text-center text-[11px] text-slate-400 italic">
+                <p className="text-center text-[11px] text-muted italic">
                   No notes linked to this list yet — click the card above to add
                   one.
                 </p>
@@ -1024,7 +945,7 @@ export const ListsView: React.FC<ListsViewProps> = ({
             </div>
           )}
 
-          {/* ================= SUB-TAB 3: LINKED EVENTS ================= */}
+          {/* Linked events */}
           {activeSubTab === "linked-events" && (
             <div className="space-y-3">
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
@@ -1038,17 +959,23 @@ export const ListsView: React.FC<ListsViewProps> = ({
                   <div
                     key={event.id}
                     onClick={() => onOpenEditEvent(event)}
-                    className="p-3.5 rounded-xl bg-white dark:bg-[#131926] border border-slate-200 dark:border-slate-800/80 hover:border-rose-500/40 shadow-xs cursor-pointer flex flex-col gap-2 transition-all"
+                    className="p-3.5 rounded-xl bg-raised border border-soft hover:border-danger/40 shadow-xs cursor-pointer flex flex-col gap-2 transition-all"
                   >
                     <div className="flex flex-col h-full items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <h4 className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate">
-                          {event.title}
+                        <h4 className="font-semibold text-sm text-primary truncate">
+                          {event.title ? (
+                            event.title
+                          ) : (
+                            <span className="text-muted italic font-normal">
+                              Untitled Event
+                            </span>
+                          )}
                         </h4>
                       </div>
 
-                      <div className="pt-2 mt-1 w-full border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between gap-2 text-[10px] font-mono text-slate-400">
-                        <span className="text-xs font-mono text-cyan-600 dark:text-cyan-400 mt-0.5">
+                      <div className="pt-2 mt-1 w-full border-t border-soft flex items-center justify-between gap-2 text-[10px] font-mono text-muted">
+                        <span className="text-xs font-mono text-info mt-0.5">
                           {new Date(event.startAt).toLocaleString([], {
                             month: "short",
                             day: "numeric",
@@ -1060,8 +987,8 @@ export const ListsView: React.FC<ListsViewProps> = ({
                           <span
                             className={`${
                               event.category === "official"
-                                ? "text-white dark:text-white bg-indigo-500"
-                                : "text-white dark:text-white bg-rose-500"
+                                ? "text-white bg-accent"
+                                : "text-white bg-danger"
                             } p-0.5 rounded px-1`}
                           >
                             {event.category === "official"
@@ -1076,7 +1003,7 @@ export const ListsView: React.FC<ListsViewProps> = ({
               </div>
 
               {linkedEvents.length === 0 && (
-                <p className="text-center text-[11px] text-slate-400 italic">
+                <p className="text-center text-[11px] text-muted italic">
                   No events linked to this list yet — click the card above to
                   schedule one.
                 </p>
@@ -1086,10 +1013,8 @@ export const ListsView: React.FC<ListsViewProps> = ({
         </div>
       </div>
 
-      {/* Sticky Bottom Master Input Bar for Lists View */}
       {activeSubTab === "items" && inputBar}
 
-      {/* 3. Floating Status Picker Popover */}
       {activeStatusPicker && (
         <StatusPickerPopover
           currentStatus={activeStatusPicker.status}

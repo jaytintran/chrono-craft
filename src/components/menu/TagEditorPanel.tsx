@@ -62,12 +62,12 @@ export const TagEditorPanel: React.FC<TagEditorPanelProps> = ({
     <div className="p-3 space-y-3">
       {/* Selected + available chips */}
       <div>
-        <div className="px-1 pb-1.5 text-[10px] font-mono uppercase tracking-wider text-slate-400">
+        <div className="px-1 pb-1.5 text-[10px] font-mono uppercase tracking-wider text-muted">
           Tags ({selected.length} selected)
         </div>
         <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto">
           {allTags.length === 0 ? (
-            <p className="text-[11px] text-slate-400 italic px-1 py-1.5">
+            <p className="text-[11px] text-muted italic px-1 py-1.5">
               No tags yet — add one below.
             </p>
           ) : (
@@ -80,8 +80,8 @@ export const TagEditorPanel: React.FC<TagEditorPanelProps> = ({
                   onClick={() => onToggle(t)}
                   className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-mono border transition-colors cursor-pointer ${
                     on
-                      ? "bg-indigo-500/15 border-indigo-500/40 text-indigo-600 dark:text-indigo-300"
-                      : "border-slate-200 dark:border-slate-800 text-slate-500 hover:border-slate-400 dark:hover:border-slate-600 hover:text-slate-700 dark:hover:text-slate-300"
+                      ? "bg-accent/15 border-accent/40 text-accent"
+                      : "border-soft text-secondary hover:border-strong hover:text-primary"
                   }`}
                 >
                   {on && <Check className="w-2.5 h-2.5" />}#{t}
@@ -95,7 +95,7 @@ export const TagEditorPanel: React.FC<TagEditorPanelProps> = ({
       {/* Add-new row */}
       <div>
         <div className="relative">
-          <Plus className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
+          <Plus className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted pointer-events-none" />
           <input
             type="text"
             value={query}
@@ -114,7 +114,7 @@ export const TagEditorPanel: React.FC<TagEditorPanelProps> = ({
               }
             }}
             placeholder="Add new tag…"
-            className="w-full pl-7 pr-2 py-1.5 rounded-md bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[11px] font-mono text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500"
+            className="w-full pl-7 pr-2 py-1.5 rounded-md bg-sunken border border-soft text-[11px] font-mono text-primary focus:outline-none focus:border-accent"
           />
         </div>
         {suggestions.length > 0 && (
@@ -124,7 +124,7 @@ export const TagEditorPanel: React.FC<TagEditorPanelProps> = ({
                 key={s}
                 type="button"
                 onClick={() => handleAdd(s)}
-                className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-indigo-500/15 hover:text-indigo-500 dark:hover:text-indigo-300 transition-colors cursor-pointer"
+                className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-hover text-secondary hover:bg-accent/15 hover:text-accent transition-colors cursor-pointer"
               >
                 #{s}
               </button>
@@ -137,7 +137,7 @@ export const TagEditorPanel: React.FC<TagEditorPanelProps> = ({
         <button
           type="button"
           onClick={onDone}
-          className="w-full py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-semibold shadow-xs transition-colors cursor-pointer"
+          className="w-full py-2 rounded-lg bg-accent hover:bg-accent-hover text-accent-fg text-[11px] font-semibold shadow-xs transition-colors cursor-pointer"
         >
           Done
         </button>

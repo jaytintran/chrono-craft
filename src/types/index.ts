@@ -156,9 +156,22 @@ export interface ScratchpadCard {
 
 export type TimelineDisplayMode = "default" | "compact" | "flat";
 
+export type ThemeId =
+  | "dark"
+  | "light"
+  | "forest"
+  | "sepia"
+  | "nord"
+  | "tokyo"
+  | "cyberpunk"
+  | "paper";
+
+export type ThemeFlavor = "dark" | "light";
+
 export interface AppSettings {
   xActiveLimit: number; // Defaults to 5
-  theme: "dark" | "light";
+  theme: ThemeId;
+  themeFlavor?: ThemeFlavor;
   nlpAutoExtract: boolean;
   showEntryContent?: boolean; // Defaults to true
   timelineDisplayMode?: TimelineDisplayMode; // undefined = "default"
