@@ -109,7 +109,7 @@ const SyncControl: React.FC<SyncControlProps> = ({
 
   const statusText =
     state === "error"
-      ? "Sync failed"
+      ? "Sync Failed"
       : isSyncing
         ? "Syncing…"
         : `Synced ${formatAgo(settings.gistSync?.lastSyncedAt)}`;
@@ -118,7 +118,7 @@ const SyncControl: React.FC<SyncControlProps> = ({
 
   return (
     <div
-      className={`flex items-center gap-2 ${
+      className={`flex max-sm:justify-between max-sm:w-full items-center gap-2 ${
         compact ? "text-[10px]" : "text-[11px]"
       } font-mono`}
     >
@@ -140,37 +140,39 @@ const SyncControl: React.FC<SyncControlProps> = ({
         </span>
       </div>
 
-      {/* Push */}
-      <button
-        type="button"
-        disabled={isSyncing}
-        onClick={() => onPush()}
-        title="Push local state to Gist"
-        className={`flex items-center gap-1 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer ${
-          compact ? "px-1.5 py-0.5 text-[10px]" : "px-2 py-1 text-[10px]"
-        } font-semibold uppercase tracking-wider`}
-      >
-        <ArrowUpFromLine className="w-3 h-3 text-indigo-400" />
-        <span>Push</span>
-      </button>
+      <div className="flex max-sm:gap-2 gap-1">
+        {/* Push */}
+        <button
+          type="button"
+          disabled={isSyncing}
+          onClick={() => onPush()}
+          title="Push local state to Gist"
+          className={`flex items-center gap-1 rounded-md md:border md:border-slate-200 md:dark:border-slate-700 md:bg-white md:dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer ${
+            compact ? "px-1.5 py-0.5 text-[10px]" : "px-2 py-1 text-[10px]"
+          } font-semibold uppercase tracking-wider`}
+        >
+          <ArrowUpFromLine className="w-3 h-3 text-indigo-400" />
+          <span>Push</span>
+        </button>
 
-      {/* Pull */}
-      <button
-        type="button"
-        disabled={isSyncing || !canPull}
-        onClick={() => onPull()}
-        title={
-          canPull
-            ? "Pull remote changes into local DB"
-            : "Push first to create a Gist, then Pull becomes available"
-        }
-        className={`flex items-center gap-1 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer ${
-          compact ? "px-1.5 py-0.5 text-[10px]" : "px-2 py-1 text-[10px]"
-        } font-semibold uppercase tracking-wider`}
-      >
-        <ArrowDownToLine className="w-3 h-3 text-emerald-400" />
-        <span>Pull</span>
-      </button>
+        {/* Pull */}
+        <button
+          type="button"
+          disabled={isSyncing || !canPull}
+          onClick={() => onPull()}
+          title={
+            canPull
+              ? "Pull remote changes into local DB"
+              : "Push first to create a Gist, then Pull becomes available"
+          }
+          className={`flex items-center gap-1 rounded-md md:border md:border-slate-200 md:dark:border-slate-700 md:bg-white md:dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer ${
+            compact ? "px-1.5 py-0.5 text-[10px]" : "px-2 py-1 text-[10px]"
+          } font-semibold uppercase tracking-wider`}
+        >
+          <ArrowDownToLine className="w-3 h-3 text-emerald-400" />
+          <span>Pull</span>
+        </button>
+      </div>
     </div>
   );
 };

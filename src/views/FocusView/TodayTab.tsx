@@ -64,7 +64,7 @@ export const TodayTab: React.FC<TodayTabProps> = ({
           <div className="flex items-center gap-2">
             <Anchor className="w-4 h-4 text-cyan-400" />
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
-              Anchors (Scheduled Commitments)
+              Anchors | Daily Schedule
             </h3>
           </div>
           <span className="text-[11px] font-mono text-slate-400">
@@ -182,7 +182,7 @@ export const TodayTab: React.FC<TodayTabProps> = ({
           <div className="flex items-center gap-2">
             <Zap className="w-4 h-4 text-indigo-400" />
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
-              {settings.xActiveLimit}-Active Max Concurrent Tasks
+              {settings.xActiveLimit}-Active Max Tasks
             </h3>
           </div>
 
