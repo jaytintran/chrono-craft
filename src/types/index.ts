@@ -40,6 +40,7 @@ export interface TimelineEntry {
     allDay?: boolean;
     category?: "official" | "personal";
   };
+  deletedAt?: string;
 }
 
 export interface Note {
@@ -52,6 +53,7 @@ export interface Note {
   updatedAt: string;
   isPinned?: boolean;
   color?: string; // hex or tailwind class token
+  deletedAt?: string;
 }
 
 export interface CalendarEvent {
@@ -68,6 +70,7 @@ export interface CalendarEvent {
   isAchievement?: boolean;
   completedAt?: string; // attended
   missedAt?: string; // didn't attend
+  deletedAt?: string;
 }
 
 export type HabitScheduleType =
@@ -86,6 +89,7 @@ export interface Habit {
   color: string;
   createdAt: string;
   targetCount?: number;
+  deletedAt?: string;
 }
 
 export interface HabitLog {
@@ -93,6 +97,7 @@ export interface HabitLog {
   habitId: string;
   date: string; // YYYY-MM-DD
   completedAt: string; // ISO string
+  deletedAt?: string;
 }
 
 export type ListType = "projects" | "books" | "courses" | "custom";
@@ -116,6 +121,7 @@ export interface ListItem {
   notes?: string;
   dueDate?: string;
   createdAt: string;
+  deletedAt?: string;
 }
 
 export interface CustomList {
@@ -126,6 +132,7 @@ export interface CustomList {
   icon: string;
   color: string;
   createdAt: string;
+  deletedAt?: string;
 }
 
 export interface CustomFocusTab {
@@ -133,6 +140,7 @@ export interface CustomFocusTab {
   name: string;
   bgColor: string; // e.g. '#6366F1'
   createdAt: string;
+  deletedAt?: string;
 }
 
 export interface ScratchpadCard {
@@ -143,6 +151,7 @@ export interface ScratchpadCard {
   isPinned?: boolean;
   createdAt: string;
   updatedAt: string;
+  deletedAt?: string;
 }
 
 export type TimelineDisplayMode = "default" | "compact" | "flat";

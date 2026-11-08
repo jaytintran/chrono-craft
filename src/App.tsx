@@ -112,15 +112,15 @@ export default function App() {
         appDb.getSettings(),
       ]);
 
-      setEntries(loadedEntries);
-      setNotes(loadedNotes);
-      setEvents(loadedEvents);
-      setHabits(loadedHabits);
-      setHabitLogs(loadedHabitLogs);
-      setLists(loadedLists);
-      setListItems(loadedListItems);
-      setCustomTabs(loadedCustomTabs);
-      setScratchpadCards(loadedScratchpad);
+      setEntries(loadedEntries.filter((e) => !e.deletedAt));
+      setNotes(loadedNotes.filter((n) => !n.deletedAt));
+      setEvents(loadedEvents.filter((e) => !e.deletedAt));
+      setHabits(loadedHabits.filter((h) => !h.deletedAt));
+      setHabitLogs(loadedHabitLogs.filter((l) => !l.deletedAt));
+      setLists(loadedLists.filter((l) => !l.deletedAt));
+      setListItems(loadedListItems.filter((i) => !i.deletedAt));
+      setCustomTabs(loadedCustomTabs.filter((t) => !t.deletedAt));
+      setScratchpadCards(loadedScratchpad.filter((c) => !c.deletedAt));
       setSettings(loadedSettings);
       setIsLoaded(true);
 
@@ -181,6 +181,23 @@ export default function App() {
     listIds: entry.metadata?.listId ? [entry.metadata.listId] : [],
   });
 
+  // ================= SOFT DELETE HELPER =================
+  // Tombstone-based delete: keep the record in IndexedDB with `deletedAt`
+  // set, so the sync engine can propagate the deletion to other devices.
+  // All view-feeding state arrays filter tombstones out at load time (see
+  // refreshData), so the user still perceives this as a hard delete.
+
+  const softDelete = async (storeName: string, id: string) => {
+    const existing = await appDb.get<any>(storeName, id);
+    if (!existing) return;
+    // If already tombstoned, do nothing (avoid resetting the timestamp)
+    if (existing.deletedAt) return;
+    await appDb.put(storeName as any, {
+      ...existing,
+      deletedAt: new Date().toISOString(),
+    });
+  };
+
   // ================= ACTION HANDLERS =================
 
   // Entries (Timeline / Focus)
@@ -220,11 +237,8 @@ export default function App() {
 
   const handleDeleteEntry = async (entryId: string) => {
     const entry = entries.find((e) => e.id === entryId);
-    // Guard: silently skip if the record isn't a valid timeline entry.
-    // Prevents the delete button on a malformed record from silently succeeding
-    // while the row stays rendered.
     if (!entry || !entry.type) return;
-    await appDb.delete("entries", entryId);
+    await softDelete("entries", entryId);
   };
 
   const handleUpdateEntryTime = async (entryId: string, newIso: string) => {
@@ -267,7 +281,7 @@ export default function App() {
   };
 
   const handleDeleteScratchpad = async (cardId: string) => {
-    await appDb.delete("scratchpad", cardId);
+    await softDelete("scratchpad", cardId);
   };
 
   const handleSendScratchpadToTimeline = async (card: ScratchpadCard) => {
@@ -300,12 +314,13 @@ export default function App() {
   };
 
   const handleDeleteCustomTab = async (tabId: string) => {
-    await appDb.delete("custom_tabs", tabId);
-    // Clean entries in tab
+    // Soft-delete entries belonging to this tab
     const tabEntries = entries.filter((e) => e.tabId === tabId);
     for (const e of tabEntries) {
-      await appDb.delete("entries", e.id);
+      await softDelete("entries", e.id);
     }
+    // Soft-delete the tab itself
+    await softDelete("custom_tabs", tabId);
   };
 
   const handleCreateNote = async (prefill?: Partial<Note>) => {
@@ -400,8 +415,8 @@ export default function App() {
 
   const handleDeleteNote = async (id: string) => {
     const linked = findLinkedEntry(id, "note");
-    if (linked) await appDb.delete("entries", linked.id);
-    else await appDb.delete("notes", id);
+    if (linked) await softDelete("entries", linked.id);
+    else await softDelete("notes", id);
   };
 
   // Events
@@ -444,8 +459,8 @@ export default function App() {
 
   const handleDeleteEvent = async (id: string) => {
     const linked = findLinkedEntry(id, "event");
-    if (linked) await appDb.delete("entries", linked.id);
-    else await appDb.delete("events", id);
+    if (linked) await softDelete("entries", linked.id);
+    else await softDelete("events", id);
   };
 
   const handleResolveEvent = async (
@@ -489,7 +504,7 @@ export default function App() {
   };
 
   const handleDeleteHabit = async (id: string) => {
-    await appDb.delete("habits", id);
+    await softDelete("habits", id);
   };
 
   const handleToggleHabitDay = async (habitId: string, dateStr: string) => {
@@ -791,7 +806,7 @@ export default function App() {
   };
 
   const handleDeleteListItem = async (itemId: string) => {
-    await appDb.delete("list_items", itemId);
+    await softDelete("list_items", itemId);
   };
 
   const handleSaveListItem = async (data: Partial<ListItem>) => {
@@ -818,9 +833,11 @@ export default function App() {
   };
 
   const handleDeleteList = async (listId: string) => {
+    // Soft-delete every item in the list
     for (const it of listItems.filter((i) => i.listId === listId)) {
-      await appDb.delete("list_items", it.id);
+      await softDelete("list_items", it.id);
     }
+    // Unlink notes/events (this is an update, not a delete)
     for (const n of notes.filter((n) => n.listIds.includes(listId))) {
       await appDb.put("notes", {
         ...n,
@@ -833,7 +850,8 @@ export default function App() {
         listIds: ev.listIds.filter((id) => id !== listId),
       });
     }
-    await appDb.delete("lists", listId);
+    // Soft-delete the list itself
+    await softDelete("lists", listId);
     if (selectedListId === listId) {
       setSelectedListId(lists.find((l) => l.id !== listId)?.id);
     }

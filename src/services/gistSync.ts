@@ -62,6 +62,7 @@ async function ghFetch(
 /** Pick the field that determines recency. Different stores use different fields. */
 function recencyKey(record: any): number {
   const candidates = [
+    record.deletedAt, // highest priority: a tombstone is as new as its delete time
     record.updatedAt,
     record.completedAt,
     record.createdAt,
@@ -185,17 +186,28 @@ async function mergeSnapshot(
     for (const remoteRecord of remoteList) {
       if (!remoteRecord?.id) continue;
       const localRecord = localMap.get(remoteRecord.id);
+      const remoteT = recencyKey(remoteRecord);
 
+      // New record — insert as-is (whether live or a tombstone)
       if (!localRecord) {
         await appDb.put(storeName as any, remoteRecord);
         pulled++;
         continue;
       }
 
-      const remoteT = recencyKey(remoteRecord);
       const localT = recencyKey(localRecord);
 
-      if (remoteT > localT) {
+      // Tie-break: if timestamps match but deleted-ness differs, the
+      // tombstone wins so both devices converge on "deleted".
+      const remoteIsTomb = !!remoteRecord.deletedAt;
+      const localIsTomb = !!localRecord.deletedAt;
+      const tombConflict = remoteT === localT && remoteIsTomb !== localIsTomb;
+
+      if (
+        remoteT > localT ||
+        tombConflict ||
+        (remoteIsTomb && remoteT >= localT)
+      ) {
         await appDb.put(storeName as any, remoteRecord);
         pulled++;
       }
