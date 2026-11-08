@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { AppSettings, TimelineEntry } from "../../types";
 import { NLPInputBar } from "../../components/NLPInputBar";
+import { Keyboard } from "@capacitor/keyboard";
 
 interface TodayTabProps {
   anchorEntries: TimelineEntry[];
@@ -39,6 +40,26 @@ export const TodayTab: React.FC<TodayTabProps> = ({
 }) => {
   const isEngineAtCapacity = activeEntries.length >= settings.xActiveLimit;
 
+  const [keyboardHeight, setKeyboardHeight] = React.useState(0);
+
+  React.useEffect(() => {
+    let showHandle: { remove: () => void } | undefined;
+    let hideHandle: { remove: () => void } | undefined;
+
+    Keyboard.addListener("keyboardWillShow", (info) => {
+      setKeyboardHeight(info.keyboardHeight);
+    }).then((h) => (showHandle = h));
+
+    Keyboard.addListener("keyboardWillHide", () => {
+      setKeyboardHeight(0);
+    }).then((h) => (hideHandle = h));
+
+    return () => {
+      showHandle?.remove();
+      hideHandle?.remove();
+    };
+  }, []);
+
   const formatCompletedTime = (isoString?: string) => {
     if (!isoString) return "";
     return new Date(isoString).toLocaleTimeString([], {
@@ -56,7 +77,15 @@ export const TodayTab: React.FC<TodayTabProps> = ({
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-fadeIn">
+    <div
+      className="max-w-6xl mx-auto space-y-8 animate-fadeIn"
+      style={
+        keyboardHeight > 0
+          ? { paddingBottom: `${keyboardHeight + 24}px` }
+          : undefined
+      }
+    >
+      {" "}
       {/* ---- Section 1: Anchors ---- */}
       {/* Section 1: Anchors (Scheduled Entries) */}
       <div className="space-y-3">

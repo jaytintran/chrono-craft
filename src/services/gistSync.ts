@@ -338,13 +338,13 @@ export async function purgeOldTombstones(
  * Count tombstones without removing anything. Used by the Settings UI to
  * show how many records are pending cleanup.
  */
-export async function countTombstones(): Promise<{
+export async function countTombstones(olderThanDays: number = 30): Promise<{
   total: number;
   stale: number;
   fresh: number;
   oldestDays: number | null;
 }> {
-  const cutoff30 = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const cutoff = Date.now() - olderThanDays * 24 * 60 * 60 * 1000;
   let total = 0;
   let stale = 0;
   let oldestMs: number | null = null;
@@ -356,7 +356,7 @@ export async function countTombstones(): Promise<{
       total++;
       const ts = new Date(record.deletedAt).getTime();
       if (!isNaN(ts)) {
-        if (ts < cutoff30) stale++;
+        if (ts < cutoff) stale++;
         if (oldestMs === null || ts < oldestMs) oldestMs = ts;
       }
     }

@@ -104,48 +104,60 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [isPurging, setIsPurging] = useState(false);
   const [purgeThreshold, setPurgeThreshold] = useState<number>(30);
 
+  // Effect A: runs only when the modal transitions from closed → open.
+  // Syncs local form state from the current props and fires the one-time
+  // data loads. Deliberately NOT keyed on `settings`, so subsequent
+  // onUpdateSettings() calls (theme toggle, token edit, etc.) don't reset
+  // the active tab or clobber the user's in-progress form state.
   useEffect(() => {
-    if (isOpen) {
-      setActiveTab(initialTab ?? "preferences");
-      setActiveLimit(settings.xActiveLimit || 5);
-      setShowEntryContent(settings.showEntryContent !== false);
-      setDisplayMode(settings.timelineDisplayMode ?? "default");
-      setNlpAutoExtract(settings.nlpAutoExtract !== false);
-      setGistToken(settings.gistSync?.token ?? "");
-      setGistId(settings.gistSync?.gistId ?? "");
-      setAutoSync(settings.gistSync?.autoSyncOnStart ?? false);
-      setPurgeStatus(null);
-      setIsPurging(false);
-      countTombstones()
-        .then((s) => setTombstoneStats(s))
-        .catch(() => setTombstoneStats(null));
+    if (!isOpen) return;
 
-      // Load database stats
-      const loadStats = async () => {
-        try {
-          const [entries, notes, events, habits, listItems] = await Promise.all(
-            [
-              appDb.getAll("entries"),
-              appDb.getAll("notes"),
-              appDb.getAll("events"),
-              appDb.getAll("habits"),
-              appDb.getAll("list_items"),
-            ],
-          );
-          setStorageStats({
-            entries: entries.length,
-            notes: notes.length,
-            events: events.length,
-            habits: habits.length,
-            listItems: listItems.length,
-          });
-        } catch {
-          // Ignore
-        }
-      };
-      loadStats();
-    }
-  }, [isOpen, settings, initialTab]);
+    setActiveTab(initialTab ?? "preferences");
+    setActiveLimit(settings.xActiveLimit || 5);
+    setShowEntryContent(settings.showEntryContent !== false);
+    setDisplayMode(settings.timelineDisplayMode ?? "default");
+    setNlpAutoExtract(settings.nlpAutoExtract !== false);
+    setGistToken(settings.gistSync?.token ?? "");
+    setGistId(settings.gistSync?.gistId ?? "");
+    setAutoSync(settings.gistSync?.autoSyncOnStart ?? false);
+    setPurgeStatus(null);
+    setIsPurging(false);
+
+    countTombstones(purgeThreshold)
+      .then((s) => setTombstoneStats(s))
+      .catch(() => setTombstoneStats(null));
+
+    const loadStats = async () => {
+      try {
+        const [entries, notes, events, habits, listItems] = await Promise.all([
+          appDb.getAll("entries"),
+          appDb.getAll("notes"),
+          appDb.getAll("events"),
+          appDb.getAll("habits"),
+          appDb.getAll("list_items"),
+        ]);
+        setStorageStats({
+          entries: entries.length,
+          notes: notes.length,
+          events: events.length,
+          habits: habits.length,
+          listItems: listItems.length,
+        });
+      } catch {
+        // Ignore
+      }
+    };
+    loadStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, initialTab]);
+
+  // Effect B: recompute purgeable count whenever the threshold changes
+  useEffect(() => {
+    if (!isOpen) return;
+    countTombstones(purgeThreshold)
+      .then((s) => setTombstoneStats(s))
+      .catch(() => setTombstoneStats(null));
+  }, [isOpen, purgeThreshold]);
 
   if (!isOpen) return null;
 
@@ -233,7 +245,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setPurgeStatus(
         `Purged ${result.purged} tombstones. ${result.remaining} still pending.`,
       );
-      const fresh = await countTombstones();
+      const fresh = await countTombstones(purgeThreshold);
       setTombstoneStats(fresh);
       setTimeout(() => setPurgeStatus(null), 5000);
     } catch (err: any) {
@@ -297,13 +309,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </button>
           </div>
         </div>
-        {/* Modern Segmented Navigation Tabs */}
 
-        <div className="flex items-center gap-2 px-6 pt-3 pb-2 border-b border-slate-200 dark:border-slate-800/80 bg-slate-100/40 dark:bg-slate-900/40">
+        {/* Modern Segmented Navigation Tabs */}
+        <div className="flex w-full overflow-x-scroll items-center gap-2 px-6 pt-3 pb-2 border-b border-slate-200 dark:border-slate-800/80 bg-slate-100/40 dark:bg-slate-900/40">
           <button
             type="button"
             onClick={() => setActiveTab("preferences")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            className={`shrink-0 whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTab === "preferences"
                 ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xs border border-slate-200/80 dark:border-slate-700"
                 : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-300"
@@ -316,7 +328,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab("gist")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            className={`shrink-0 whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTab === "gist"
                 ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xs border border-slate-200/80 dark:border-slate-700"
                 : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-300"
@@ -329,7 +341,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab("backup")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            className={`shrink-0 whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTab === "backup"
                 ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xs border border-slate-200/80 dark:border-slate-700"
                 : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-300"
@@ -342,7 +354,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab("storage")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            className={`shrink-0 whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTab === "storage"
                 ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xs border border-slate-200/80 dark:border-slate-700"
                 : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-300"
@@ -352,6 +364,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <span>Storage & System</span>
           </button>
         </div>
+
         {/* Scrollable Tab Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-5">
           {/* ================= TAB 1: PREFERENCES ================= */}
@@ -943,8 +956,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     onChange={(e) =>
                       setPurgeThreshold(parseInt(e.target.value, 10))
                     }
-                    className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                    className="px-2.5 py-1 w-fit rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-mono text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500 cursor-pointer"
                   >
+                    <option value={0}>All tombstones (right now)</option>
                     <option value={7}>7 days</option>
                     <option value={14}>14 days</option>
                     <option value={30}>30 days (recommended)</option>
@@ -954,11 +968,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </select>
                 </div>
 
+                {purgeThreshold === 0 && (
+                  <p className="text-[10px] text-rose-500 dark:text-rose-400 leading-relaxed">
+                    ⚠ Purges all tombstones immediately. Any device that has not
+                    yet synced this deletion will resurrect the item on its next
+                    push.
+                  </p>
+                )}
+
                 {/* Purge button */}
                 <button
                   type="button"
                   disabled={
-                    isPurging || !tombstoneStats || tombstoneStats.total === 0
+                    isPurging || !tombstoneStats || tombstoneStats.stale === 0
                   }
                   onClick={handlePurge}
                   className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 disabled:opacity-40 disabled:cursor-not-allowed text-amber-700 dark:text-amber-400 border border-amber-500/30 text-xs font-semibold transition-colors cursor-pointer"
@@ -967,7 +989,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <span>
                     {isPurging
                       ? "Purging…"
-                      : `Purge ${tombstoneStats?.stale ?? 0} tombstone${tombstoneStats?.stale === 1 ? "" : "s"}`}
+                      : tombstoneStats?.stale === 0
+                        ? `Nothing to purge (${tombstoneStats.total} kept for sync safety)`
+                        : `Purge ${tombstoneStats?.stale} of ${tombstoneStats?.total} tombstones`}
                   </span>
                 </button>
 
