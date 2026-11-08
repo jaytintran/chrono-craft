@@ -15,15 +15,24 @@ import {
   Flame,
   FolderKanban,
 } from "lucide-react";
-import { ActiveView, AppSettings } from "../types";
+import { ActiveView, AppSettings } from "@/types";
+
+import { SyncStatusStrip } from "./SyncStatusStrip";
+import { SyncStatusPill } from "./SyncStatusPill";
 
 interface HeaderProps {
   activeView: ActiveView;
   onSelectView: (view: ActiveView) => void;
   settings: AppSettings;
   onOpenSettings: () => void;
+  onOpenGistSettings: () => void;
   activeTaskCount: number;
   completedTodayCount: number;
+  isSyncing: boolean;
+  lastSyncResult: string | null;
+  onGistPush: () => Promise<void> | void;
+  onGistPull: () => Promise<void> | void;
+  onGistSync: () => Promise<void> | void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -31,8 +40,14 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectView,
   settings,
   onOpenSettings,
+  onOpenGistSettings,
   activeTaskCount,
   completedTodayCount,
+  isSyncing,
+  lastSyncResult,
+  onGistPush,
+  onGistPull,
+  onGistSync,
 }) => {
   const viewOptions: Array<{
     id: ActiveView;
@@ -83,6 +98,18 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="sticky top-0 z-30 bg-white/90 dark:bg-[#0B0F17]/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800/80 transition-colors pt-[env(safe-area-inset-top)]">
+      {/* Mobile-only sync status strip — sits above the nav tabs */}
+      <SyncStatusStrip
+        settings={settings}
+        isSyncing={isSyncing}
+        lastSyncResult={lastSyncResult}
+        onPush={onGistPush}
+        onPull={onGistPull}
+        onFullSync={onGistSync}
+        onOpenGistSettings={onOpenGistSettings}
+      />
+
+      {/* Zones */}
       <div className="h-14 md:h-16 px-4 md:px-6 flex items-center justify-between">
         {/* Zone 1: Brand & Desktop Breadcrumbs / Mobile View Switcher */}
         <div className="flex items-center gap-4 max-md:hidden">
@@ -108,7 +135,6 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Mobile view switcher: full-width segmented control */}
         {/* Mobile view switcher: full-width, 7 tabs distributed evenly */}
         <nav
           aria-label="Workspace views"
@@ -188,6 +214,19 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Zone 3: Settings) */}
         <div className="flex items-center gap-2 shrink-0 max-md:hidden">
+          {/* Sync pill (desktop only) */}
+          <div className="hidden md:block">
+            <SyncStatusPill
+              settings={settings}
+              isSyncing={isSyncing}
+              lastSyncResult={lastSyncResult}
+              onPush={onGistPush}
+              onPull={onGistPull}
+              onFullSync={onGistSync}
+              onOpenGistSettings={onOpenGistSettings}
+            />
+          </div>
+
           {/* Desktop: full view-button; Mobile: icon-only (Settings lives in mobile tab strip) */}
           <button
             type="button"

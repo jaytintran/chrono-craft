@@ -70,6 +70,11 @@ export default function App() {
   const [isCreateListOpen, setIsCreateListOpen] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
+  // Settings State
+  const [settingsInitialTab, setSettingsInitialTab] = useState<
+    "preferences" | "backup" | "storage" | "gist"
+  >("preferences");
+
   // Universal Context Menu State
   const [contextTarget, setContextTarget] = useState<ContextMenuTarget | null>(
     null,
@@ -840,6 +845,15 @@ export default function App() {
     setSettings(updated);
   };
 
+  const openSettingsTo = (
+    tab: "preferences" | "backup" | "storage" | "gist",
+  ) => {
+    setSettingsInitialTab(tab);
+    setIsSettingsOpen(true);
+  };
+
+  const handleOpenGistSettings = () => openSettingsTo("gist");
+
   // Gist Sync
   const handleGistSync = async () => {
     const cfg = settings.gistSync;
@@ -987,9 +1001,15 @@ export default function App() {
           setActiveView(v);
         }}
         settings={settings}
-        onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenSettings={() => openSettingsTo("preferences")}
+        onOpenGistSettings={handleOpenGistSettings}
         activeTaskCount={activeFocusCount}
         completedTodayCount={completedTodayCount}
+        isSyncing={isSyncing}
+        lastSyncResult={lastSyncResult}
+        onGistPush={handleGistPush}
+        onGistPull={handleGistPull}
+        onGistSync={handleGistSync}
       />
 
       {/* 2. Workspace Body: Desktop Sidebar + Main Canvas */}
@@ -1208,6 +1228,7 @@ export default function App() {
         onGistPull={handleGistPull}
         isSyncing={isSyncing}
         lastSyncResult={lastSyncResult}
+        initialTab={settingsInitialTab}
       />
 
       {/* 5. Create Custom List Modal */}

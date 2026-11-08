@@ -31,6 +31,8 @@ import {
 import { AppSettings, TimelineDisplayMode } from "../../types";
 import { appDb } from "../../services/db";
 
+type SettingsTab = "preferences" | "backup" | "storage" | "gist";
+
 interface SettingsModalProps {
   isOpen: boolean;
   settings: AppSettings;
@@ -41,9 +43,8 @@ interface SettingsModalProps {
   onGistPull?: () => Promise<void>;
   isSyncing?: boolean;
   lastSyncResult?: string | null;
+  initialTab?: SettingsTab;
 }
-
-type SettingsTab = "preferences" | "backup" | "storage" | "gist";
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
@@ -55,8 +56,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onGistPull,
   isSyncing,
   lastSyncResult,
+  initialTab,
 }) => {
-  const [activeTab, setActiveTab] = useState<SettingsTab>("preferences");
+  const [activeTab, setActiveTab] = useState<SettingsTab>(
+    initialTab ?? "preferences",
+  );
   const [activeLimit, setActiveLimit] = useState(settings.xActiveLimit || 5);
   const [showEntryContent, setShowEntryContent] = useState(
     settings.showEntryContent !== false,
@@ -87,6 +91,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
+      setActiveTab(initialTab ?? "preferences");
       setActiveLimit(settings.xActiveLimit || 5);
       setShowEntryContent(settings.showEntryContent !== false);
       setDisplayMode(settings.timelineDisplayMode ?? "default");
@@ -120,7 +125,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       };
       loadStats();
     }
-  }, [isOpen, settings]);
+  }, [isOpen, settings, initialTab]);
 
   if (!isOpen) return null;
 
