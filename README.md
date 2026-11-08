@@ -153,8 +153,6 @@ app is intentionally small enough that plain React is sufficient.
 npm install
 ```
 
-````
-
 ### Run dev server
 
 ```bash
@@ -733,4 +731,3 @@ org), Gruvbox (Pavel Pertsev), Monokai, Solarized (Ethan Schoonover),
 and the Cyberpunk 2077 UI kit.
 
 Built with care, on purpose, offline.
-````
