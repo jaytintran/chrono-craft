@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Check, Flame, BarChart2 } from "lucide-react";
 import { Habit, HabitLog, HabitScheduleType } from "../../types";
 import { DAYS_OF_WEEK, PRESET_COLORS } from "./types";
@@ -18,37 +18,48 @@ interface HabitFormProps {
 
 export const HabitForm = React.forwardRef<HabitFormHandle, HabitFormProps>(
   ({ data, logs = [], isNew, onDirty }, ref) => {
-    const [title, setTitle] = useState("");
-    const [description, setDescription] = useState("");
-    const [color, setColor] = useState("#6366F1");
-    const [scheduleType, setScheduleType] =
-      useState<HabitScheduleType>("everyday");
-    const [customDays, setCustomDays] = useState<number[]>([1, 2, 3, 4, 5]);
+    const [title, setTitle] = useState(data.title || "");
+    const [description, setDescription] = useState(data.description || "");
+    const [color, setColor] = useState(data.color || "#6366F1");
+    const [scheduleType, setScheduleType] = useState<HabitScheduleType>(
+      data.scheduleType || "everyday",
+    );
+    const [customDays, setCustomDays] = useState<number[]>(
+      data.customDays || [1, 2, 3, 4, 5],
+    );
+    const lastIdRef = useRef(data.id);
 
     useEffect(() => {
-      setTitle(data.title || "");
-      setDescription(data.description || "");
-      setColor(data.color || "#6366F1");
-      setScheduleType(data.scheduleType || "everyday");
-      setCustomDays(data.customDays || [1, 2, 3, 4, 5]);
-    }, [data]);
+      if (lastIdRef.current !== data.id) {
+        lastIdRef.current = data.id;
+        setTitle(data.title || "");
+        setDescription(data.description || "");
+        setColor(data.color || "#6366F1");
+        setScheduleType(data.scheduleType || "everyday");
+        setCustomDays(data.customDays || [1, 2, 3, 4, 5]);
+      }
+    }, [data.id]);
 
     useEffect(() => {
       onDirty?.();
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [title, description, color, scheduleType, customDays]);
 
-    React.useImperativeHandle(ref, () => ({
-      collect: () => ({
-        id: data.id,
-        title: title.trim(),
-        description,
-        color,
-        scheduleType,
-        customDays: scheduleType === "custom" ? customDays : undefined,
+    React.useImperativeHandle(
+      ref,
+      () => ({
+        collect: () => ({
+          id: data.id,
+          title: title.trim(),
+          description,
+          color,
+          scheduleType,
+          customDays: scheduleType === "custom" ? customDays : undefined,
+        }),
+        isTitleValid: () => title.trim().length > 0,
       }),
-      isTitleValid: () => title.trim().length > 0,
-    }));
+      [data.id, title, description, color, scheduleType, customDays],
+    );
 
     const logDatesSet = new Set(logs.map((l) => l.date));
     let currentStreak = 0;

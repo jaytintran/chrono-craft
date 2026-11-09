@@ -6,13 +6,21 @@ import {
   MinusCircle,
   PlayCircle,
 } from "lucide-react";
-import { CalendarEvent, Habit, HabitLog, ListItem, Note } from "../../types";
+import {
+  CalendarEvent,
+  Habit,
+  HabitLog,
+  ListItem,
+  Note,
+  TimelineEntry,
+} from "../../types";
 
 export type DetailSheetMode =
   | { type: "note"; data: Partial<Note>; isNew?: boolean }
   | { type: "event"; data: Partial<CalendarEvent>; isNew?: boolean }
   | { type: "habit"; data: Partial<Habit>; logs?: HabitLog[]; isNew?: boolean }
   | { type: "list_item"; data: Partial<ListItem>; isNew?: boolean }
+  | { type: "log"; data: Partial<TimelineEntry>; isNew?: boolean }
   | null;
 
 export const DAYS_OF_WEEK = [
@@ -97,5 +105,7 @@ export const ITEM_STATUSES = [
 // Date-local formatter used by the Event form
 export function formatDateTimeLocal(d: Date): string {
   const pad = (n: number) => n.toString().padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+    d.getHours(),
+  )}:${pad(d.getMinutes())}`;
 }

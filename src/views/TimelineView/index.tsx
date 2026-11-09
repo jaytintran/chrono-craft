@@ -37,6 +37,7 @@ interface TimelineViewProps {
   onUpdateEntryTime?: (entryId: string, newIso: string) => Promise<void>;
   displayMode?: TimelineDisplayMode;
   onUpdateEntryTitle?: (entryId: string, newTitle: string) => Promise<void>;
+  onOpenLogDetail?: (logId: string) => void;
 }
 
 const getEntryAnchorIso = (e: TimelineEntry): string =>
@@ -49,7 +50,9 @@ const getEntryDateKey = (e: TimelineEntry): string =>
 
 const formatDayMonth = (iso: string) => {
   const d = new Date(iso);
-  return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
+  return `${String(d.getDate()).padStart(2, "0")}/${String(
+    d.getMonth() + 1,
+  ).padStart(2, "0")}`;
 };
 
 export const TimelineView: React.FC<TimelineViewProps> = ({
@@ -64,6 +67,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
   onUpdateEntryTime,
   displayMode = "default",
   onUpdateEntryTitle,
+  onOpenLogDetail,
 }) => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [filterType, setFilterType] = useState<"all" | EntryType | "habit">(
@@ -313,6 +317,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
             onOpenEventDetail={onOpenEventDetail}
             onOpenContextMenu={onOpenContextMenu}
             onOpenTimePicker={openTimePicker}
+            onOpenLogDetail={onOpenLogDetail}
           />
         ) : (
           <div className="max-w-6xl mx-auto">
@@ -334,7 +339,9 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                       </span>
                     </span>
                     <ChevronDown
-                      className={`w-4 h-4 text-warning transition-transform ${isCarryOverOpen ? "rotate-180" : ""}`}
+                      className={`w-4 h-4 text-warning transition-transform ${
+                        isCarryOverOpen ? "rotate-180" : ""
+                      }`}
                     />
                   </button>
                   {isCarryOverOpen && (
@@ -395,7 +402,9 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                 </div>
               ) : (
                 <div
-                  className={`${displayMode === "flat" ? "space-y-1" : "space-y-4"} relative`}
+                  className={`${
+                    displayMode === "flat" ? "space-y-1" : "space-y-4"
+                  } relative`}
                 >
                   {processedItems.map((item) => (
                     <TimelineEntryRow
@@ -411,6 +420,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                       onOpenEventDetail={onOpenEventDetail}
                       onOpenContextMenu={onOpenContextMenu}
                       onOpenTimePicker={openTimePicker}
+                      onOpenLogDetail={onOpenLogDetail}
                     />
                   ))}
                 </div>

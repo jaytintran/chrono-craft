@@ -45,6 +45,7 @@ interface TimelineEntryRowProps {
     iso: string,
     position: { x: number; y: number },
   ) => void;
+  onOpenLogDetail?: (logId: string) => void;
 }
 
 export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
@@ -59,6 +60,7 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
   onOpenEventDetail,
   onOpenContextMenu,
   onOpenTimePicker,
+  onOpenLogDetail,
 }) => {
   const entry = item.originalEntry;
 
@@ -69,7 +71,9 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
   }
 
   const isCompleted = entry.status === "completed";
-  const isNoteOrEvent = entry.type === "note" || entry.type === "event";
+  const isNoteOrEvent =
+    entry.type === "note" || entry.type === "event" || entry.type === "log";
+  const isClickable = isNoteOrEvent || entry.type === "log";
   const isLog = entry.type === "log";
   const isTimeBlockMarker = item.isTimeBlockMarker;
   const isContainedInBlock = !!item.containedInBlock;
@@ -150,6 +154,7 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
     if (entry.type === "note" && onOpenNoteDetail) onOpenNoteDetail(entry.id);
     else if (entry.type === "event" && onOpenEventDetail)
       onOpenEventDetail(entry.id);
+    else if (entry.type === "log" && onOpenLogDetail) onOpenLogDetail(entry.id);
   };
 
   const handleContextMenu = (e: React.MouseEvent) => {
@@ -412,17 +417,18 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
                 }`}
               />
             </div>
-            <div className="flex flex-wrap items-center gap-2 text-xs text-secondary font-mono">
-              <span className="uppercase text-[11px] text-accent font-semibold font-sans">
+            <div className="flex flex-wrap max-sm:text-[10px]  items-center gap-2 max-sm:gap-0.5 max-sm:tracking-tight text-xs text-secondary font-mono">
+              {/* <span className="uppercase text-accent font-semibold font-sans">
                 {entry.source === "habit"
                   ? "HABIT LOG"
                   : entry.type.toUpperCase()}
-              </span>
+              </span> */}
+
               {entry.scheduledAt && (
                 <>
-                  <span className="text-muted">·</span>
+                  {/* <span className="text-muted">·</span> */}
                   <span className="flex items-center gap-1 text-info">
-                    <Clock className="w-3 h-3" />
+                    {/* <Clock className="w-3 h-3" /> */}
                     <span>Scheduled {formatTimestamp(entry.scheduledAt)}</span>
                   </span>
                 </>
@@ -432,7 +438,7 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
                 !entry.scheduledAt &&
                 entry.completedAt && (
                   <>
-                    <span className="text-muted">·</span>
+                    {/* <span className="text-muted">·</span> */}
                     <span className="text-success font-medium">
                       Created {formatTimestamp(entry.createdAt)} · Done{" "}
                       {formatTimestamp(entry.completedAt)} (
@@ -456,7 +462,7 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
               )}
               {isLog && entry.createdAt && (
                 <>
-                  <span className="text-muted">·</span>
+                  {/* <span className="text-muted">·</span> */}
                   <span>
                     {toLocalDateKey(new Date(entry.createdAt)) ===
                     selectedDateStr
@@ -465,9 +471,11 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
                   </span>
                 </>
               )}
+            </div>
+
+            <div className="flex flex-wrap max-sm:text-[10px]  items-center gap-2 max-sm:gap-0.5 max-sm:tracking-tight text-xs text-secondary font-mono">
               {entry.tags.length > 0 && (
                 <>
-                  <span className="text-muted">·</span>
                   <span className="text-muted">
                     {entry.tags.map((t) => `#${t}`).join(" ")}
                   </span>
@@ -486,10 +494,11 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
             </button>
           </div>
         </div>
+
         {showEntryContent && getEntryContent() && (
           <RichContent
             content={getEntryContent()}
-            className="mt-3 pt-3 border-t border-soft text-xs text-secondary leading-relaxed"
+            className="mt-2 pt-2 border-t border-soft text-xs text-secondary leading-relaxed"
           />
         )}
       </div>

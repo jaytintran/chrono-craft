@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Calendar } from "lucide-react";
 import { CalendarEvent, CustomList } from "../../types";
 import { RichTextEditor } from "../editors/RichTextEditor";
@@ -18,38 +18,49 @@ interface EventFormProps {
 
 export const EventForm = React.forwardRef<EventFormHandle, EventFormProps>(
   ({ data, availableLists, onDirty }, ref) => {
-    const [title, setTitle] = useState("");
-    const [description, setDescription] = useState("");
-    const [startAt, setStartAt] = useState("");
-    const [endAt, setEndAt] = useState("");
-    const [allDay, setAllDay] = useState(false);
+    const defaultStart = data.startAt ? new Date(data.startAt) : new Date();
+    const defaultEnd = data.endAt ? new Date(data.endAt) : (() => {
+      const e = new Date(defaultStart);
+      e.setHours(e.getHours() + 1);
+      return e;
+    })();
+
+    const [title, setTitle] = useState(data.title || "");
+    const [description, setDescription] = useState(data.description || "");
+    const [startAt, setStartAt] = useState(formatDateTimeLocal(defaultStart));
+    const [endAt, setEndAt] = useState(formatDateTimeLocal(defaultEnd));
+    const [allDay, setAllDay] = useState(data.allDay || false);
     const [category, setCategory] = useState<"official" | "personal">(
-      "personal",
+      data.category || "personal",
     );
-    const [tags, setTags] = useState<string[]>([]);
-    const [listIds, setListIds] = useState<string[]>([]);
-    const [isAchievement, setIsAchievement] = useState(false);
+    const [tags, setTags] = useState<string[]>(data.tags || []);
+    const [listIds, setListIds] = useState<string[]>(data.listIds || []);
+    const [isAchievement, setIsAchievement] = useState(data.isAchievement || false);
+    const lastIdRef = useRef(data.id);
 
     useEffect(() => {
-      setTitle(data.title || "");
-      setDescription(data.description || "");
-      setTags(data.tags || []);
-      setListIds(data.listIds || []);
-      setAllDay(data.allDay || false);
-      setCategory(data.category || "personal");
-      setIsAchievement(data.isAchievement || false);
+      if (lastIdRef.current !== data.id) {
+        lastIdRef.current = data.id;
+        setTitle(data.title || "");
+        setDescription(data.description || "");
+        setTags(data.tags || []);
+        setListIds(data.listIds || []);
+        setAllDay(data.allDay || false);
+        setCategory(data.category || "personal");
+        setIsAchievement(data.isAchievement || false);
 
-      const defaultStart = data.startAt ? new Date(data.startAt) : new Date();
-      setStartAt(formatDateTimeLocal(defaultStart));
+        const curStart = data.startAt ? new Date(data.startAt) : new Date();
+        setStartAt(formatDateTimeLocal(curStart));
 
-      if (data.endAt) {
-        setEndAt(formatDateTimeLocal(new Date(data.endAt)));
-      } else {
-        const e = new Date(defaultStart);
-        e.setHours(e.getHours() + 1);
-        setEndAt(formatDateTimeLocal(e));
+        if (data.endAt) {
+          setEndAt(formatDateTimeLocal(new Date(data.endAt)));
+        } else {
+          const e = new Date(curStart);
+          e.setHours(e.getHours() + 1);
+          setEndAt(formatDateTimeLocal(e));
+        }
       }
-    }, [data]);
+    }, [data.id]);
 
     useEffect(() => {
       onDirty?.();
@@ -103,20 +114,35 @@ export const EventForm = React.forwardRef<EventFormHandle, EventFormProps>(
     const dtInput =
       "px-2.5 py-1.5 rounded-lg bg-raised border border-soft text-xs font-mono text-primary focus:outline-none focus:border-accent";
 
-    React.useImperativeHandle(ref, () => ({
-      collect: () => ({
-        id: data.id,
-        title: title.trim(),
+    React.useImperativeHandle(
+      ref,
+      () => ({
+        collect: () => ({
+          id: data.id,
+          title: title.trim(),
+          description,
+          startAt: new Date(startAt).toISOString(),
+          endAt: endAt ? new Date(endAt).toISOString() : undefined,
+          allDay,
+          category,
+          tags,
+          listIds: isAchievement ? [] : listIds,
+          isAchievement,
+        }),
+      }),
+      [
+        data.id,
+        title,
         description,
-        startAt: new Date(startAt).toISOString(),
-        endAt: endAt ? new Date(endAt).toISOString() : undefined,
+        startAt,
+        endAt,
         allDay,
         category,
         tags,
-        listIds: isAchievement ? [] : listIds,
+        listIds,
         isAchievement,
-      }),
-    }));
+      ],
+    );
 
     return (
       <div className="space-y-4">

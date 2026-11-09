@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { X, Folder } from "lucide-react";
 import { ListItem, ListItemStatus, CustomList } from "../../types";
 import { RichTextEditor } from "../editors/RichTextEditor";
@@ -20,37 +20,52 @@ export const ListItemForm = React.forwardRef<
   ListItemFormHandle,
   ListItemFormProps
 >(({ data, availableLists, onDirty }, ref) => {
-  const [title, setTitle] = useState("");
-  const [subtitle, setSubtitle] = useState("");
-  const [status, setStatus] = useState<ListItemStatus>("inbox");
-  const [notes, setNotes] = useState("");
-  const [dueDate, setDueDate] = useState("");
-  const [tags, setTags] = useState<string[]>([]);
-  const [listId, setListId] = useState("");
+  const [title, setTitle] = useState(data.title || "");
+  const [subtitle, setSubtitle] = useState(data.subtitle || "");
+  const [status, setStatus] = useState<ListItemStatus>(data.status || "inbox");
+  const [notes, setNotes] = useState(data.notes || "");
+  const [dueDate, setDueDate] = useState(data.dueDate || "");
+  const [tags, setTags] = useState<string[]>(data.tags || []);
+  const [listId, setListId] = useState(
+    data.listId || availableLists[0]?.id || "",
+  );
   const [tagInput, setTagInput] = useState("");
+  const lastIdRef = useRef(data.id);
 
   useEffect(() => {
-    setTitle(data.title || "");
-    setSubtitle(data.subtitle || "");
-    setStatus(data.status || "inbox");
-    setNotes(data.notes || "");
-    setDueDate(data.dueDate || "");
-    setTags(data.tags || []);
-    setListId(data.listId || availableLists[0]?.id || "");
-  }, [data, availableLists]);
+    if (lastIdRef.current !== data.id) {
+      lastIdRef.current = data.id;
+      setTitle(data.title || "");
+      setSubtitle(data.subtitle || "");
+      setStatus(data.status || "inbox");
+      setNotes(data.notes || "");
+      setDueDate(data.dueDate || "");
+      setTags(data.tags || []);
+      setListId(data.listId || availableLists[0]?.id || "");
+    }
+  }, [data.id, availableLists]);
 
-  React.useImperativeHandle(ref, () => ({
-    collect: () => ({
-      id: data.id,
-      listId: listId || data.listId || availableLists[0]?.id || "projects",
-      title: title.trim(),
-      subtitle: subtitle.trim() || undefined,
-      status,
-      notes: notes.trim() || undefined,
-      dueDate: dueDate || undefined,
-      tags,
+  useEffect(() => {
+    onDirty?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, subtitle, status, notes, dueDate, tags, listId]);
+
+  React.useImperativeHandle(
+    ref,
+    () => ({
+      collect: () => ({
+        id: data.id,
+        listId: listId || data.listId || availableLists[0]?.id || "projects",
+        title: title.trim(),
+        subtitle: subtitle.trim() || undefined,
+        status,
+        notes: notes.trim() || undefined,
+        dueDate: dueDate || undefined,
+        tags,
+      }),
     }),
-  }));
+    [data.id, data.listId, availableLists, listId, title, subtitle, status, notes, dueDate, tags],
+  );
 
   const itemList = availableLists.find((l) => l.id === listId);
   const itemMeta = ITEM_META[itemList?.type ?? "custom"] ?? ITEM_META.custom;

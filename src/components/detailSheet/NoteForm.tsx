@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Note, CustomList } from "../../types";
 import { RichTextEditor } from "../editors/RichTextEditor";
 import { MetaRow } from "./MetaRow";
@@ -21,22 +21,26 @@ export interface NoteFormHandle {
 
 export const NoteForm = React.forwardRef<NoteFormHandle, NoteFormProps>(
   ({ data, availableLists, onPinChange, onDirty }, ref) => {
-    const [title, setTitle] = useState("");
-    const [content, setContent] = useState("");
-    const [tags, setTags] = useState<string[]>([]);
-    const [listIds, setListIds] = useState<string[]>([]);
-    const [isPinned, setIsPinned] = useState(false);
+    const [title, setTitle] = useState(data.title || "");
+    const [content, setContent] = useState(data.content || "");
+    const [tags, setTags] = useState<string[]>(data.tags || []);
+    const [listIds, setListIds] = useState<string[]>(data.listIds || []);
+    const [isPinned, setIsPinned] = useState(data.isPinned || false);
+    const lastIdRef = useRef(data.id);
 
     // Hydrate all fields whenever the sheet switches to a different note
     useEffect(() => {
-      setTitle(data.title || "");
-      setContent(data.content || "");
-      setTags(data.tags || []);
-      setListIds(data.listIds || []);
-      setIsPinned(data.isPinned || false);
-      onPinChange?.(data.isPinned || false);
+      if (lastIdRef.current !== data.id) {
+        lastIdRef.current = data.id;
+        setTitle(data.title || "");
+        setContent(data.content || "");
+        setTags(data.tags || []);
+        setListIds(data.listIds || []);
+        setIsPinned(data.isPinned || false);
+        onPinChange?.(data.isPinned || false);
+      }
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [data]);
+    }, [data.id]);
 
     useEffect(() => {
       onDirty?.();
@@ -51,18 +55,22 @@ export const NoteForm = React.forwardRef<NoteFormHandle, NoteFormProps>(
       });
     };
 
-    React.useImperativeHandle(ref, () => ({
-      collect: () => ({
-        id: data.id,
-        title: title.trim(),
-        content,
-        tags,
-        listIds,
-        isPinned,
+    React.useImperativeHandle(
+      ref,
+      () => ({
+        collect: () => ({
+          id: data.id,
+          title: title.trim(),
+          content,
+          tags,
+          listIds,
+          isPinned,
+        }),
+        togglePinned,
+        isPinned: () => isPinned,
       }),
-      togglePinned,
-      isPinned: () => isPinned,
-    }));
+      [data.id, title, content, tags, listIds, isPinned],
+    );
 
     return (
       <div className="space-y-4">

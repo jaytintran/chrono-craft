@@ -4,13 +4,21 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { X, Check, Pin, Trash2, Trophy, ArrowLeft } from "lucide-react";
-import { CalendarEvent, CustomList, Habit, ListItem, Note } from "../../types";
+import {
+  CalendarEvent,
+  CustomList,
+  Habit,
+  ListItem,
+  Note,
+  TimelineEntry,
+} from "../../types";
 import { NoteForm, NoteFormHandle } from "./NoteForm";
 import { EventForm, EventFormHandle } from "./EventForm";
 import { HabitForm, HabitFormHandle } from "./HabitForm";
 import { ListItemForm, ListItemFormHandle } from "./ListItemForm";
 import { DetailSheetMode } from "./types";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
+import { LogForm, LogFormHandle } from "./LogForm";
 
 export type { DetailSheetMode } from "./types";
 
@@ -26,6 +34,8 @@ interface DetailSheetProps {
   onDeleteHabit?: (id: string) => void;
   onSaveListItem?: (item: Partial<ListItem>) => void;
   onDeleteListItem?: (id: string) => void;
+  onSaveLog?: (entry: Partial<TimelineEntry>) => void;
+  onDeleteLog?: (id: string) => void; // optional; logs use onDeleteEntry via context menu
 }
 
 export const DetailSheet: React.FC<DetailSheetProps> = ({
@@ -40,11 +50,14 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
   onDeleteHabit,
   onSaveListItem,
   onDeleteListItem,
+  onSaveLog,
+  onDeleteLog,
 }) => {
   const noteRef = useRef<NoteFormHandle>(null);
   const eventRef = useRef<EventFormHandle>(null);
   const habitRef = useRef<HabitFormHandle>(null);
   const itemRef = useRef<ListItemFormHandle>(null);
+  const logRef = useRef<LogFormHandle>(null);
 
   const [isNotePinned, setIsNotePinned] = useState(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -82,6 +95,8 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
               ? eventRef
               : sheetMode.type === "habit"
               ? habitRef
+              : sheetMode.type === "log"
+              ? logRef
               : itemRef;
           const draft = ref.current?.collect();
           if (draft) {
@@ -90,6 +105,8 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
               onSaveEvent?.(draft as Partial<CalendarEvent>);
             if (sheetMode.type === "habit")
               onSaveHabit?.(draft as Partial<Habit>);
+            if (sheetMode.type === "log")
+              onSaveLog?.(draft as Partial<TimelineEntry>);
             if (sheetMode.type === "list_item")
               onSaveListItem?.(draft as Partial<ListItem>);
           }
@@ -112,9 +129,11 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
     if (!sheetMode) return;
     const id = sheetMode.data.id;
     if (!id) return;
-    if (sheetMode.type === "note" && onDeleteNote) onDeleteNote(id);
+    if ((sheetMode.type === "note" || sheetMode.type === "log") && onDeleteNote)
+      onDeleteNote(id);
     if (sheetMode.type === "event" && onDeleteEvent) onDeleteEvent(id);
     if (sheetMode.type === "habit" && onDeleteHabit) onDeleteHabit(id);
+    if (sheetMode.type === "log" && onDeleteLog) onDeleteLog(id);
     if (sheetMode.type === "list_item" && onDeleteListItem)
       onDeleteListItem(id);
     onClose();
@@ -133,6 +152,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
     | { kind: "event"; payload: Partial<CalendarEvent> }
     | { kind: "habit"; payload: Partial<Habit> }
     | { kind: "list_item"; payload: Partial<ListItem> }
+    | { kind: "log"; payload: Partial<TimelineEntry> }
     | null => {
     if (!sheetMode) return null;
     switch (sheetMode.type) {
@@ -152,6 +172,10 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
         return itemRef.current
           ? { kind: "list_item", payload: itemRef.current.collect() }
           : null;
+      case "log":
+        return logRef.current
+          ? { kind: "log", payload: logRef.current.collect() }
+          : null;
       default:
         return null;
     }
@@ -163,6 +187,11 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
     if (!collected) return;
 
     const snap = snapshotOf(collected.payload);
+    console.log("[commitOnce]", collected.kind, {
+      snap,
+      prevSnap: savedSnapshotRef.current,
+      willSave: snap !== savedSnapshotRef.current,
+    }); // ← add
     if (snap === savedSnapshotRef.current) return;
     savedSnapshotRef.current = snap;
 
@@ -179,10 +208,18 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
       case "list_item":
         onSaveListItem?.(collected.payload);
         break;
+      case "log":
+        onSaveLog?.(collected.payload);
+        break;
     }
   };
 
   const scheduleAutosave = () => {
+    console.log("[scheduleAutosave]", {
+      sheetMode: sheetMode?.type,
+      isNew: sheetMode?.isNew,
+    }); // ← add
+
     if (!sheetMode || sheetMode.isNew) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
@@ -196,7 +233,30 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
       clearTimeout(saveTimerRef.current);
       saveTimerRef.current = null;
     }
-    commitOnce();
+    // Always force a save on close, bypassing the snapshot dedupe.
+    // If the form has any pending state, this is the last chance to persist it.
+    if (sheetMode && !sheetMode.isNew) {
+      const collected = collectCurrentDraft();
+      if (collected) {
+        switch (collected.kind) {
+          case "note":
+            onSaveNote?.(collected.payload);
+            break;
+          case "event":
+            onSaveEvent?.(collected.payload);
+            break;
+          case "habit":
+            onSaveHabit?.(collected.payload);
+            break;
+          case "list_item":
+            onSaveListItem?.(collected.payload);
+            break;
+          case "log":
+            onSaveLog?.(collected.payload);
+            break;
+        }
+      }
+    }
   };
 
   const handleCreateHabitSubmit = () => {
@@ -331,6 +391,13 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
           ref={itemRef}
           data={sheetMode.data}
           availableLists={availableLists}
+          onDirty={scheduleAutosave}
+        />
+      )}
+      {sheetMode.type === "log" && (
+        <LogForm
+          ref={logRef}
+          data={sheetMode.data}
           onDirty={scheduleAutosave}
         />
       )}

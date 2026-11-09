@@ -43,6 +43,7 @@ interface TimelineSearchViewProps {
   onUpdateEntryTitle?: (entryId: string, newTitle: string) => Promise<void>;
   onOpenNoteDetail?: (noteId: string) => void;
   onOpenEventDetail?: (eventId: string) => void;
+  onOpenLogDetail?: (logId: string) => void;
   onOpenContextMenu?: (
     entry: TimelineEntry,
     pos: { x: number; y: number },
@@ -67,6 +68,7 @@ export const TimelineSearchView: React.FC<TimelineSearchViewProps> = ({
   onOpenEventDetail,
   onOpenContextMenu,
   onOpenTimePicker,
+  onOpenLogDetail,
 }) => {
   const matched = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -201,6 +203,7 @@ export const TimelineSearchView: React.FC<TimelineSearchViewProps> = ({
                       onOpenEventDetail={onOpenEventDetail}
                       onOpenContextMenu={onOpenContextMenu}
                       onOpenTimePicker={onOpenTimePicker}
+                      onOpenLogDetail={onOpenLogDetail}
                     />
                   ))}
                 </div>

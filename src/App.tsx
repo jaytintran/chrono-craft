@@ -542,25 +542,6 @@ export default function App() {
       return;
     }
 
-    // 1b. Timeline-born log → same writeback, but `type: "log"` is preserved
-    //     because we spread `linkedLog` (which already has type: "log").
-    const linkedLog = findLinkedEntry(noteData.id, "log");
-    if (linkedLog) {
-      await appDb.put("entries", {
-        ...linkedLog,
-        title: noteData.title ?? linkedLog.title,
-        tags: noteData.tags ?? linkedLog.tags,
-        metadata: {
-          ...linkedLog.metadata,
-          notes: noteData.content ?? linkedLog.metadata?.notes,
-          listId: noteData.listIds
-            ? noteData.listIds[0]
-            : linkedLog.metadata?.listId,
-        },
-      });
-      return;
-    }
-
     // 2. Plain note → update-in-place only (never create here)
     if (!noteData.id || noteData.id.startsWith("tl_")) return;
 
@@ -572,6 +553,33 @@ export default function App() {
       ...noteData,
       title: noteData.title ?? existing.title,
       updatedAt: now,
+    });
+  };
+
+  const handleSaveLog = async (logData: Partial<TimelineEntry>) => {
+    console.log("[handleSaveLog]", {
+      id: logData.id,
+      content: logData.metadata?.notes,
+      foundInEntries: entries.find(
+        (e) => e.id === logData.id && e.type === "log",
+      )?.id,
+      entriesCount: entries.length,
+    });
+    if (!logData.id) return;
+    const existing = entries.find(
+      (e) => e.id === logData.id && e.type === "log",
+    );
+    if (!existing) return;
+
+    await appDb.put("entries", {
+      ...existing,
+      ...logData,
+      type: "log", // non-negotiable: never promote
+      metadata: {
+        ...existing.metadata,
+        ...(logData.metadata ?? {}),
+      },
+      updatedAt: new Date().toISOString(),
     });
   };
 
@@ -738,13 +746,8 @@ export default function App() {
         // Logs use the note-style editor, but stay type: "log" — the save
         // path (handleSaveNote → linkedLog branch) preserves that.
         setSheetMode({
-          type: "note",
-          data: {
-            id: item.id,
-            title: item.title,
-            content: item.metadata?.notes || "",
-            tags: item.tags,
-          },
+          type: "log",
+          data: item, // pass the raw entry; LogForm reads metadata.notes
           isNew: false,
         });
       } else {
@@ -1321,6 +1324,16 @@ export default function App() {
               }
               onUpdateEntryTime={handleUpdateEntryTime}
               showEntryContent={settings.showEntryContent}
+              onOpenLogDetail={(entryId) => {
+                const entry = entries.find((e) => e.id === entryId);
+                if (entry && entry.type === "log") {
+                  setSheetMode({
+                    type: "log",
+                    data: entry,
+                    isNew: false,
+                  });
+                }
+              }}
             />
           )}
 
@@ -1444,6 +1457,7 @@ export default function App() {
         onDeleteHabit={handleDeleteHabit}
         onSaveListItem={handleSaveListItem}
         onDeleteListItem={handleDeleteListItem}
+        onSaveLog={handleSaveLog}
       />
       {/* 4. Settings & Workspace Backup Modal */}
       <SettingsModal
