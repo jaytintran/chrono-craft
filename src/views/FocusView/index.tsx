@@ -64,17 +64,32 @@ export const FocusView: React.FC<FocusViewProps> = ({
 
   const isMobile = useIsMobile();
 
-  const anchorEntries = entries.filter(
-    (e) => e.source === "focus-anchor" && e.status !== "completed",
-  );
-  const activeEntries = entries.filter(
-    (e) => e.source === "focus-active" && e.status !== "completed",
-  );
-  const completedEntries = entries.filter(
-    (e) =>
-      e.status === "completed" &&
-      (e.source === "focus-anchor" || e.source === "focus-active"),
-  );
+  const anchorEntries = entries
+    .filter((e) => e.source === "focus-anchor" && e.status !== "completed")
+    .sort((a, b) => {
+      const at = a.scheduledAt ? new Date(a.scheduledAt).getTime() : Infinity;
+      const bt = b.scheduledAt ? new Date(b.scheduledAt).getTime() : Infinity;
+      if (at !== bt) return at - bt;
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    });
+  const activeEntries = entries
+    .filter((e) => e.source === "focus-active" && e.status !== "completed")
+    .sort(
+      (a, b) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    );
+
+  const completedEntries = entries
+    .filter(
+      (e) =>
+        e.status === "completed" &&
+        (e.source === "focus-anchor" || e.source === "focus-active"),
+    )
+    .sort((a, b) => {
+      const at = a.completedAt ? new Date(a.completedAt).getTime() : 0;
+      const bt = b.completedAt ? new Date(b.completedAt).getTime() : 0;
+      return bt - at;
+    });
 
   const currentCustomTab = customTabs.find((t) => t.id === activeTab);
   const customTabEntries = entries.filter((e) => e.tabId === activeTab);
