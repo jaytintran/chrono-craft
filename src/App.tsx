@@ -626,6 +626,7 @@ export default function App() {
         await appDb.put("habits", {
           ...existing,
           ...habitData,
+          updatedAt: now,
         });
         return;
       }
@@ -640,10 +641,27 @@ export default function App() {
       customDays: habitData.customDays,
       color: habitData.color || "#6366F1",
       createdAt: now,
+      updatedAt: now,
+    });
+  };
+
+  const handleCreateHabit = () => {
+    setSheetMode({
+      type: "habit",
+      data: {
+        scheduleType: "everyday",
+        color: "#6366F1",
+      },
+      logs: [],
+      isNew: true,
     });
   };
 
   const handleDeleteHabit = async (id: string) => {
+    const relatedLogs = habitLogs.filter((l) => l.habitId === id);
+    for (const log of relatedLogs) {
+      await softDelete("habit_logs", log.id);
+    }
     await softDelete("habits", id);
   };
 
@@ -1317,14 +1335,7 @@ export default function App() {
                   isNew: false,
                 })
               }
-              onOpenCreateHabit={() =>
-                setSheetMode({
-                  type: "habit",
-                  data: { scheduleType: "everyday", color: "#6366F1" },
-                  logs: [],
-                  isNew: true,
-                })
-              }
+              onOpenCreateHabit={handleCreateHabit}
             />
           )}
 

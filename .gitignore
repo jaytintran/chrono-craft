@@ -1,6 +1,9 @@
 node_modules/
 build/
 dist/
+public/
+resources/
+scripts/
 android/
 coverage/
 .DS_Store

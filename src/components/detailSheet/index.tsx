@@ -50,6 +50,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedSnapshotRef = useRef<string>("");
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isHabitTitleValid, setIsHabitTitleValid] = useState(false);
 
   useEffect(() => {
     savedSnapshotRef.current = "";
@@ -78,10 +79,10 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
             sheetMode.type === "note"
               ? noteRef
               : sheetMode.type === "event"
-                ? eventRef
-                : sheetMode.type === "habit"
-                  ? habitRef
-                  : itemRef;
+              ? eventRef
+              : sheetMode.type === "habit"
+              ? habitRef
+              : itemRef;
           const draft = ref.current?.collect();
           if (draft) {
             if (sheetMode.type === "note") onSaveNote?.(draft as Partial<Note>);
@@ -198,6 +199,14 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
     commitOnce();
   };
 
+  const handleCreateHabitSubmit = () => {
+    if (!sheetMode || sheetMode.type !== "habit" || !sheetMode.isNew) return;
+    const draft = habitRef.current?.collect();
+    if (!draft || !draft.title?.trim()) return;
+    onSaveHabit?.(draft);
+    onClose();
+  };
+
   const header = (
     <div className="flex items-center justify-between gap-3 px-4 md:px-6 py-3 md:py-4 border-b border-soft shrink-0">
       <div className="flex items-center gap-2 min-w-0">
@@ -222,6 +231,17 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
+        {sheetMode.type === "habit" && sheetMode.isNew && (
+          <button
+            type="button"
+            onClick={handleCreateHabitSubmit}
+            disabled={!isHabitTitleValid}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed text-accent-fg text-xs font-semibold shadow-xs transition-colors"
+          >
+            <Check className="w-3.5 h-3.5" />
+            <span>Create</span>
+          </button>
+        )}
         {!sheetMode.isNew && sheetMode.data.id && (
           <button
             type="button"
@@ -297,7 +317,13 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
           data={sheetMode.data}
           logs={sheetMode.logs}
           isNew={sheetMode.isNew}
-          onDirty={scheduleAutosave}
+          onDirty={() => {
+            if (sheetMode.isNew) {
+              setIsHabitTitleValid(habitRef.current?.isTitleValid() ?? false);
+            } else {
+              scheduleAutosave();
+            }
+          }}
         />
       )}
       {sheetMode.type === "list_item" && (

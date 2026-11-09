@@ -2,9 +2,11 @@ import React, { useState, useEffect } from "react";
 import { Check, Flame, BarChart2 } from "lucide-react";
 import { Habit, HabitLog, HabitScheduleType } from "../../types";
 import { DAYS_OF_WEEK, PRESET_COLORS } from "./types";
+import { toLocalDateKey } from "@/utils/date";
 
 export interface HabitFormHandle {
   collect: () => Partial<Habit>;
+  isTitleValid: () => boolean;
 }
 
 interface HabitFormProps {
@@ -39,22 +41,23 @@ export const HabitForm = React.forwardRef<HabitFormHandle, HabitFormProps>(
     React.useImperativeHandle(ref, () => ({
       collect: () => ({
         id: data.id,
-        title: title.trim() || "Untitled Habit",
+        title: title.trim(),
         description,
         color,
         scheduleType,
         customDays: scheduleType === "custom" ? customDays : undefined,
       }),
+      isTitleValid: () => title.trim().length > 0,
     }));
 
     const logDatesSet = new Set(logs.map((l) => l.date));
     let currentStreak = 0;
     const today = new Date();
     let checkDate = new Date(today);
-    const todayStr = today.toISOString().split("T")[0];
+    const todayStr = toLocalDateKey(today);
     if (!logDatesSet.has(todayStr)) checkDate.setDate(checkDate.getDate() - 1);
     while (true) {
-      const dStr = checkDate.toISOString().split("T")[0];
+      const dStr = toLocalDateKey(checkDate);
       if (logDatesSet.has(dStr)) {
         currentStreak++;
         checkDate.setDate(checkDate.getDate() - 1);
@@ -69,7 +72,7 @@ export const HabitForm = React.forwardRef<HabitFormHandle, HabitFormProps>(
     for (let i = 29; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
-      const dStr = d.toISOString().split("T")[0];
+      const dStr = toLocalDateKey(d);
       past30Days.push({
         dateStr: dStr,
         dayNum: d.getDate(),
@@ -180,7 +183,9 @@ export const HabitForm = React.forwardRef<HabitFormHandle, HabitFormProps>(
                 {past30Days.map((d) => (
                   <div
                     key={d.dateStr}
-                    title={`${d.dateStr}: ${d.completed ? "Completed" : "Missed"}`}
+                    title={`${d.dateStr}: ${
+                      d.completed ? "Completed" : "Missed"
+                    }`}
                     className={`h-5 rounded-xs flex items-center justify-center text-[9px] font-mono transition-colors ${
                       d.completed ? "text-white" : "bg-hover text-muted"
                     }`}
