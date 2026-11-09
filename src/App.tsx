@@ -277,7 +277,10 @@ export default function App() {
   }, [settings.gistSync, runAutoPull]);
 
   // Resolve "tl_<id>" or "<id>" to the Timeline entry that owns a note/event
-  const findLinkedEntry = (id: string | undefined, type: "note" | "event") => {
+  const findLinkedEntry = (
+    id: string | undefined,
+    type: "note" | "event" | "log",
+  ) => {
     if (!id) return undefined;
     const entryId = id.startsWith("tl_") ? id.slice(3) : id;
     return entries.find((e) => e.id === entryId && e.type === type);
@@ -521,19 +524,38 @@ export default function App() {
     const now = new Date().toISOString();
 
     // 1. Timeline-born note → write back to the entries store
-    const linked = findLinkedEntry(noteData.id, "note");
-    if (linked) {
+    const linkedNote = findLinkedEntry(noteData.id, "note");
+    if (linkedNote) {
       await appDb.put("entries", {
-        ...linked,
-        title: noteData.title ?? linked.title,
-        tags: noteData.tags ?? linked.tags,
+        ...linkedNote,
+        title: noteData.title ?? linkedNote.title,
+        tags: noteData.tags ?? linkedNote.tags,
         metadata: {
-          ...linked.metadata,
-          notes: noteData.content ?? linked.metadata?.notes,
+          ...linkedNote.metadata,
+          notes: noteData.content ?? linkedNote.metadata?.notes,
           listId: noteData.listIds
             ? noteData.listIds[0]
-            : linked.metadata?.listId,
-          isPinned: noteData.isPinned ?? linked.metadata?.isPinned,
+            : linkedNote.metadata?.listId,
+          isPinned: noteData.isPinned ?? linkedNote.metadata?.isPinned,
+        },
+      });
+      return;
+    }
+
+    // 1b. Timeline-born log → same writeback, but `type: "log"` is preserved
+    //     because we spread `linkedLog` (which already has type: "log").
+    const linkedLog = findLinkedEntry(noteData.id, "log");
+    if (linkedLog) {
+      await appDb.put("entries", {
+        ...linkedLog,
+        title: noteData.title ?? linkedLog.title,
+        tags: noteData.tags ?? linkedLog.tags,
+        metadata: {
+          ...linkedLog.metadata,
+          notes: noteData.content ?? linkedLog.metadata?.notes,
+          listId: noteData.listIds
+            ? noteData.listIds[0]
+            : linkedLog.metadata?.listId,
         },
       });
       return;
@@ -554,9 +576,17 @@ export default function App() {
   };
 
   const handleDeleteNote = async (id: string) => {
-    const linked = findLinkedEntry(id, "note");
-    if (linked) await softDelete("entries", linked.id);
-    else await softDelete("notes", id);
+    const linkedNote = findLinkedEntry(id, "note");
+    if (linkedNote) {
+      await softDelete("entries", linkedNote.id);
+      return;
+    }
+    const linkedLog = findLinkedEntry(id, "log");
+    if (linkedLog) {
+      await softDelete("entries", linkedLog.id);
+      return;
+    }
+    await softDelete("notes", id);
   };
 
   // Events
@@ -702,6 +732,19 @@ export default function App() {
         setSheetMode({
           type: "event",
           data: buildEventSheetData(item),
+          isNew: false,
+        });
+      } else if (item.type === "log") {
+        // Logs use the note-style editor, but stay type: "log" — the save
+        // path (handleSaveNote → linkedLog branch) preserves that.
+        setSheetMode({
+          type: "note",
+          data: {
+            id: item.id,
+            title: item.title,
+            content: item.metadata?.notes || "",
+            tags: item.tags,
+          },
           isNew: false,
         });
       } else {

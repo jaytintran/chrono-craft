@@ -55,16 +55,28 @@ export const InlineTitle: React.FC<InlineTitleProps> = ({
 
   if (!editing) {
     if (isMobile) {
-      // No stopPropagation: the tap bubbles up to the card and opens the Detail Sheet
-      return <span className={`min-w-0 ${className}`}>{value}</span>;
+      // No stopPropagation: the tap bubbles up to the card and opens the Detail Sheet.
+      // Wrap instead of truncate so long titles stay fully readable.
+      // We strip the caller's truncate class and add wrap-friendly ones.
+      return (
+        <span
+          className={`min-w-0 !whitespace-normal !overflow-visible !text-clip break-words ${className.replace(
+            /\btruncate\b/g,
+            "",
+          )}`}
+        >
+          {value}
+        </span>
+      );
     }
+    // Desktop unchanged
     return (
       <span
         role="button"
         tabIndex={0}
         title="Click to edit title"
         onClick={(e) => {
-          e.stopPropagation(); // don't trigger the card's Detail Sheet
+          e.stopPropagation();
           setEditing(true);
         }}
         onKeyDown={(e) => {

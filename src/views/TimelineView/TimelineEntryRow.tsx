@@ -84,7 +84,7 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
 
   const saveEntryTitle = (next: string, restorePrefix = false) => {
     const prefix = restorePrefix
-      ? (entry.title.match(/^Completed habit:\s*/i)?.[0] ?? "")
+      ? entry.title.match(/^Completed habit:\s*/i)?.[0] ?? ""
       : "";
     onUpdateEntryTitle?.(entry.id, prefix + next);
   };
@@ -174,7 +174,7 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
           <Hourglass className="w-4 h-4 animate-pulse" />
         </div>
         <div className="flex-1 p-3 rounded-xl bg-accent/10 border border-accent/30 flex items-center justify-between text-xs text-accent">
-          <div className="flex items-center gap-2 font-mono">
+          <div className="flex items-center gap-2 font-mono min-w-0">
             <span className="font-bold uppercase tracking-wider text-[11px] px-1.5 py-0.5 rounded bg-accent/20">
               BLOCK START
             </span>
@@ -203,7 +203,9 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
   // ========== TIME BLOCK END ==========
   if (isTimeBlockMarker === "end") {
     const durationMins = entry.timeBlock?.durationMinutes || 0;
-    const durationText = `${Math.floor(durationMins / 60)}h ${durationMins % 60}m`;
+    const durationText = `${Math.floor(durationMins / 60)}h ${
+      durationMins % 60
+    }m`;
     return (
       <div
         onContextMenu={handleContextMenu}
@@ -213,7 +215,7 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
           <Clock className="w-4 h-4" />
         </div>
         <div className="flex-1 p-3 rounded-xl bg-accent/5 border border-dashed border-accent/30 flex items-center justify-between text-xs text-accent">
-          <div className="flex items-center gap-2 font-mono">
+          <div className="flex items-center gap-2 font-mono min-w-0">
             <span className="font-bold uppercase tracking-wider text-[10px] px-1.5 py-0.5 rounded bg-accent/10">
               BLOCK END
             </span>
@@ -275,14 +277,16 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
         </button>
         <div
           onClick={isNoteOrEvent ? handleTitleClick : undefined}
-          className={`flex-1 px-3 py-2 rounded-xl bg-raised border border-soft shadow-2xs hover:border-accent/40 transition-all ${isNoteOrEvent ? "cursor-pointer" : ""}`}
+          className={`flex-1 min-w-0 px-3 py-2 rounded-xl bg-raised border border-soft shadow-2xs hover:border-accent/40 transition-all ${
+            isNoteOrEvent ? "cursor-pointer" : ""
+          }`}
         >
           <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 min-w-0 flex-1">
+            <div className="flex items-start gap-2 min-w-0 flex-1">
               <InlineTitle
                 value={getCleanTitle()}
                 onSave={(t) => saveEntryTitle(t, true)}
-                className={`text-xs font-semibold truncate ${
+                className={`text-xs font-semibold md:truncate ${
                   isCompleted && entry.type === "task"
                     ? "line-through text-muted"
                     : "text-primary"
@@ -379,7 +383,9 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
             : "bg-raised border border-soft shadow-md"
         } ${
           entry.type === "task"
-            ? `cursor-pointer ${isFlat ? "" : "hover:scale-110 hover:border-success"}`
+            ? `cursor-pointer ${
+                isFlat ? "" : "hover:scale-110 hover:border-success"
+              }`
             : "cursor-default"
         }`}
       >
@@ -387,7 +393,7 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
       </button>
       <div
         onClick={isNoteOrEvent ? handleTitleClick : undefined}
-        className={`flex-1 transition-all ${
+        className={`flex-1 min-w-0 transition-all ${
           displayMode === "flat"
             ? "py-1.5 px-2 -mx-2 rounded-lg hover:bg-hover/70"
             : "p-4 rounded-xl bg-raised border border-soft shadow-xs hover:border-accent/40 hover:shadow-md"
@@ -399,7 +405,7 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
               <InlineTitle
                 value={entry.title}
                 onSave={(t) => saveEntryTitle(t)}
-                className={`text-sm font-semibold truncate ${
+                className={`text-sm font-semibold md:truncate ${
                   isCompleted && entry.type === "task"
                     ? "line-through text-muted"
                     : "text-primary"
@@ -480,7 +486,7 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
             </button>
           </div>
         </div>
-        {showEntryContent && isNoteOrEvent && getEntryContent() && (
+        {showEntryContent && getEntryContent() && (
           <RichContent
             content={getEntryContent()}
             className="mt-3 pt-3 border-t border-soft text-xs text-secondary leading-relaxed"
