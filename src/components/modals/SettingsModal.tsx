@@ -91,6 +91,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [autoSync, setAutoSync] = useState(
     settings.gistSync?.autoSyncOnStart ?? false,
   );
+  const [autoPullOnFocus, setAutoPullOnFocus] = useState(
+    settings.gistSync?.autoPullOnFocus ?? false,
+  );
+
   const [tombstoneStats, setTombstoneStats] = useState<{
     total: number;
     stale: number;
@@ -112,6 +116,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     setGistToken(settings.gistSync?.token ?? "");
     setGistId(settings.gistSync?.gistId ?? "");
     setAutoSync(settings.gistSync?.autoSyncOnStart ?? false);
+    setAutoPullOnFocus(settings.gistSync?.autoPullOnFocus ?? false);
     setPurgeStatus(null);
     setIsPurging(false);
 
@@ -561,6 +566,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           token: gistToken.trim(),
                           gistId: gistId.trim(),
                           autoSyncOnStart: autoSync,
+                          autoPullOnFocus: autoPullOnFocus,
                         },
                       })
                     }
@@ -592,6 +598,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           token: gistToken.trim(),
                           gistId: gistId.trim(),
                           autoSyncOnStart: autoSync,
+                          autoPullOnFocus: autoPullOnFocus,
                         },
                       })
                     }
@@ -600,38 +607,87 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   />
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-secondary">
-                    Auto-sync on app start
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const next = !autoSync;
-                      setAutoSync(next);
-                      onUpdateSettings({
-                        gistSync: {
-                          ...(settings.gistSync ?? {
-                            enabled: true,
-                            token: "",
-                            gistId: "",
-                          }),
-                          token: gistToken.trim(),
-                          gistId: gistId.trim(),
-                          autoSyncOnStart: next,
-                        },
-                      });
-                    }}
-                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
-                      autoSync ? "bg-accent" : "bg-strong"
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition ${
-                        autoSync ? "translate-x-4" : "translate-x-0"
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <span className="text-xs text-secondary block">
+                        Auto-pull on app start
+                      </span>
+                      <p className="text-[10px] text-muted">
+                        Pull remote changes once when the app launches.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = !autoSync;
+                        setAutoSync(next);
+                        onUpdateSettings({
+                          gistSync: {
+                            ...(settings.gistSync ?? {
+                              enabled: true,
+                              token: "",
+                              gistId: "",
+                            }),
+                            token: gistToken.trim(),
+                            gistId: gistId.trim(),
+                            autoSyncOnStart: next,
+                            autoPullOnFocus: autoPullOnFocus,
+                          },
+                        });
+                      }}
+                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+                        autoSync ? "bg-accent" : "bg-strong"
                       }`}
-                    />
-                  </button>
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition ${
+                          autoSync ? "translate-x-4" : "translate-x-0"
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <span className="text-xs text-secondary block">
+                        Auto-pull when returning to the app
+                      </span>
+                      <p className="text-[10px] text-muted">
+                        Pull after the tab has been hidden for 5+ minutes.
+                        Pulls, never pushes.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = !autoPullOnFocus;
+                        setAutoPullOnFocus(next);
+                        onUpdateSettings({
+                          gistSync: {
+                            ...(settings.gistSync ?? {
+                              enabled: true,
+                              token: "",
+                              gistId: "",
+                            }),
+                            token: gistToken.trim(),
+                            gistId: gistId.trim(),
+                            autoSyncOnStart: autoSync,
+                            autoPullOnFocus: next,
+                          },
+                        });
+                      }}
+                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+                        autoPullOnFocus ? "bg-accent" : "bg-strong"
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition ${
+                          autoPullOnFocus ? "translate-x-4" : "translate-x-0"
+                        }`}
+                      />
+                    </button>
+                  </div>
                 </div>
               </div>
 

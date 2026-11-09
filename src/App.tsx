@@ -3,7 +3,7 @@
  * Coordinates offline IndexedDB reactive state across Focus, Timeline, Notes, Events, Habits, and Lists.
  */
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   ActiveView,
   AppSettings,
@@ -26,6 +26,7 @@ import {
   syncWithGist,
   pushToGist,
   pullFromGist,
+  pullFromGistCoalesced,
   purgeOldTombstones,
 } from "./services/gistSync";
 
@@ -71,6 +72,10 @@ export default function App() {
   // Gist Sync State
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncResult, setLastSyncResult] = useState<string | null>(null);
+  // Auto-pull coordination
+  const hiddenSinceRef = useRef<number | null>(null);
+  const pendingAutoPullRef = useRef(false);
+  const isAutoPullRef = useRef(false);
 
   // Modals & Sheets State
   const [sheetMode, setSheetMode] = useState<DetailSheetMode>(null);
@@ -140,6 +145,37 @@ export default function App() {
     }
   }, [selectedListId]);
 
+  // Run auto pull from Gist
+  const runAutoPull = useCallback(async () => {
+    const cfg = settings.gistSync;
+    if (!cfg?.token || !cfg.gistId) return;
+
+    // Defer if an editor is currently open so we don't overwrite an unsaved draft
+    if (sheetMode !== null && !sheetMode.isNew) {
+      pendingAutoPullRef.current = true;
+      return;
+    }
+
+    isAutoPullRef.current = true;
+    setIsSyncing(true);
+    try {
+      const { pulled } = await pullFromGistCoalesced(cfg.token, cfg.gistId);
+      await appDb.updateSettings({
+        gistSync: {
+          ...cfg,
+          lastSyncedAt: new Date().toISOString(),
+        },
+      });
+      if (pulled > 0)
+        setLastSyncResult(`Pulled ${pulled} new/updated records.`);
+    } catch (err: any) {
+      setLastSyncResult(`Pull failed: ${err?.message ?? String(err)}`);
+    } finally {
+      isAutoPullRef.current = false;
+      setIsSyncing(false);
+    }
+  }, [settings.gistSync, sheetMode]);
+
   // Subscribe to DB mutations
   useEffect(() => {
     refreshData();
@@ -204,6 +240,41 @@ export default function App() {
 
     applyNativeTheme(isDark ? "dark" : "light");
   }, [settings.theme, settings.themeFlavor]);
+
+  // Auto pull from Gist on app start
+  useEffect(() => {
+    if (!isLoaded) return;
+    if (!settings.gistSync?.autoSyncOnStart) return;
+    if (!settings.gistSync?.token || !settings.gistSync?.gistId) return;
+
+    runAutoPull();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded]);
+
+  // Auto pull from Gist on visibility change
+  useEffect(() => {
+    const MIN_HIDDEN_MS = 5 * 60 * 1000;
+
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        hiddenSinceRef.current = Date.now();
+        return;
+      }
+      // "visible"
+      const hiddenAt = hiddenSinceRef.current;
+      hiddenSinceRef.current = null;
+      if (hiddenAt === null) return;
+      if (Date.now() - hiddenAt < MIN_HIDDEN_MS) return;
+
+      if (!settings.gistSync?.autoPullOnFocus) return;
+      if (!settings.gistSync?.token || !settings.gistSync?.gistId) return;
+
+      runAutoPull();
+    };
+
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [settings.gistSync, runAutoPull]);
 
   // Resolve "tl_<id>" or "<id>" to the Timeline entry that owns a note/event
   const findLinkedEntry = (id: string | undefined, type: "note" | "event") => {
@@ -277,6 +348,7 @@ export default function App() {
       title: entry.title || "Untitled Entry",
       scheduledAt: entry.scheduledAt,
       createdAt: entry.createdAt || now,
+      updatedAt: now,
       completedAt: entry.completedAt,
       status: entry.status || "pending",
       source: entry.source || "timeline",
@@ -366,12 +438,14 @@ export default function App() {
 
   // Custom Focus Tabs
   const handleCreateCustomTab = async (tab: Partial<CustomFocusTab>) => {
+    const now = new Date().toISOString();
     const id = "tab_" + Date.now();
     await appDb.put<CustomFocusTab>("custom_tabs", {
       id,
       name: tab.name || "New Tab",
       bgColor: tab.bgColor || "#4F46E5",
       createdAt: new Date().toISOString(),
+      updatedAt: now,
     });
   };
 
@@ -809,6 +883,8 @@ export default function App() {
   // Lists & List Items
   const handleCreateList = async (listData: Partial<CustomList>) => {
     const id = "list_" + Date.now();
+    const now = new Date().toISOString();
+
     await appDb.put<CustomList>("lists", {
       id,
       name: listData.name || "New List",
@@ -817,12 +893,14 @@ export default function App() {
       icon: listData.icon || "Folder",
       color: listData.color || "#6366F1",
       createdAt: new Date().toISOString(),
+      updatedAt: now,
     });
     setSelectedListId(id);
     setActiveView("lists");
   };
 
   const handleAddListItem = async (item: Partial<ListItem>) => {
+    const now = new Date().toISOString();
     const id =
       "item_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
     await appDb.put<ListItem>("list_items", {
@@ -835,6 +913,7 @@ export default function App() {
       notes: item.notes,
       dueDate: item.dueDate,
       createdAt: new Date().toISOString(),
+      updatedAt: now,
     });
   };
 
@@ -1295,7 +1374,14 @@ export default function App() {
       <DetailSheet
         sheetMode={sheetMode}
         availableLists={lists}
-        onClose={() => setSheetMode(null)}
+        onClose={() => {
+          setSheetMode(null);
+          if (pendingAutoPullRef.current) {
+            pendingAutoPullRef.current = false;
+            // Let sheetMode become null in state first, then run the deferred pull
+            setTimeout(() => runAutoPull(), 0);
+          }
+        }}
         onSaveNote={handleSaveNote}
         onDeleteNote={handleDeleteNote}
         onSaveEvent={handleSaveEvent}

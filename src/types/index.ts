@@ -24,6 +24,7 @@ export interface TimelineEntry {
   title: string;
   scheduledAt?: string; // ISO string
   createdAt: string; // ISO string
+  updatedAt?: string;
   completedAt?: string; // ISO string
   status: EntryStatus;
   source: EntrySource;
@@ -67,6 +68,7 @@ export interface CalendarEvent {
   tags: string[];
   listIds: string[];
   createdAt: string;
+  updatedAt?: string;
   isAchievement?: boolean;
   completedAt?: string; // attended
   missedAt?: string; // didn't attend
@@ -88,6 +90,7 @@ export interface Habit {
   customDays?: number[]; // 0 = Sun, 1 = Mon, 2 = Tue, ..., 6 = Sat
   color: string;
   createdAt: string;
+  updatedAt?: string;
   targetCount?: number;
   deletedAt?: string;
 }
@@ -97,6 +100,7 @@ export interface HabitLog {
   habitId: string;
   date: string; // YYYY-MM-DD
   completedAt: string; // ISO string
+  updatedAt?: string;
   deletedAt?: string;
 }
 
@@ -121,6 +125,7 @@ export interface ListItem {
   notes?: string;
   dueDate?: string;
   createdAt: string;
+  updatedAt?: string;
   deletedAt?: string;
 }
 
@@ -132,6 +137,7 @@ export interface CustomList {
   icon: string;
   color: string;
   createdAt: string;
+  updatedAt?: string;
   deletedAt?: string;
 }
 
@@ -140,6 +146,7 @@ export interface CustomFocusTab {
   name: string;
   bgColor: string; // e.g. '#6366F1'
   createdAt: string;
+  updatedAt?: string;
   deletedAt?: string;
 }
 
@@ -181,6 +188,7 @@ export interface AppSettings {
     gistId: string; // "" = create new on first push
     lastSyncedAt?: string;
     autoSyncOnStart?: boolean;
+    autoPullOnFocus?: boolean;
   };
 }
 

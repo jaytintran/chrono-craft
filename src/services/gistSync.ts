@@ -41,6 +41,26 @@ const SYNC_STORES = [
   "scratchpad",
 ] as const;
 
+// ---------- Guard Pull Deduplication ----------
+
+let _pullInFlight: Promise<{ pulled: number }> | null = null;
+
+/**
+ * Pull from the gist, coalescing concurrent calls.
+ * If a pull is already in flight, returns that same promise so callers
+ * share the result instead of issuing duplicate HTTP requests.
+ */
+export async function pullFromGistCoalesced(
+  token: string,
+  gistId: string,
+): Promise<{ pulled: number }> {
+  if (_pullInFlight) return _pullInFlight;
+  _pullInFlight = pullFromGist(token, gistId).finally(() => {
+    _pullInFlight = null;
+  });
+  return _pullInFlight;
+}
+
 // ---------- helpers ----------
 
 async function ghFetch(
