@@ -6,6 +6,10 @@ interface MetaRowProps {
   tags: string[];
   listIds: string[];
   availableLists: CustomList[];
+  /** Per-list tag pools keyed by listId; used for suggestions. */
+  listTagsById?: Map<string, string[]>;
+  /** Workspace-wide tag fallback when the item has no listIds. */
+  allTags?: string[];
   onToggleListId: (listId: string) => void;
   onAddTag: (tag: string) => void;
   onRemoveTag: (tag: string) => void;
@@ -15,6 +19,8 @@ export const MetaRow: React.FC<MetaRowProps> = ({
   tags,
   listIds,
   availableLists,
+  listTagsById,
+  allTags = [],
   onToggleListId,
   onAddTag,
   onRemoveTag,
@@ -22,10 +28,43 @@ export const MetaRow: React.FC<MetaRowProps> = ({
   const [tagInput, setTagInput] = useState("");
   const [listMenuOpen, setListMenuOpen] = useState(false);
 
+  const [tagFocused, setTagFocused] = useState(false);
+  const [tagHighlight, setTagHighlight] = useState(0);
+
+  // Union of tag pools for every list this item is linked to.
+  // Falls back to the workspace-wide pool when there are no listIds.
+  const tagPool = React.useMemo(() => {
+    const set = new Set<string>();
+    if (listIds.length > 0 && listTagsById) {
+      for (const id of listIds) {
+        const bucket = listTagsById.get(id);
+        if (bucket) for (const t of bucket) set.add(t);
+      }
+      return Array.from(set).sort((a, b) => a.localeCompare(b));
+    }
+    return allTags;
+  }, [listIds, listTagsById, allTags]);
+
+  // Filtered + already-assigned-filtered suggestions, capped at 6.
+  const tagSuggestions = React.useMemo(() => {
+    const q = tagInput.trim().replace(/^#/, "").toLowerCase();
+    return tagPool
+      .filter((t) => !tags.includes(t))
+      .filter((t) => (q ? t.toLowerCase().startsWith(q) : true))
+      .slice(0, 6);
+  }, [tagPool, tags, tagInput]);
+
+  const acceptTagSuggestion = (t: string) => {
+    if (!tags.includes(t)) onAddTag(t);
+    setTagInput("");
+    setTagHighlight(0);
+  };
+
   const commitTag = () => {
     const clean = tagInput.trim().replace(/^#/, "").toLowerCase();
     if (clean && !tags.includes(clean)) onAddTag(clean);
     setTagInput("");
+    setTagHighlight(0);
   };
 
   return (
@@ -106,20 +145,86 @@ export const MetaRow: React.FC<MetaRowProps> = ({
         )}
       </div>
 
-      <input
-        type="text"
-        value={tagInput}
-        onChange={(e) => setTagInput(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
+      <div className="relative">
+        <input
+          type="text"
+          value={tagInput}
+          onChange={(e) => {
+            setTagInput(e.target.value);
+            setTagHighlight(0);
+          }}
+          onFocus={() => setTagFocused(true)}
+          onBlur={() => {
+            setTimeout(() => setTagFocused(false), 120);
             commitTag();
-          }
-        }}
-        onBlur={commitTag}
-        placeholder="+ Tag"
-        className="w-16 focus:w-32 transition-all bg-transparent text-[11px] font-mono text-secondary placeholder-muted focus:outline-none px-1 py-1"
-      />
+          }}
+          onKeyDown={(e) => {
+            if (tagFocused && tagSuggestions.length > 0) {
+              if (e.key === "ArrowDown") {
+                e.preventDefault();
+                setTagHighlight((i) => (i + 1) % tagSuggestions.length);
+                return;
+              }
+              if (e.key === "ArrowUp") {
+                e.preventDefault();
+                setTagHighlight(
+                  (i) =>
+                    (i - 1 + tagSuggestions.length) % tagSuggestions.length,
+                );
+                return;
+              }
+              if (e.key === "Enter" && tagInput.trim()) {
+                e.preventDefault();
+                const picked = tagSuggestions[tagHighlight];
+                if (picked) acceptTagSuggestion(picked);
+                else commitTag();
+                return;
+              }
+              if (e.key === "Tab" && tagSuggestions[tagHighlight]) {
+                e.preventDefault();
+                acceptTagSuggestion(tagSuggestions[tagHighlight]);
+                return;
+              }
+              if (e.key === "Escape") {
+                setTagFocused(false);
+                return;
+              }
+            }
+            if (e.key === "Enter") {
+              e.preventDefault();
+              commitTag();
+            }
+          }}
+          placeholder="+ Tag"
+          className="w-16 focus:w-32 transition-all bg-transparent text-[11px] font-mono text-secondary placeholder-muted focus:outline-none px-1 py-1"
+        />
+
+        {tagFocused && tagSuggestions.length > 0 && (
+          <div className="absolute left-0 top-full mt-1 z-30 min-w-[160px] max-w-[220px] rounded-lg bg-raised border border-soft shadow-2xl p-1 animate-scaleUp">
+            <div className="px-2 pt-1 pb-1 text-[10px] font-mono uppercase tracking-wider text-muted">
+              {listIds.length > 0 ? "Tags from this list" : "Tags in workspace"}
+            </div>
+            {tagSuggestions.map((t, i) => (
+              <button
+                key={t}
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  acceptTagSuggestion(t);
+                }}
+                onMouseEnter={() => setTagHighlight(i)}
+                className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-md text-xs font-mono text-left transition-colors ${
+                  i === tagHighlight
+                    ? "bg-accent/15 text-accent"
+                    : "text-secondary hover:bg-hover"
+                }`}
+              >
+                <span>#{t}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

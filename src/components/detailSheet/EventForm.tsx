@@ -13,17 +13,21 @@ export interface EventFormHandle {
 interface EventFormProps {
   data: Partial<CalendarEvent>;
   availableLists: CustomList[];
+  listTagsById?: Map<string, string[]>;
+  allTags?: string[];
   onDirty?: () => void;
 }
 
 export const EventForm = React.forwardRef<EventFormHandle, EventFormProps>(
-  ({ data, availableLists, onDirty }, ref) => {
+  ({ data, availableLists, listTagsById, allTags, onDirty }, ref) => {
     const defaultStart = data.startAt ? new Date(data.startAt) : new Date();
-    const defaultEnd = data.endAt ? new Date(data.endAt) : (() => {
-      const e = new Date(defaultStart);
-      e.setHours(e.getHours() + 1);
-      return e;
-    })();
+    const defaultEnd = data.endAt
+      ? new Date(data.endAt)
+      : (() => {
+          const e = new Date(defaultStart);
+          e.setHours(e.getHours() + 1);
+          return e;
+        })();
 
     const [title, setTitle] = useState(data.title || "");
     const [description, setDescription] = useState(data.description || "");
@@ -35,7 +39,9 @@ export const EventForm = React.forwardRef<EventFormHandle, EventFormProps>(
     );
     const [tags, setTags] = useState<string[]>(data.tags || []);
     const [listIds, setListIds] = useState<string[]>(data.listIds || []);
-    const [isAchievement, setIsAchievement] = useState(data.isAchievement || false);
+    const [isAchievement, setIsAchievement] = useState(
+      data.isAchievement || false,
+    );
     const lastIdRef = useRef(data.id);
 
     useEffect(() => {
@@ -250,7 +256,9 @@ export const EventForm = React.forwardRef<EventFormHandle, EventFormProps>(
                   onChange={(e) =>
                     handleEndChange(e.target.value, splitDT(endAt).t)
                   }
-                  className={`${dtInput} flex-1 ${endInvalid ? "!border-danger" : ""}`}
+                  className={`${dtInput} flex-1 ${
+                    endInvalid ? "!border-danger" : ""
+                  }`}
                 />
                 <input
                   type="time"
@@ -258,7 +266,9 @@ export const EventForm = React.forwardRef<EventFormHandle, EventFormProps>(
                   onChange={(e) =>
                     handleEndChange(splitDT(endAt).d, e.target.value)
                   }
-                  className={`${dtInput} w-28 ${endInvalid ? "!border-danger" : ""}`}
+                  className={`${dtInput} w-28 ${
+                    endInvalid ? "!border-danger" : ""
+                  }`}
                 />
               </div>
               <div className="pb-3 space-y-1.5">
@@ -273,8 +283,8 @@ export const EventForm = React.forwardRef<EventFormHandle, EventFormProps>(
                       m < 60
                         ? `${m}m`
                         : m % 60 === 0
-                          ? `${m / 60}h`
-                          : `${Math.floor(m / 60)}h ${m % 60}m`;
+                        ? `${m / 60}h`
+                        : `${Math.floor(m / 60)}h ${m % 60}m`;
                     return (
                       <button
                         key={m}
@@ -301,6 +311,8 @@ export const EventForm = React.forwardRef<EventFormHandle, EventFormProps>(
             tags={tags}
             listIds={listIds}
             availableLists={availableLists}
+            listTagsById={listTagsById}
+            allTags={allTags}
             onToggleListId={(id) =>
               setListIds((prev) =>
                 prev.includes(id)

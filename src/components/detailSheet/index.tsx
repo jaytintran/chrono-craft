@@ -25,6 +25,10 @@ export type { DetailSheetMode } from "./types";
 interface DetailSheetProps {
   sheetMode: DetailSheetMode;
   availableLists: CustomList[];
+  /** Per-list tag pools, keyed by listId. Used by MetaRow autocomplete. */
+  listTagsById?: Map<string, string[]>;
+  /** Global tag pool (all lists). Fallback for notes/events with no listIds. */
+  allTags?: string[];
   onClose: () => void;
   onSaveNote?: (note: Partial<Note>) => void;
   onDeleteNote?: (id: string) => void;
@@ -41,6 +45,8 @@ interface DetailSheetProps {
 export const DetailSheet: React.FC<DetailSheetProps> = ({
   sheetMode,
   availableLists,
+  listTagsById,
+  allTags = [],
   onClose,
   onSaveNote,
   onDeleteNote,
@@ -359,6 +365,8 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
           ref={noteRef}
           data={sheetMode.data}
           availableLists={availableLists}
+          listTagsById={listTagsById}
+          allTags={allTags}
           onPinChange={setIsNotePinned}
           onDirty={scheduleAutosave}
         />
@@ -368,6 +376,8 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
           ref={eventRef}
           data={sheetMode.data}
           availableLists={availableLists}
+          listTagsById={listTagsById}
+          allTags={allTags}
           onDirty={scheduleAutosave}
         />
       )}
@@ -391,6 +401,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
           ref={itemRef}
           data={sheetMode.data}
           availableLists={availableLists}
+          existingTags={listTagsById?.get(sheetMode.data.listId ?? "") ?? []}
           onDirty={scheduleAutosave}
         />
       )}

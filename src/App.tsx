@@ -1227,6 +1227,25 @@ export default function App() {
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [notes, events, listItems, entries]);
 
+  // Compute avalable tags for Detal Sheet's Form
+  // Tags already used by any item in the same list (for TagAutocomplete suggestions)
+  const listTagsById = React.useMemo(() => {
+    const acc = new Map<string, Set<string>>();
+    for (const it of listItems) {
+      const bucket = acc.get(it.listId) ?? new Set<string>();
+      for (const t of it.tags ?? []) bucket.add(t);
+      acc.set(it.listId, bucket);
+    }
+    const out = new Map<string, string[]>();
+    for (const [k, v] of acc) {
+      out.set(
+        k,
+        Array.from(v).sort((a, b) => a.localeCompare(b)),
+      );
+    }
+    return out;
+  }, [listItems]);
+
   return (
     <div className="flex flex-col h-[100dvh] w-full bg-app text-primary antialiased overflow-hidden transition-colors selection:bg-accent/30 selection:text-accent">
       {/* 1. Global Header Navigation */}
@@ -1441,6 +1460,8 @@ export default function App() {
       <DetailSheet
         sheetMode={sheetMode}
         availableLists={lists}
+        listTagsById={listTagsById}
+        allTags={availableTags}
         onClose={() => {
           setSheetMode(null);
           if (pendingAutoPullRef.current) {

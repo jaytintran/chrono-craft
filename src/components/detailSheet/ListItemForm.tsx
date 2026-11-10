@@ -14,12 +14,13 @@ interface ListItemFormProps {
   data: Partial<ListItem>;
   availableLists: CustomList[];
   onDirty?: () => void;
+  existingTags?: string[];
 }
 
 export const ListItemForm = React.forwardRef<
   ListItemFormHandle,
   ListItemFormProps
->(({ data, availableLists, onDirty }, ref) => {
+>(({ data, availableLists, existingTags = [], onDirty }, ref) => {
   const [title, setTitle] = useState(data.title || "");
   const [subtitle, setSubtitle] = useState(data.subtitle || "");
   const [status, setStatus] = useState<ListItemStatus>(data.status || "inbox");
@@ -29,8 +30,11 @@ export const ListItemForm = React.forwardRef<
   const [listId, setListId] = useState(
     data.listId || availableLists[0]?.id || "",
   );
-  const [tagInput, setTagInput] = useState("");
   const lastIdRef = useRef(data.id);
+
+  const [tagInput, setTagInput] = useState("");
+  const [tagFocused, setTagFocused] = useState(false);
+  const [tagHighlight, setTagHighlight] = useState(0);
 
   useEffect(() => {
     if (lastIdRef.current !== data.id) {
@@ -64,7 +68,18 @@ export const ListItemForm = React.forwardRef<
         tags,
       }),
     }),
-    [data.id, data.listId, availableLists, listId, title, subtitle, status, notes, dueDate, tags],
+    [
+      data.id,
+      data.listId,
+      availableLists,
+      listId,
+      title,
+      subtitle,
+      status,
+      notes,
+      dueDate,
+      tags,
+    ],
   );
 
   const itemList = availableLists.find((l) => l.id === listId);
@@ -73,7 +88,9 @@ export const ListItemForm = React.forwardRef<
     status === "todo" ? "inbox" : status === "done" ? "completed" : status;
 
   const toYMD = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+      d.getDate(),
+    ).padStart(2, "0")}`;
   const dueInDays = (n: number) => {
     const d = new Date();
     d.setDate(d.getDate() + n);
@@ -84,6 +101,22 @@ export const ListItemForm = React.forwardRef<
     const clean = tagInput.trim().replace(/^#/, "").toLowerCase();
     if (clean && !tags.includes(clean)) setTags((p) => [...p, clean]);
     setTagInput("");
+    setTagHighlight(0);
+  };
+
+  // Tag Suggestions Logic
+  const tagSuggestions = React.useMemo(() => {
+    const q = tagInput.trim().replace(/^#/, "").toLowerCase();
+    return existingTags
+      .filter((t) => !tags.includes(t))
+      .filter((t) => (q ? t.toLowerCase().startsWith(q) : true))
+      .slice(0, 6);
+  }, [existingTags, tags, tagInput]);
+
+  const acceptTagSuggestion = (t: string) => {
+    if (!tags.includes(t)) setTags((p) => [...p, t]);
+    setTagInput("");
+    setTagHighlight(0);
   };
 
   return (
@@ -193,20 +226,87 @@ export const ListItemForm = React.forwardRef<
             </button>
           </span>
         ))}
-        <input
-          type="text"
-          value={tagInput}
-          onChange={(e) => setTagInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
+        <div className="relative">
+          <input
+            type="text"
+            value={tagInput}
+            onChange={(e) => {
+              setTagInput(e.target.value);
+              setTagHighlight(0);
+            }}
+            onFocus={() => setTagFocused(true)}
+            onBlur={() => {
+              // Small delay so a click on a suggestion lands before blur fires
+              setTimeout(() => setTagFocused(false), 120);
               commitTag();
-            }
-          }}
-          onBlur={() => commitTag()}
-          placeholder="+ Tag"
-          className="w-16 focus:w-32 transition-all bg-transparent text-[11px] font-mono text-secondary placeholder-muted focus:outline-none px-1 py-1"
-        />
+            }}
+            onKeyDown={(e) => {
+              if (tagFocused && tagSuggestions.length > 0) {
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setTagHighlight((i) => (i + 1) % tagSuggestions.length);
+                  return;
+                }
+                if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setTagHighlight(
+                    (i) =>
+                      (i - 1 + tagSuggestions.length) % tagSuggestions.length,
+                  );
+                  return;
+                }
+                if (e.key === "Enter" && tagInput.trim()) {
+                  e.preventDefault();
+                  const picked = tagSuggestions[tagHighlight];
+                  if (picked) acceptTagSuggestion(picked);
+                  else commitTag();
+                  return;
+                }
+                if (e.key === "Tab" && tagSuggestions[tagHighlight]) {
+                  e.preventDefault();
+                  acceptTagSuggestion(tagSuggestions[tagHighlight]);
+                  return;
+                }
+                if (e.key === "Escape") {
+                  setTagFocused(false);
+                  return;
+                }
+              }
+              if (e.key === "Enter") {
+                e.preventDefault();
+                commitTag();
+              }
+            }}
+            placeholder="+ Tag"
+            className="w-16 focus:w-32 transition-all bg-transparent text-[11px] font-mono text-secondary placeholder-muted focus:outline-none px-1 py-1"
+          />
+
+          {tagFocused && tagSuggestions.length > 0 && (
+            <div className="absolute left-0 top-full mt-1 z-30 min-w-[160px] max-w-[220px] rounded-lg bg-raised border border-soft shadow-2xl p-1 animate-scaleUp">
+              <div className="px-2 pt-1 pb-1 text-[10px] font-mono uppercase tracking-wider text-muted">
+                Tags from this list
+              </div>
+              {tagSuggestions.map((t, i) => (
+                <button
+                  key={t}
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault(); // keep focus, avoid blur-before-click
+                    acceptTagSuggestion(t);
+                  }}
+                  onMouseEnter={() => setTagHighlight(i)}
+                  className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-md text-xs font-mono text-left transition-colors ${
+                    i === tagHighlight
+                      ? "bg-accent/15 text-accent"
+                      : "text-secondary hover:bg-hover"
+                  }`}
+                >
+                  <span>#{t}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <div>

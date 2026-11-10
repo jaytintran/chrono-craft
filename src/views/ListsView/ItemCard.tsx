@@ -12,6 +12,7 @@ import {
   MoreVertical,
 } from "lucide-react";
 import { ListItem, ListItemStatus } from "../../types";
+import { formatCreatedDate } from "./helpers";
 
 export type ItemViewMode = "stacked" | "grid" | "compact";
 
@@ -114,8 +115,8 @@ export const ItemCard: React.FC<ItemCardProps> = ({
               isCompleted
                 ? "text-muted"
                 : isDropped
-                  ? "text-danger/70"
-                  : "text-primary"
+                ? "text-danger/70"
+                : "text-primary"
             }`}
           >
             {item.title ? (
@@ -138,6 +139,14 @@ export const ItemCard: React.FC<ItemCardProps> = ({
           {item.dueDate && (
             <span className="text-[10px] font-mono text-info hidden sm:inline">
               {item.dueDate}
+            </span>
+          )}
+          {item.createdAt && (
+            <span
+              className="text-[10px] font-mono text-muted hidden md:inline"
+              title={`Created ${new Date(item.createdAt).toLocaleString()}`}
+            >
+              {formatCreatedDate(item.createdAt)}
             </span>
           )}
 
@@ -190,8 +199,8 @@ export const ItemCard: React.FC<ItemCardProps> = ({
                 isCompleted
                   ? "text-muted"
                   : isDropped
-                    ? "text-danger/70"
-                    : "text-primary"
+                  ? "text-danger/70"
+                  : "text-primary"
               }`}
             >
               {item.title ? (
@@ -220,6 +229,17 @@ export const ItemCard: React.FC<ItemCardProps> = ({
           <div className="flex items-center gap-2 pt-1 text-[10px] font-mono text-muted">
             {item.dueDate && (
               <span className="text-info">Due {item.dueDate}</span>
+            )}
+            {item.createdAt && (
+              <>
+                {item.dueDate && <span className="text-muted">·</span>}
+                <span
+                  className="text-muted"
+                  title={`Created ${new Date(item.createdAt).toLocaleString()}`}
+                >
+                  {formatCreatedDate(item.createdAt)}
+                </span>
+              </>
             )}
             {item.tags && item.tags.length > 0 && (
               <span className="text-secondary truncate">

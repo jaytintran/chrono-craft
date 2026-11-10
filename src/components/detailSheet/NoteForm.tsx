@@ -7,6 +7,8 @@ import { TitleInput } from "./TitleInput";
 interface NoteFormProps {
   data: Partial<Note>;
   availableLists: CustomList[];
+  listTagsById?: Map<string, string[]>;
+  allTags?: string[];
   /** Fires every time the pin state changes so the shell can update its header button. */
   onPinChange?: (pinned: boolean) => void;
   /** Fires whenever any field changes; parent uses this to schedule a debounced save. */
@@ -20,7 +22,10 @@ export interface NoteFormHandle {
 }
 
 export const NoteForm = React.forwardRef<NoteFormHandle, NoteFormProps>(
-  ({ data, availableLists, onPinChange, onDirty }, ref) => {
+  (
+    { data, availableLists, listTagsById, allTags, onPinChange, onDirty },
+    ref,
+  ) => {
     const [title, setTitle] = useState(data.title || "");
     const [content, setContent] = useState(data.content || "");
     const [tags, setTags] = useState<string[]>(data.tags || []);
@@ -94,6 +99,8 @@ export const NoteForm = React.forwardRef<NoteFormHandle, NoteFormProps>(
           tags={tags}
           listIds={listIds}
           availableLists={availableLists}
+          listTagsById={listTagsById}
+          allTags={allTags}
           onToggleListId={(id) =>
             setListIds((prev) =>
               prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
