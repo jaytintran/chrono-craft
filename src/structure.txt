@@ -15,6 +15,7 @@ C:.
 |   |       HabitForm.tsx
 |   |       index.tsx
 |   |       ListItemForm.tsx
+|   |       LogForm.tsx
 |   |       MetaRow.tsx
 |   |       NoteForm.tsx
 |   |       TitleInput.tsx
@@ -46,6 +47,7 @@ C:.
 |           MultiGroupFilterPopover.tsx
 |           SearchBar.tsx
 |           StatusPickerPopover.tsx
+|           ThemePicker.tsx
 |           
 +---hooks
 |       useIsMobile.ts
@@ -54,6 +56,7 @@ C:.
 |       
 +---services
 |       db.ts
+|       gistSync.ts
 |       nlpParser.ts
 |       
 +---types
