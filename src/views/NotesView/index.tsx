@@ -38,6 +38,8 @@ interface NotesFilterStorage {
 }
 
 const STORAGE_KEY = "chronocraft_notes_filter_options";
+const countWords = (html: string) =>
+  stripHtml(html).trim().split(/\s+/).filter(Boolean).length;
 
 export const NotesView: React.FC<NotesViewProps> = ({
   notes,
@@ -238,10 +240,17 @@ export const NotesView: React.FC<NotesViewProps> = ({
                       )}
                     </div>
 
-                    <RichContent
-                      content={note.content}
-                      className="text-xs text-secondary leading-relaxed font-sans"
-                    />
+                    <div className="relative">
+                      <RichContent
+                        content={note.content}
+                        className="text-xs text-secondary leading-relaxed font-sans line-clamp-6"
+                      />
+                      {/* Soft fade at the bottom edge to signal truncation */}
+                      <div
+                        aria-hidden
+                        className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-b from-transparent to-raised"
+                      />
+                    </div>
                   </div>
 
                   <div className="pt-2 border-t border-soft flex items-center justify-between text-xs text-muted font-mono">

@@ -359,11 +359,13 @@ export const EventsView: React.FC<EventsViewProps> = ({
                     isAchievement
                       ? "bg-warning/5 border-warning/40 hover:border-warning/70"
                       : isUnresolved
-                        ? "bg-warning/[0.03] border-warning/30 hover:border-warning/60"
-                        : isToday
-                          ? "bg-danger/5 border-danger/30 hover:border-danger/60"
-                          : "bg-raised border-soft hover:border-accent/40"
-                  } ${isDone ? "opacity-50" : ""} ${isMissed ? "opacity-40" : ""}`}
+                      ? "bg-warning/[0.03] border-warning/30 hover:border-warning/60"
+                      : isToday
+                      ? "bg-danger/5 border-danger/30 hover:border-danger/60"
+                      : "bg-raised border-soft hover:border-accent/40"
+                  } ${isDone ? "opacity-50" : ""} ${
+                    isMissed ? "opacity-40" : ""
+                  }`}
                 >
                   <button
                     type="button"
@@ -376,19 +378,19 @@ export const EventsView: React.FC<EventsViewProps> = ({
                       isDone
                         ? "Attended — click to clear"
                         : isMissed
-                          ? "Missed — click to clear"
-                          : "Click to mark as attended"
+                        ? "Missed — click to clear"
+                        : "Click to mark as attended"
                     }
                     className={`flex flex-col items-center justify-center w-14 py-2 rounded-xl shrink-0 text-center border transition-colors cursor-pointer ${
                       isAchievement
                         ? "bg-warning/10 border-warning/40 text-warning hover:border-warning/70"
                         : isDone
-                          ? "bg-success/10 border-success/40 text-success hover:border-success/70"
-                          : isMissed
-                            ? "bg-danger/10 border-danger/40 text-danger hover:border-danger/70"
-                            : isUnresolved
-                              ? "bg-warning/10 border-warning/40 hover:border-warning/70"
-                              : "bg-sunken border-soft hover:border-success/60"
+                        ? "bg-success/10 border-success/40 text-success hover:border-success/70"
+                        : isMissed
+                        ? "bg-danger/10 border-danger/40 text-danger hover:border-danger/70"
+                        : isUnresolved
+                        ? "bg-warning/10 border-warning/40 hover:border-warning/70"
+                        : "bg-sunken border-soft hover:border-success/60"
                     }`}
                   >
                     <span
@@ -396,10 +398,10 @@ export const EventsView: React.FC<EventsViewProps> = ({
                         isAchievement
                           ? "text-warning/80"
                           : isDone
-                            ? "text-success/80"
-                            : isMissed
-                              ? "text-danger/80"
-                              : "text-muted"
+                          ? "text-success/80"
+                          : isMissed
+                          ? "text-danger/80"
+                          : "text-muted"
                       }`}
                     >
                       {new Date(event.startAt).toLocaleDateString("en-US", {
@@ -411,10 +413,10 @@ export const EventsView: React.FC<EventsViewProps> = ({
                         isAchievement
                           ? "text-warning"
                           : isDone
-                            ? "text-success"
-                            : isMissed
-                              ? "text-danger"
-                              : "text-primary"
+                          ? "text-success"
+                          : isMissed
+                          ? "text-danger"
+                          : "text-primary"
                       }`}
                     >
                       {new Date(event.startAt).getDate()}
@@ -428,8 +430,8 @@ export const EventsView: React.FC<EventsViewProps> = ({
                           isAchievement
                             ? "text-warning"
                             : isDone || isMissed
-                              ? "line-through text-muted"
-                              : "text-primary group-hover:text-danger"
+                            ? "line-through text-muted"
+                            : "text-primary group-hover:text-danger"
                         }`}
                       >
                         {event.title ? (
@@ -485,7 +487,7 @@ export const EventsView: React.FC<EventsViewProps> = ({
                     {event.description && (
                       <RichContent
                         content={event.description}
-                        className="text-xs text-secondary leading-relaxed font-sans"
+                        className="text-xs text-secondary leading-relaxed font-sans line-clamp-4"
                       />
                     )}
 
