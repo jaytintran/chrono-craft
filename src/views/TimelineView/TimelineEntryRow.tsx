@@ -12,6 +12,7 @@ import {
   Clock,
   Hourglass,
   MoreVertical,
+  Minus,
 } from "lucide-react";
 import { TimelineEntry, TimelineDisplayMode } from "../../types";
 import { InlineTitle } from "../../components/ui/InlineTitle";
@@ -417,19 +418,16 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
                 }`}
               />
             </div>
-            <div className="flex flex-wrap max-sm:text-[10px]  items-center gap-2 max-sm:gap-0.5 max-sm:tracking-tight text-xs text-secondary font-mono">
-              {/* <span className="uppercase text-accent font-semibold font-sans">
-                {entry.source === "habit"
-                  ? "HABIT LOG"
-                  : entry.type.toUpperCase()}
-              </span> */}
-
+            <div className="flex flex-wrap max-sm:text-[10px] items-center gap-2 max-sm:gap-0.5 max-sm:tracking-tight text-xs text-secondary font-mono">
               {entry.scheduledAt && (
                 <>
                   {/* <span className="text-muted">·</span> */}
                   <span className="flex items-center gap-1 text-info">
                     {/* <Clock className="w-3 h-3" /> */}
-                    <span>Scheduled {formatTimestamp(entry.scheduledAt)}</span>
+                    <span>
+                      {isLog ? "At " : "Scheduled "}
+                      {formatTimestamp(entry.scheduledAt)}
+                    </span>
                   </span>
                 </>
               )}
@@ -449,21 +447,22 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
               {isCompleted && entry.scheduledAt && entry.completedAt && (
                 <>
                   <span className="text-muted">·</span>
-                  <span className="text-success font-medium">
-                    Done at {formatTimestamp(entry.completedAt)}
+                  <span className="text-success font-medium tracking-tight">
+                    Done {formatTimestamp(entry.completedAt)}
                   </span>
                 </>
               )}
               {!isCompleted && !entry.scheduledAt && entry.createdAt && (
                 <>
-                  <span className="text-muted">·</span>
+                  {/* <span className="text-muted">·</span> */}
                   <span>Created {formatTimestamp(entry.createdAt)}</span>
                 </>
               )}
-              {isLog && entry.createdAt && (
+              {isLog && entry.createdAt && !entry.scheduledAt && (
                 <>
                   {/* <span className="text-muted">·</span> */}
                   <span>
+                    Created{" "}
                     {toLocalDateKey(new Date(entry.createdAt)) ===
                     selectedDateStr
                       ? formatTimestamp(entry.createdAt)
@@ -473,6 +472,7 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
               )}
             </div>
 
+            {/* Flat Mode should also display tags (Optional) */}
             <div className="flex flex-wrap max-sm:text-[10px]  items-center gap-2 max-sm:gap-0.5 max-sm:tracking-tight text-xs text-secondary font-mono">
               {entry.tags.length > 0 && (
                 <>
