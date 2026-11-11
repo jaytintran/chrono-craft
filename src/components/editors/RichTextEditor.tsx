@@ -3,9 +3,15 @@ import { createPortal } from "react-dom";
 import { useEditor, EditorContent, Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
+import { TaskList, TaskItem } from "@tiptap/extension-list";
+import {
+  CodeBlockWithLanguage,
+  SUPPORTED_LANGUAGES,
+} from "./CodeBlockLanguage";
+import { autoDetectLanguage } from "@/utils/highlight";
+
 import { Markdown } from "@tiptap/markdown";
 import { SlashCommand, SlashState } from "./SlashCommand";
-import { TaskList, TaskItem } from "@tiptap/extension-list";
 import {
   Bold,
   Italic,
@@ -70,6 +76,37 @@ const Btn = ({
   </button>
 );
 
+const CodeLanguagePicker: React.FC<{ editor: Editor }> = ({ editor }) => {
+  // Re-render on every transaction (isActive changes) — the parent
+  // already sets shouldRerenderOnTransaction: true.
+  const isCodeBlock = editor.isActive("codeBlock");
+  if (!isCodeBlock) return null;
+
+  const current =
+    (editor.getAttributes("codeBlock").language as string | undefined) ??
+    "plaintext";
+
+  return (
+    <select
+      value={current}
+      onChange={(e) =>
+        editor
+          .chain()
+          .focus()
+          .updateAttributes("codeBlock", { language: e.target.value })
+          .run()
+      }
+      className="px-2 py-0.5 rounded-md bg-raised border border-soft text-[11px] font-mono text-primary focus:outline-none focus:border-accent cursor-pointer"
+    >
+      {SUPPORTED_LANGUAGES.map((lang) => (
+        <option key={lang} value={lang}>
+          {lang}
+        </option>
+      ))}
+    </select>
+  );
+};
+
 interface Props {
   value: string;
   onChange: (html: string) => void;
@@ -116,7 +153,8 @@ export const RichTextEditor: React.FC<Props> = ({
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({ codeBlock: false }),
+      CodeBlockWithLanguage,
       TaskList,
       TaskItem.configure({ nested: true }),
       Markdown,
@@ -133,13 +171,29 @@ export const RichTextEditor: React.FC<Props> = ({
     shouldRerenderOnTransaction: true,
     editorProps: {
       attributes: {
-        style: `min-height:${typeof minHeight === "number" ? `${minHeight}px` : minHeight}`,
+        style: `min-height:${
+          typeof minHeight === "number" ? `${minHeight}px` : minHeight
+        }`,
       },
       handlePaste: (_view, event) => {
         const ed = editorRef.current;
         const text = event.clipboardData?.getData("text/plain") ?? "";
         const html = event.clipboardData?.getData("text/html") ?? "";
-        if (!ed || html || ed.isActive("codeBlock") || !looksLikeMarkdown(text))
+
+        // If pasting inside an active codeBlock, check if we should auto-detect language once
+        if (ed && ed.isActive("codeBlock")) {
+          const currentLang = ed.getAttributes("codeBlock").language;
+          // Only auto-detect if language is currently unset or plaintext
+          if (!currentLang || currentLang === "plaintext") {
+            const detected = autoDetectLanguage(text);
+            if (detected) {
+              ed.chain().updateAttributes("codeBlock", { language: detected }).run();
+            }
+          }
+          return false; // let TipTap insert the text content normally
+        }
+
+        if (!ed || html || !looksLikeMarkdown(text))
           return false;
         ed.commands.insertContent(text, { contentType: "markdown" });
         return true;
@@ -241,6 +295,10 @@ export const RichTextEditor: React.FC<Props> = ({
         >
           <Quote className="w-4 h-4" />
         </Btn>
+
+        {/* NEW: language selector, only visible inside code blocks */}
+        <CodeLanguagePicker editor={editor} />
+
         <span className="ml-auto flex items-center gap-0.5">
           <Btn
             title="Undo"

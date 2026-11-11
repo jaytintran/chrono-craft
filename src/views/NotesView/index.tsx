@@ -255,7 +255,8 @@ export const NotesView: React.FC<NotesViewProps> = ({
 
                   <div className="pt-2 border-t border-soft flex items-center justify-between text-xs text-muted font-mono">
                     <div className="flex flex-wrap items-center gap-1.5 min-w-0">
-                      <span>{formatDate(note.updatedAt)}</span>
+                      <span>Created: {formatDate(note.createdAt)} | </span>
+                      <span>Updated: {formatDate(note.updatedAt)}</span>
                       {note.tags.length > 0 && (
                         <>
                           <span>·</span>
