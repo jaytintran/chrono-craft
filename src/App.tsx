@@ -901,19 +901,26 @@ export default function App() {
   };
 
   const handleContextMenuDelete = async (item: any) => {
-    const isListItem =
-      typeof item.listId === "string" &&
-      item.subtitle !== undefined &&
-      item.startAt === undefined &&
-      item.content === undefined;
-    if (isListItem) {
+    // Order matters — most specific shape first.
+    // 1. ListItem — has singular `listId` and NO `type` field.
+    if (typeof item.listId === "string" && item.type === undefined) {
       await handleDeleteListItem(item.id);
-    } else if (item.startAt !== undefined) {
+      return;
+    }
+    // 2. CalendarEvent — has `startAt` (never on TimelineEntry/Note/ListItem).
+    if (item.startAt !== undefined) {
       await handleDeleteEvent(item.id);
-    } else if (item.content !== undefined && item.type === undefined) {
-      await handleDeleteNote(item.id);
-    } else {
+      return;
+    }
+    // 3. TimelineEntry — always has `type`.
+    if (item.type !== undefined) {
       await handleDeleteEntry(item.id);
+      return;
+    }
+    // 4. Plain Note — has `content`, no `type`, no singular `listId`.
+    if (item.content !== undefined) {
+      await handleDeleteNote(item.id);
+      return;
     }
   };
 
