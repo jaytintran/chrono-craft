@@ -16,7 +16,6 @@ import {
   MinusCircle,
 } from "lucide-react";
 import { TimelineEntry } from "@/types";
-import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { TagEditorPanel } from "./TagEditorPanel";
 
 export interface ContextMenuTarget {
@@ -76,7 +75,6 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   const [isRescheduleOpen, setIsRescheduleOpen] = useState(false);
   const [tagInput, setTagInput] = useState("");
   const [currentTags, setCurrentTags] = useState<string[]>([]);
-  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -87,21 +85,19 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
 
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
-      if (isDeleteConfirmOpen) return;
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         onClose();
       }
     };
     if (isOpen) document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
-  }, [isOpen, onClose, isDeleteConfirmOpen]);
+  }, [isOpen, onClose]);
 
   useEffect(() => {
     if (!isOpen) {
       setIsRescheduleOpen(false);
       setTagInput("");
       setCurrentTags([]);
-      setIsDeleteConfirmOpen(false);
       setPanel("actions");
     } else if (target?.item) {
       setCurrentTags(target.item.tags || []);
@@ -154,6 +150,10 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   const closeAndRun = (fn: () => void) => {
     fn();
     onClose();
+  };
+
+  const handleDelete = () => {
+    closeAndRun(() => onDelete(item));
   };
 
   const rescheduleShortcut = (days: number) => {
@@ -319,7 +319,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
 
       <button
         type="button"
-        onClick={() => setIsDeleteConfirmOpen(true)}
+        onClick={handleDelete}
         className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-danger hover:bg-danger/10 transition-colors cursor-pointer font-semibold"
       >
         <Trash2 className="w-3.5 h-3.5" />
@@ -434,7 +434,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
       <div className="pt-2 pb-1">
         <button
           type="button"
-          onClick={() => setIsDeleteConfirmOpen(true)}
+          onClick={handleDelete}
           className="w-full flex items-center gap-3 py-2.5 px-2 text-sm font-semibold text-danger hover:bg-danger/10 rounded-xl transition-colors"
         >
           <Trash2 className={`w-4 h-4 ${ICON_COLOR.danger}`} />
@@ -511,30 +511,6 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
           </div>
         )}
       </div>
-
-      <ConfirmDialog
-        isOpen={isDeleteConfirmOpen}
-        title={`Delete this ${
-          item.type === "list_item" || item.listId !== undefined
-            ? "list item"
-            : item.type === "note"
-              ? "note"
-              : item.type === "event" || item.startAt !== undefined
-                ? "event"
-                : "entry"
-        }?`}
-        message="This permanently removes the item. This can't be undone."
-        confirmLabel="Delete"
-        onCancel={() => {
-          setIsDeleteConfirmOpen(false);
-          onClose();
-        }}
-        onConfirm={() => {
-          setIsDeleteConfirmOpen(false);
-          onDelete(item);
-          onClose();
-        }}
-      />
     </>
   );
 };
