@@ -42,6 +42,7 @@ export interface TimelineEntry {
     category?: "official" | "personal";
   };
   deletedAt?: string;
+  isAchievement?: boolean;
 }
 
 export interface Note {
@@ -127,6 +128,7 @@ export interface ListItem {
   createdAt: string;
   updatedAt?: string;
   deletedAt?: string;
+  isAchievement?: boolean;
 }
 
 export interface CustomList {
@@ -198,6 +200,7 @@ export type ActiveView =
   | "notes"
   | "events"
   | "habits"
+  | "achievements"
   | "lists";
 export type FocusTab = "today" | "scratchpad" | string; // string is custom tab ID
 

@@ -126,7 +126,6 @@ export const EventsView: React.FC<EventsViewProps> = ({
       };
     },
   );
-  const [showAchievementsOnly, setShowAchievementsOnly] = useState(false);
 
   useEffect(() => {
     try {
@@ -167,12 +166,6 @@ export const EventsView: React.FC<EventsViewProps> = ({
           .includes(searchQuery.toLowerCase());
 
       if (!matchesSearch) return false;
-
-      if (showAchievementsOnly) {
-        if (!ev.isAchievement) return false;
-      } else {
-        if (ev.isAchievement) return false;
-      }
 
       const evCategory = ev.category || "personal";
       if (
@@ -263,24 +256,6 @@ export const EventsView: React.FC<EventsViewProps> = ({
             <Plus className="w-4 h-4" />
             <span>New Event</span>
           </button>
-
-          <button
-            type="button"
-            onClick={() => setShowAchievementsOnly((v) => !v)}
-            title={
-              showAchievementsOnly
-                ? "Show all events"
-                : "Show achievements only"
-            }
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
-              showAchievementsOnly
-                ? "bg-warning/15 text-warning border-warning/40"
-                : "border-soft text-secondary hover:text-warning hover:border-warning/40"
-            }`}
-          >
-            <Trophy className="w-4 h-4" />
-            <span>Achievements</span>
-          </button>
         </div>
       </div>
 
@@ -317,8 +292,7 @@ export const EventsView: React.FC<EventsViewProps> = ({
         </div>
 
         <div className="text-xs font-mono text-muted tabular-nums">
-          {showAchievementsOnly ? "Achievements" : "Events"}:{" "}
-          {filteredEvents.length}
+          Events: {filteredEvents.length}
         </div>
       </div>
 
@@ -327,9 +301,8 @@ export const EventsView: React.FC<EventsViewProps> = ({
         <div className="max-w-6xl mx-auto space-y-4">
           {filteredEvents.length === 0 ? (
             <div className="p-12 text-center rounded-2xl border border-dashed border-soft text-xs text-muted">
-              {showAchievementsOnly
-                ? "No achievements yet. Promote a log, event, or completed task via its context menu."
-                : "No events found matching your active options. Try adjusting the category or timeframe."}
+              No events found matching your active options. Try adjusting the
+              category or timeframe.
             </div>
           ) : (
             filteredEvents.map((event) => {

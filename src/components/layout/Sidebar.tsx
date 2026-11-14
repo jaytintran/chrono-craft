@@ -18,6 +18,7 @@ import {
   GraduationCap,
   Folder,
   Database,
+  Trophy,
 } from "lucide-react";
 import { ActiveView, CustomList } from "@/types";
 
@@ -190,6 +191,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <span className="text-[10px] font-mono text-entity-orange">
             Matrix
           </span>
+        </button>
+
+        {/* 6. Achievements View */}
+        <button
+          type="button"
+          onClick={() => onSelectView("achievements")}
+          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all ${
+            activeView === "achievements"
+              ? "bg-accent text-accent-fg font-semibold shadow-xs shadow-accent/30"
+              : "text-secondary hover:bg-hover"
+          }`}
+        >
+          <div className="flex items-center gap-2.5">
+            <Trophy
+              className={`w-4 h-4 ${
+                activeView === "achievements"
+                  ? "text-accent-fg"
+                  : "text-warning"
+              }`}
+            />
+            <span>Achievements</span>
+          </div>
+          <span className="text-[10px] font-mono text-warning">Proud</span>
         </button>
       </div>
 

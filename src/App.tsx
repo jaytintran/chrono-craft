@@ -42,6 +42,8 @@ import { TimelineView } from "./views/TimelineView";
 import { NotesView } from "./views/NotesView";
 import { EventsView } from "./views/EventsView";
 import { HabitsView } from "./views/HabitsView";
+import { AchievementsView } from "./views/AchievementsView";
+import type { AchievementItem } from "./views/AchievementsView/helpers";
 import { ListsView } from "./views/ListsView";
 import { toLocalDateKey } from "./utils/date";
 import { applyNativeTheme } from "./utils/nativeTheme";
@@ -359,6 +361,7 @@ export default function App() {
       tabId: entry.tabId,
       timeBlock: entry.timeBlock,
       metadata: entry.metadata,
+      isAchievement: entry.isAchievement,
     };
     await appDb.put("entries", newEntry);
   };
@@ -707,6 +710,67 @@ export default function App() {
     return await appDb.toggleHabitDay(habitId, dateStr);
   };
 
+  const handleOpenAchievementDetail = (item: AchievementItem) => {
+    // ListItem
+    if (item.source === "list") {
+      setSheetMode({
+        type: "list_item",
+        data: item.original as ListItem,
+        isNew: false,
+      });
+      return;
+    }
+
+    // Event achievement: two possible origins —
+    //   (a) a real CalendarEvent from the `events` store
+    //   (b) a Timeline-born event stored in `entries` (has `type`)
+    if (item.source === "event") {
+      const original = item.original as any;
+      if (original.type !== undefined) {
+        // (b) Timeline-born event → convert to CalendarEvent shape
+        setSheetMode({
+          type: "event",
+          data: buildEventSheetData(original as TimelineEntry),
+          isNew: false,
+        });
+      } else {
+        // (a) Real CalendarEvent
+        setSheetMode({
+          type: "event",
+          data: original as CalendarEvent,
+          isNew: false,
+        });
+      }
+      return;
+    }
+
+    // log / focus — both live in the `entries` store
+    const entry = item.original as TimelineEntry;
+    if (entry.type === "log") {
+      setSheetMode({ type: "log", data: entry, isNew: false });
+    } else {
+      setSheetMode({
+        type: "note",
+        data: {
+          id: entry.id,
+          title: entry.title,
+          content: entry.metadata?.notes || "",
+          tags: entry.tags,
+        },
+        isNew: false,
+      });
+    }
+  };
+
+  const handleOpenAchievementContextMenu = (
+    item: AchievementItem,
+    pos: { x: number; y: number },
+  ) => {
+    setContextTarget({ item: item.original, type: "timeline" });
+    setContextPosition(pos);
+    setIsContextMenuOpen(true);
+  };
+
   // Universal Context Menu Actions
   const handleOpenContextMenu = (
     item: any,
@@ -924,31 +988,90 @@ export default function App() {
     }
   };
 
-  const handleMarkAchievement = (item: any) => {
-    // Build the pre-filled CalendarEvent draft
-    const draft: Partial<CalendarEvent> = {
-      title: item.title,
-      description:
-        item.metadata?.notes || item.description || item.content || "",
-      startAt:
-        item.scheduledAt ||
-        item.startAt ||
-        item.createdAt ||
-        new Date().toISOString(),
-      endAt:
-        item.completedAt ||
-        item.endAt ||
-        item.metadata?.endAt ||
-        new Date().toISOString(),
-      allDay: false,
-      category: "personal",
-      tags: item.tags || [],
-      listIds: [],
-      isAchievement: true,
-    };
+  const handleMarkAchievement = async (item: any) => {
+    const now = new Date().toISOString();
+    const next = !item.isAchievement;
 
-    // Open the DetailSheet in event mode, new=true
-    setSheetMode({ type: "event", data: draft, isNew: true });
+    // Event
+    if (item.startAt !== undefined) {
+      const existing = events.find((e) => e.id === item.id);
+      if (!existing) return;
+      await appDb.put("events", {
+        ...existing,
+        isAchievement: next,
+        updatedAt: now,
+      });
+      return;
+    }
+
+    // Timeline entry (log / focus task)
+    if (item.type !== undefined) {
+      const existing = entries.find((e) => e.id === item.id);
+      if (!existing) return;
+      await appDb.put("entries", {
+        ...existing,
+        isAchievement: next,
+        updatedAt: now,
+      });
+      return;
+    }
+  };
+
+  const handleToggleAchievement = async (id: string) => {
+    if (!sheetMode) return;
+    const now = new Date().toISOString();
+
+    if (sheetMode.type === "list_item") {
+      const existing = listItems.find((i) => i.id === id);
+      if (!existing) return;
+      const next = !existing.isAchievement;
+      await appDb.put("list_items", {
+        ...existing,
+        isAchievement: next,
+        updatedAt: now,
+      });
+      setSheetMode((prev) =>
+        prev && prev.type === "list_item" && prev.data.id === id
+          ? { ...prev, data: { ...prev.data, isAchievement: next } }
+          : prev,
+      );
+      return;
+    }
+
+    if (sheetMode.type === "event") {
+      const existing = events.find((e) => e.id === id);
+      if (!existing) return;
+      const next = !existing.isAchievement;
+      await appDb.put("events", {
+        ...existing,
+        isAchievement: next,
+        updatedAt: now,
+      });
+      setSheetMode((prev) =>
+        prev && prev.type === "event" && prev.data.id === id
+          ? { ...prev, data: { ...prev.data, isAchievement: next } }
+          : prev,
+      );
+      return;
+    }
+
+    if (sheetMode.type === "log" || sheetMode.type === "note") {
+      const existing = entries.find((e) => e.id === id);
+      if (!existing) return;
+      const next = !existing.isAchievement;
+      await appDb.put("entries", {
+        ...existing,
+        isAchievement: next,
+        updatedAt: now,
+      });
+      setSheetMode((prev) =>
+        prev &&
+        (prev.type === "log" || prev.type === "note") &&
+        prev.data.id === id
+          ? { ...prev, data: { ...prev.data, isAchievement: next } }
+          : prev,
+      );
+    }
   };
 
   // Lists & List Items
@@ -1421,6 +1544,17 @@ export default function App() {
             />
           )}
 
+          {activeView === "achievements" && (
+            <AchievementsView
+              listItems={listItems}
+              events={events}
+              entries={entries}
+              onAddAchievement={handleAddEntry}
+              onOpenDetail={handleOpenAchievementDetail}
+              onOpenContextMenu={handleOpenAchievementContextMenu}
+            />
+          )}
+
           {activeView === "lists" && (
             <ListsView
               lists={lists}
@@ -1486,6 +1620,7 @@ export default function App() {
         onSaveListItem={handleSaveListItem}
         onDeleteListItem={handleDeleteListItem}
         onSaveLog={handleSaveLog}
+        onToggleAchievement={handleToggleAchievement}
       />
       {/* 4. Settings & Workspace Backup Modal */}
       <SettingsModal

@@ -40,6 +40,7 @@ interface DetailSheetProps {
   onDeleteListItem?: (id: string) => void;
   onSaveLog?: (entry: Partial<TimelineEntry>) => void;
   onDeleteLog?: (id: string) => void; // optional; logs use onDeleteEntry via context menu
+  onToggleAchievement?: (id: string) => void;
 }
 
 export const DetailSheet: React.FC<DetailSheetProps> = ({
@@ -58,6 +59,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
   onDeleteListItem,
   onSaveLog,
   onDeleteLog,
+  onToggleAchievement,
 }) => {
   const noteRef = useRef<NoteFormHandle>(null);
   const eventRef = useRef<EventFormHandle>(null);
@@ -333,6 +335,23 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
             <Pin className="w-4 h-4" />
           </button>
         )}
+        {(sheetMode.type === "event" ||
+          sheetMode.type === "list_item" ||
+          sheetMode.type === "log" ||
+          sheetMode.type === "note") &&
+          (sheetMode.data as any).isAchievement === true &&
+          sheetMode.data.id &&
+          onToggleAchievement && (
+            <button
+              type="button"
+              onClick={() => onToggleAchievement(sheetMode.data.id!)}
+              title="Achievement — click to unmark"
+              aria-label="Unmark achievement"
+              className="p-1.5 rounded-lg border bg-warning/10 text-warning border-warning/30 hover:bg-warning/20 transition-colors"
+            >
+              <Trophy className="w-4 h-4" />
+            </button>
+          )}
         {sheetMode.type === "event" && sheetMode.data.completedAt && (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-success/10 text-success border border-success/30 text-[10px] font-mono uppercase tracking-wider">
             <Check className="w-3 h-3" /> Attended

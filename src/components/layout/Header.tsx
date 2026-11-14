@@ -16,6 +16,7 @@ import {
   FolderKanban,
   ArrowUpFromLine,
   ArrowDownToLine,
+  Trophy,
 } from "lucide-react";
 import { ActiveView, AppSettings } from "@/types";
 
@@ -110,8 +111,8 @@ const SyncControl: React.FC<SyncControlProps> = ({
     state === "error"
       ? "Sync Failed"
       : isSyncing
-        ? "Syncing…"
-        : `Synced ${formatAgo(settings.gistSync?.lastSyncedAt)}`;
+      ? "Syncing…"
+      : `Synced ${formatAgo(settings.gistSync?.lastSyncedAt)}`;
 
   const canPull = !!settings.gistSync?.gistId;
 
@@ -124,9 +125,9 @@ const SyncControl: React.FC<SyncControlProps> = ({
       {/* Status indicator (dot + label) */}
       <div className="flex items-center gap-1.5 min-w-0 shrink">
         <span
-          className={`w-1.5 h-1.5 rounded-full shrink-0 ${SYNC_DOT_CLASS[state]} ${
-            isSyncing ? "animate-pulse" : ""
-          }`}
+          className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+            SYNC_DOT_CLASS[state]
+          } ${isSyncing ? "animate-pulse" : ""}`}
         />
         <span
           className={`truncate ${
@@ -222,6 +223,11 @@ export const Header: React.FC<HeaderProps> = ({
       label: "Lists",
       icon: <FolderKanban className="w-4 h-4 text-success" />,
     },
+    {
+      id: "achievements",
+      label: "Tropies",
+      icon: <Trophy className="w-4 h-4 text-warning" />,
+    },
   ];
 
   const currentOption =
@@ -278,7 +284,10 @@ export const Header: React.FC<HeaderProps> = ({
           aria-label="Workspace views"
           className="md:hidden py-2 flex-1 min-w-0"
         >
-          <div role="tablist" className="flex w-full items-stretch">
+          <div
+            role="tablist"
+            className="flex w-full items-stretch overflow-x-auto scrollbar-none"
+          >
             {viewOptions.map((opt) => {
               const isActive = activeView === opt.id;
               return (
@@ -288,7 +297,7 @@ export const Header: React.FC<HeaderProps> = ({
                   role="tab"
                   aria-selected={isActive}
                   onClick={() => onSelectView(opt.id)}
-                  className={`flex-1 min-w-0 h-12 flex flex-col items-center justify-center gap-0.5 rounded-lg text-[9px] sm:text-[10px] font-semibold transition-all cursor-pointer ${
+                  className={`flex-1 min-w-[56px] shrink-0 h-12 flex flex-col items-center justify-center gap-0.5 rounded-lg text-[9px] sm:text-[10px] font-semibold transition-all cursor-pointer ${
                     isActive
                       ? "bg-raised text-primary shadow-xs"
                       : "text-secondary active:bg-hover"
@@ -303,6 +312,21 @@ export const Header: React.FC<HeaderProps> = ({
                 </button>
               );
             })}
+
+            {/* Achievement Tab */}
+            {/* <button
+              type="button"
+              onClick={() => onSelectView("achievements")}
+              title="Achievements"
+              aria-label="Achievements"
+              className={`md:hidden p-2 rounded-xl transition-colors cursor-pointer ${
+                activeView === "achievements"
+                  ? "text-warning bg-warning/10"
+                  : "text-secondary hover:text-warning hover:bg-hover"
+              }`}
+            >
+              <Trophy className="w-4 h-4" />
+            </button> */}
 
             {/* Settings tab — opens modal, never marked active */}
             <button

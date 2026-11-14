@@ -185,7 +185,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `chronocraft-backup-${new Date().toISOString().split("T")[0]}.json`;
+      a.download = `chronocraft-backup-${
+        new Date().toISOString().split("T")[0]
+      }.json`;
       a.click();
       URL.revokeObjectURL(url);
       setExportStatus("Export downloaded successfully!");
@@ -263,7 +265,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4">
-      <div className="relative w-full md:max-w-xl h-[100dvh] md:h-auto bg-raised rounded-t-3xl md:rounded-2xl shadow-2xl z-10 border-t md:border border-soft overflow-hidden flex flex-col max-h-none md:max-h-[90vh] animate-slideInBottom md:animate-scaleUp">
+      <div className="relative w-full md:max-w-xl h-[100dvh] md:h-auto bg-raised max-sm:rounded-none md:rounded-2xl shadow-2xl z-10 border-t md:border border-soft overflow-hidden flex flex-col max-h-none md:max-h-[90vh] animate-slideInBottom md:animate-scaleUp">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-3 md:py-4 border-b border-soft bg-sunken/50">
           <div>
@@ -950,8 +952,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     {isPurging
                       ? "Purging…"
                       : tombstoneStats?.stale === 0
-                        ? `Nothing to purge (${tombstoneStats.total} kept for sync safety)`
-                        : `Purge ${tombstoneStats?.stale} of ${tombstoneStats?.total} tombstones`}
+                      ? `Nothing to purge (${tombstoneStats.total} kept for sync safety)`
+                      : `Purge ${tombstoneStats?.stale} of ${tombstoneStats?.total} tombstones`}
                   </span>
                 </button>
 

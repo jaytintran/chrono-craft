@@ -128,10 +128,12 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
 
   const item = target.item;
   const itemTitle = item.title || "Untitled Item";
-  const canBeAchievement =
+  const isAchievementEligible =
+    item.startAt !== undefined || // ← real CalendarEvent
     item.type === "log" ||
     item.type === "event" ||
     (item.type === "task" && item.status === "completed");
+  const isAlreadyAchievement = item.isAchievement === true;
   const isEventItem = item.startAt !== undefined;
   const evDone = isEventItem && !!item.completedAt;
   const evMissed = isEventItem && !!item.missedAt;
@@ -217,14 +219,22 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
         <span>Edit Details</span>
       </button>
 
-      {canBeAchievement && onMarkAchievement && (
+      {isAchievementEligible && onMarkAchievement && (
         <button
           type="button"
           onClick={() => closeAndRun(() => onMarkAchievement(item))}
           className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-hover transition-colors cursor-pointer text-secondary font-medium"
         >
-          <Trophy className="w-3.5 h-3.5 text-warning" />
-          <span>Mark as Achievement</span>
+          <Trophy
+            className={`w-3.5 h-3.5 text-warning ${
+              isAlreadyAchievement ? "fill-warning/20" : ""
+            }`}
+          />
+          <span>
+            {isAlreadyAchievement
+              ? "Unmark Achievement"
+              : "Mark as Achievement"}
+          </span>
         </button>
       )}
 
@@ -349,14 +359,22 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
           <span>Duplicate Item</span>
         </button>
 
-        {canBeAchievement && onMarkAchievement && (
+        {isAchievementEligible && onMarkAchievement && (
           <button
             type="button"
             onClick={() => closeAndRun(() => onMarkAchievement(item))}
             className="w-full flex items-center gap-3 py-2.5 px-2 text-sm font-medium hover:bg-hover rounded-xl transition-colors"
           >
-            <Trophy className={`w-4 h-4 ${ICON_COLOR.achievement}`} />
-            <span>Mark as Achievement</span>
+            <Trophy
+              className={`w-4 h-4 ${ICON_COLOR.achievement} ${
+                isAlreadyAchievement ? "fill-warning/20" : ""
+              }`}
+            />
+            <span>
+              {isAlreadyAchievement
+                ? "Unmark Achievement"
+                : "Mark as Achievement"}
+            </span>
           </button>
         )}
       </div>

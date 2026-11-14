@@ -133,7 +133,6 @@ export const EventForm = React.forwardRef<EventFormHandle, EventFormProps>(
           category,
           tags,
           listIds: isAchievement ? [] : listIds,
-          isAchievement,
         }),
       }),
       [
