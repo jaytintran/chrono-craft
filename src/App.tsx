@@ -385,6 +385,19 @@ export default function App() {
     await softDelete("entries", entryId);
   };
 
+  const handleRemoveFromFocus = async (entryIds: string[]) => {
+    const now = new Date().toISOString();
+    for (const id of entryIds) {
+      const entry = entries.find((e) => e.id === id);
+      if (!entry) continue;
+      await appDb.put("entries", {
+        ...entry,
+        source: "timeline",
+        updatedAt: now,
+      });
+    }
+  };
+
   const handleUpdateEntryTime = async (entryId: string, newIso: string) => {
     const entry = entries.find((e) => e.id === entryId);
     if (!entry || !entry.type) return;
@@ -1433,6 +1446,7 @@ export default function App() {
               onOpenContextMenu={(item, pos) =>
                 handleOpenContextMenu(item, "focus", pos)
               }
+              onRemoveFromFocus={handleRemoveFromFocus}
             />
           )}
 

@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState, useEffect } from "react";
-import { Trophy, ChevronDown, SearchX } from "lucide-react";
+import { Trophy, CalendarRange, Layers, SearchX } from "lucide-react";
 import { NLPInputBar } from "@/components/NLPInputBar";
 import {
   AchievementItem,
@@ -10,6 +10,8 @@ import {
   groupByDay,
 } from "./helpers";
 import { AchievementRow } from "./AchievementRow";
+import { FilterSelect } from "@/components/ui/FilterSelect";
+
 import { CalendarEvent, ListItem, TimelineEntry } from "../../types";
 
 interface AchievementsViewProps {
@@ -100,45 +102,29 @@ export const AchievementsView: React.FC<AchievementsViewProps> = ({
       </div>
 
       {/* Filter row */}
-      <div className="px-6 py-2.5 border-b border-soft bg-sunken/70 flex flex-wrap items-center gap-3 shrink-0">
-        <div className="flex items-center p-0.5 rounded-xl bg-sunken border border-soft text-xs">
-          {TIME_CHIPS.map((chip) => {
-            const on = timeFilter === chip.id;
-            return (
-              <button
-                key={chip.id}
-                type="button"
-                onClick={() => setTimeFilter(chip.id)}
-                className={`px-2.5 py-1 rounded-lg font-semibold transition-colors cursor-pointer ${
-                  on
-                    ? "bg-accent/15 text-accent border border-accent/40"
-                    : "text-secondary hover:text-primary border border-transparent"
-                }`}
-              >
-                {chip.label}
-              </button>
-            );
-          })}
-        </div>
+      <div className="px-6 py-2.5 border-b border-soft bg-sunken/70 flex flex-wrap items-center justify-between gap-3 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <FilterSelect
+            icon={<CalendarRange className="w-3.5 h-3.5 text-muted" />}
+            value={timeFilter}
+            active={timeFilter !== "all"}
+            onChange={(v) => setTimeFilter(v as TimeFilter)}
+            options={TIME_CHIPS.map((c) => ({
+              value: c.id,
+              label: c.label,
+            }))}
+          />
 
-        <div className="flex items-center p-0.5 rounded-xl bg-sunken border border-soft text-xs">
-          {SOURCE_CHIPS.map((chip) => {
-            const on = sourceFilter === chip.id;
-            return (
-              <button
-                key={chip.id}
-                type="button"
-                onClick={() => setSourceFilter(chip.id)}
-                className={`px-2.5 py-1 rounded-lg font-semibold transition-colors cursor-pointer ${
-                  on
-                    ? "bg-accent/15 text-accent border border-accent/40"
-                    : "text-secondary hover:text-primary border border-transparent"
-                }`}
-              >
-                {chip.label}
-              </button>
-            );
-          })}
+          <FilterSelect
+            icon={<Layers className="w-3.5 h-3.5 text-muted" />}
+            value={sourceFilter}
+            active={sourceFilter !== "all"}
+            onChange={(v) => setSourceFilter(v as SourceFilter)}
+            options={SOURCE_CHIPS.map((c) => ({
+              value: c.id,
+              label: c.label,
+            }))}
+          />
         </div>
       </div>
 
@@ -160,7 +146,7 @@ export const AchievementsView: React.FC<AchievementsViewProps> = ({
             <div className="space-y-6">
               {grouped.map((group) => (
                 <section key={group.dateKey} className="relative">
-                  <div className="sticky top-0 z-10 -mx-2 px-2 py-1.5 mb-3 bg-app/90 backdrop-blur-md border-b border-soft/70">
+                  <div className="z-10 -mx-2 px-2 py-1.5 mb-3 bg-app/90 backdrop-blur-md border-b border-soft/70">
                     <span className="text-[11px] font-mono uppercase tracking-wider text-secondary">
                       {formatDayHeading(group.dateKey)}
                     </span>

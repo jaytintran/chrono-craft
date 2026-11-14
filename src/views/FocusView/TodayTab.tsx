@@ -8,10 +8,13 @@ import {
   Clock,
   Sliders,
   MoreVertical,
+  RotateCcw,
+  ChevronDown,
 } from "lucide-react";
 import { AppSettings, TimelineEntry } from "../../types";
 import { NLPInputBar } from "../../components/NLPInputBar";
 import { Keyboard } from "@capacitor/keyboard";
+import { toLocalDateKey } from "../../utils/date";
 
 interface TodayTabProps {
   anchorEntries: TimelineEntry[];
@@ -24,6 +27,7 @@ interface TodayTabProps {
   onDeleteEntry: (entryId: string) => Promise<void>;
   onOpenSettings: () => void;
   onOpenContextMenu?: (item: any, pos: { x: number; y: number }) => void;
+  onRemoveFromFocus: (entryIds: string[]) => Promise<void>;
 }
 
 export const TodayTab: React.FC<TodayTabProps> = ({
@@ -37,8 +41,36 @@ export const TodayTab: React.FC<TodayTabProps> = ({
   onDeleteEntry,
   onOpenSettings,
   onOpenContextMenu,
+  onRemoveFromFocus,
 }) => {
   const [keyboardHeight, setKeyboardHeight] = React.useState(0);
+  const [collapsedDays, setCollapsedDays] = React.useState<Set<string>>(() => {
+    if (typeof window === "undefined") return new Set();
+    try {
+      const raw = localStorage.getItem("chronocraft_focus_completed_collapsed");
+      if (raw) return new Set(JSON.parse(raw) as string[]);
+    } catch {
+      // ignore
+    }
+    return new Set();
+  });
+
+  const toggleDay = (dateKey: string) => {
+    setCollapsedDays((prev) => {
+      const next = new Set(prev);
+      if (next.has(dateKey)) next.delete(dateKey);
+      else next.add(dateKey);
+      try {
+        localStorage.setItem(
+          "chronocraft_focus_completed_collapsed",
+          JSON.stringify(Array.from(next)),
+        );
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
 
   React.useEffect(() => {
     let showHandle: { remove: () => void } | undefined;
@@ -67,6 +99,56 @@ export const TodayTab: React.FC<TodayTabProps> = ({
       minute: "2-digit",
     });
   };
+
+  // Group completed entries by local day key, most-recent day first
+  const groupCompletedByDay = (entries: TimelineEntry[]) => {
+    const map = new Map<string, TimelineEntry[]>();
+    for (const e of entries) {
+      const iso = e.completedAt ?? e.createdAt;
+      const key = toLocalDateKey(new Date(iso));
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(e);
+    }
+    return Array.from(map.entries())
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([dateKey, items]) => ({
+        dateKey,
+        items: items.sort((a, b) => {
+          const at = a.completedAt ? new Date(a.completedAt).getTime() : 0;
+          const bt = b.completedAt ? new Date(b.completedAt).getTime() : 0;
+          return bt - at;
+        }),
+      }));
+  };
+
+  const formatDayHeading = (dateKey: string) => {
+    const [y, m, d] = dateKey.split("-").map(Number);
+    const date = new Date(y, m - 1, d);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const dd = String(d).padStart(2, "0");
+    const mm = String(m).padStart(2, "0");
+
+    if (date.toDateString() === today.toDateString()) {
+      return `Today, ${dd}/${mm}`;
+    }
+    if (date.toDateString() === yesterday.toDateString()) {
+      return `Yesterday, ${dd}/${mm}`;
+    }
+    if (date.getFullYear() === today.getFullYear()) {
+      const weekday = date.toLocaleDateString("en-US", { weekday: "short" });
+      return `${weekday}, ${dd}/${mm}`;
+    }
+    const weekday = date.toLocaleDateString("en-US", { weekday: "short" });
+    return `${weekday}, ${dd}/${mm}/${y}`;
+  };
+
+  const completedGroups = React.useMemo(
+    () => groupCompletedByDay(completedEntries),
+    [completedEntries],
+  );
 
   return (
     <div
@@ -319,6 +401,7 @@ export const TodayTab: React.FC<TodayTabProps> = ({
       </div>
 
       {/* Completed */}
+      {/* Completed */}
       <div className="space-y-3 pt-4 border-t border-soft">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -327,13 +410,13 @@ export const TodayTab: React.FC<TodayTabProps> = ({
               Completed (Anchors & Active Work)
             </h3>
           </div>
-          <span className="text-[11px] font-mono text-success">
-            {completedEntries.length} Done Today
+          <span className="text-[11px] font-mono text-success tabular-nums">
+            {completedEntries.length} total
           </span>
         </div>
 
         <NLPInputBar
-          placeholder="Log completed actions here for gratitude..."
+          placeholder="Log completed or current action/step here for gratitude..."
           defaultType="log"
           showTypeSwitcher={false}
           compact={isMobile}
@@ -353,46 +436,125 @@ export const TodayTab: React.FC<TodayTabProps> = ({
           }}
         />
 
-        <div className="space-y-2 mt-2">
+        <div className="space-y-3 mt-2">
           {completedEntries.length === 0 ? (
             <div className="p-4 rounded-xl border border-dashed border-soft text-center text-xs text-muted">
               Checked-off tasks and anchors will appear here with completed
               timestamps and stream to your Timeline spine.
             </div>
           ) : (
-            completedEntries.map((done) => (
-              <div
-                key={done.id}
-                className="group flex items-center justify-between p-3.5 rounded-xl bg-sunken border border-soft opacity-80 hover:opacity-100 transition-all"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <button
-                    type="button"
-                    onClick={() => onToggleEntryStatus(done.id)}
-                    title="Click to restore to active queue"
-                    className="text-success hover:text-muted transition-colors shrink-0"
-                  >
-                    <CheckCircle2 className="w-4 h-4" />
-                  </button>
-                  <div className="min-w-0">
-                    <span className="text-sm text-muted line-through truncate block">
-                      {done.title}
-                    </span>
-                    <span className="text-[11px] font-mono text-success mt-0.5 block">
-                      Completed at {formatTime(done.completedAt)}
-                    </span>
-                  </div>
-                </div>
+            completedGroups.map((group) => {
+              const isCollapsed = collapsedDays.has(group.dateKey);
+              const ids = group.items.map((it) => it.id);
 
-                <button
-                  type="button"
-                  onClick={() => onDeleteEntry(done.id)}
-                  className="opacity-60 md:opacity-0 md:group-hover:opacity-100 p-1.5 text-muted hover:text-danger transition-opacity"
+              return (
+                <div
+                  key={group.dateKey}
+                  className="rounded-xl border border-soft bg-sunken/40 overflow-hidden"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ))
+                  {/* Day strip header */}
+                  <div className="flex items-center justify-between gap-2 px-3 py-2">
+                    <button
+                      type="button"
+                      onClick={() => toggleDay(group.dateKey)}
+                      aria-expanded={!isCollapsed}
+                      className="flex items-center gap-2 min-w-0 flex-1 text-left cursor-pointer"
+                    >
+                      <ChevronDown
+                        className={`w-3.5 h-3.5 text-muted shrink-0 transition-transform ${
+                          isCollapsed ? "-rotate-90" : ""
+                        }`}
+                      />
+                      <span className="text-[11px] font-mono uppercase tracking-wider text-secondary font-semibold">
+                        {formatDayHeading(group.dateKey)}
+                      </span>
+                      <span className="text-[10px] font-mono text-muted tabular-nums">
+                        · {group.items.length}
+                      </span>
+                    </button>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await onRemoveFromFocus(ids);
+                        }}
+                        title="Remove from Focus (entries stay in Timeline)"
+                        aria-label="Remove this day from Focus"
+                        className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-mono uppercase tracking-wider text-muted hover:text-warning hover:bg-warning/10 transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        <span>Clear from Focus View</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Rows */}
+                  {!isCollapsed && (
+                    <div className="px-3 pb-2 pt-1 space-y-2 border-t border-soft/60">
+                      {group.items.map((done) => {
+                        const isLog = done.type === "log";
+
+                        return (
+                          <div
+                            key={done.id}
+                            className="group flex items-center justify-between p-2.5 rounded-lg bg-raised border border-soft opacity-90 hover:opacity-100 transition-all"
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              {isLog ? (
+                                // Log: filled accent circle, non-interactive — a
+                                // record of what happened, not a task to toggle.
+                                <span className="shrink-0 text-accent">
+                                  <Circle className="w-4 h-4 fill-accent" />
+                                </span>
+                              ) : (
+                                // Completed task: tappable checkmark to reopen
+                                <button
+                                  type="button"
+                                  onClick={() => onToggleEntryStatus(done.id)}
+                                  title="Click to restore to active queue"
+                                  className="text-success hover:text-muted transition-colors shrink-0 cursor-pointer"
+                                >
+                                  <CheckCircle2 className="w-4 h-4" />
+                                </button>
+                              )}
+
+                              <div className="min-w-0">
+                                <span
+                                  className={`text-sm truncate block ${
+                                    isLog
+                                      ? "text-primary"
+                                      : "text-muted line-through"
+                                  }`}
+                                >
+                                  {done.title}
+                                </span>
+                                <span
+                                  className={`text-[11px] font-mono mt-0.5 block ${
+                                    isLog ? "text-secondary" : "text-success"
+                                  }`}
+                                >
+                                  {isLog ? "At " : "Done "}
+                                  {formatTime(done.completedAt)}
+                                </span>
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => onDeleteEntry(done.id)}
+                              className="opacity-60 md:opacity-0 md:group-hover:opacity-100 p-1.5 text-muted hover:text-danger transition-opacity cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })
           )}
         </div>
       </div>
