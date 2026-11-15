@@ -271,7 +271,7 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
           <Hourglass className="w-4 h-4 animate-pulse" />
         </div>
         <div className="flex-1 p-3 rounded-xl bg-accent/10 border border-accent/30 flex items-center justify-between text-xs text-accent">
-          <div className="flex items-center gap-2 font-mono min-w-0">
+          <div className="flex items-center gap-2 font-mono min-w-0 flex-1">
             <span className="font-bold uppercase tracking-wider text-[11px] px-1.5 py-0.5 rounded bg-accent/20">
               BLOCK START
             </span>
@@ -312,7 +312,7 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
           <Clock className="w-4 h-4" />
         </div>
         <div className="flex-1 p-3 rounded-xl bg-accent/5 border border-dashed border-accent/30 flex items-center justify-between text-xs text-accent">
-          <div className="flex items-center gap-2 font-mono min-w-0">
+          <div className="flex items-center gap-2 font-mono min-w-0 flex-1">
             <span className="font-bold uppercase tracking-wider text-[10px] px-1.5 py-0.5 rounded bg-accent/10">
               BLOCK END
             </span>
@@ -502,7 +502,7 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
       >
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1 min-w-0 flex-1">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
               <InlineTitle
                 value={entry.title}
                 onSave={(t) => saveEntryTitle(t)}

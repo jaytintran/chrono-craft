@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 interface InlineTitleProps {
   value: string;
@@ -20,7 +20,7 @@ export const InlineTitle: React.FC<InlineTitleProps> = ({
 }) => {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const cancelled = useRef(false);
 
   // Mobile: tap goes to the Detail Sheet instead of inline editing
@@ -47,6 +47,16 @@ export const InlineTitle: React.FC<InlineTitleProps> = ({
       inputRef.current?.select();
     }
   }, [editing]);
+
+  // Auto-grow: reset height, then set to scrollHeight so the textarea
+  // expands to fit the current draft on every keystroke.
+  useLayoutEffect(() => {
+    if (!editing) return;
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [draft, editing]);
 
   const commit = () => {
     setEditing(false);
@@ -103,22 +113,35 @@ export const InlineTitle: React.FC<InlineTitleProps> = ({
   }
 
   return (
-    <input
+    <textarea
       ref={inputRef}
+      rows={1}
       value={draft}
       enterKeyHint="done"
       onChange={(e) => setDraft(e.target.value)}
       onClick={(e) => e.stopPropagation()}
-      onBlur={commit} // save on leave
+      onBlur={commit}
       onKeyDown={(e) => {
         e.stopPropagation();
-        if (e.key === "Enter") inputRef.current?.blur();
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          inputRef.current?.blur();
+        } else if (e.key === "Enter" && e.shiftKey) {
+          // Prevent inserting a literal newline; titles are single-line by design.
+          e.preventDefault();
+        }
         if (e.key === "Escape") {
           cancelled.current = true;
           inputRef.current?.blur();
         }
       }}
-      className={`min-w-[10rem] flex-1 bg-transparent outline-none border-b border-accent/60 px-1 -mx-1 ${className}`}
+      className={`w-full bg-transparent outline-none border-b border-accent/60 px-1 -mx-1 resize-none leading-inherit ${className}`}
+      style={{
+        alignSelf: "flex-start",
+        flexBasis: 0,
+        flexGrow: 1,
+        minWidth: 0,
+      }}
     />
   );
 };

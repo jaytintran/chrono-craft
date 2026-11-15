@@ -213,7 +213,7 @@ export const TodayTab: React.FC<TodayTabProps> = ({
                 }}
                 className="group flex items-center justify-between p-3.5 rounded-xl bg-raised border border-soft hover:border-info/40 transition-all shadow-xs"
               >
-                <div className="flex items-center gap-3 min-w-0">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
                   <button
                     type="button"
                     onClick={() => onToggleEntryStatus(anchor.id)}
@@ -221,7 +221,7 @@ export const TodayTab: React.FC<TodayTabProps> = ({
                   >
                     <Circle className="w-4 h-4" />
                   </button>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <InlineTitle
                       value={anchor.title}
                       onSave={(t) => onUpdateEntryTitle?.(anchor.id, t)}
@@ -349,7 +349,7 @@ export const TodayTab: React.FC<TodayTabProps> = ({
                 }}
                 className="group flex items-center justify-between p-3.5 rounded-xl bg-raised border border-soft hover:border-accent/40 transition-all shadow-xs"
               >
-                <div className="flex items-center gap-3 min-w-0">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
                   <button
                     type="button"
                     onClick={() => onToggleEntryStatus(task.id)}
@@ -358,7 +358,7 @@ export const TodayTab: React.FC<TodayTabProps> = ({
                   >
                     <Circle className="w-4 h-4" />
                   </button>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <InlineTitle
                       value={task.title}
                       onSave={(t) => onUpdateEntryTitle?.(task.id, t)}
