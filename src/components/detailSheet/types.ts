@@ -21,6 +21,7 @@ export type DetailSheetMode =
   | { type: "habit"; data: Partial<Habit>; logs?: HabitLog[]; isNew?: boolean }
   | { type: "list_item"; data: Partial<ListItem>; isNew?: boolean }
   | { type: "log"; data: Partial<TimelineEntry>; isNew?: boolean }
+  | { type: "task"; data: Partial<TimelineEntry>; isNew?: boolean }
   | null;
 
 export const DAYS_OF_WEEK = [

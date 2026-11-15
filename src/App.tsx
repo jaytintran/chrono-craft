@@ -288,14 +288,19 @@ export default function App() {
     return entries.find((e) => e.id === entryId && e.type === type);
   };
 
-  const buildNoteSheetData = (entry: TimelineEntry): Partial<Note> => ({
-    id: entry.id,
-    title: entry.title,
-    content: entry.metadata?.notes || "",
-    tags: entry.tags,
-    listIds: entry.metadata?.listId ? [entry.metadata.listId] : [],
-    isPinned: entry.metadata?.isPinned ?? false,
-  });
+  const buildNoteSheetData = (entry: TimelineEntry): Partial<Note> =>
+    ({
+      id: entry.id,
+      title: entry.title,
+      content: entry.metadata?.notes || "",
+      tags: entry.tags,
+      listIds: entry.metadata?.listId ? [entry.metadata.listId] : [],
+      isPinned: entry.metadata?.isPinned ?? false,
+      // Note's own `createdAt` doesn't exist on `Partial<Note>` for the shell,
+      // but `TimelineEntry` has it and the timestamp row needs it for display.
+      ...(entry.createdAt ? { createdAt: entry.createdAt } : {}),
+      ...(entry.scheduledAt ? { scheduledAt: entry.scheduledAt } : {}),
+    } as Partial<Note>);
 
   const buildEventSheetData = (
     entry: TimelineEntry,
@@ -402,6 +407,16 @@ export default function App() {
     const entry = entries.find((e) => e.id === entryId);
     if (!entry || !entry.type) return;
     await appDb.put("entries", { ...entry, scheduledAt: newIso });
+  };
+
+  const handleUpdateEntryDate = async (entryId: string, newIso: string) => {
+    const entry = entries.find((e) => e.id === entryId);
+    if (!entry || !entry.type) return;
+    await appDb.put("entries", {
+      ...entry,
+      createdAt: newIso,
+      updatedAt: new Date().toISOString(),
+    });
   };
 
   const handleUpdateEntryTitle = async (entryId: string, newTitle: string) => {
@@ -542,10 +557,16 @@ export default function App() {
     // 1. Timeline-born note → write back to the entries store
     const linkedNote = findLinkedEntry(noteData.id, "note");
     if (linkedNote) {
+      const incomingScheduled = (noteData as { scheduledAt?: string })
+        .scheduledAt;
+      const incomingCreated = (noteData as { createdAt?: string }).createdAt;
+
       await appDb.put("entries", {
         ...linkedNote,
         title: noteData.title ?? linkedNote.title,
         tags: noteData.tags ?? linkedNote.tags,
+        createdAt: incomingCreated ?? linkedNote.createdAt,
+        scheduledAt: incomingScheduled ?? linkedNote.scheduledAt,
         metadata: {
           ...linkedNote.metadata,
           notes: noteData.content ?? linkedNote.metadata?.notes,
@@ -599,6 +620,24 @@ export default function App() {
     });
   };
 
+  const handleSaveTask = async (taskData: Partial<TimelineEntry>) => {
+    if (!taskData.id) return;
+    const existing = entries.find(
+      (e) => e.id === taskData.id && e.type === "task",
+    );
+    if (!existing) return;
+    await appDb.put("entries", {
+      ...existing,
+      ...taskData,
+      type: "task",
+      metadata: {
+        ...existing.metadata,
+        ...(taskData.metadata ?? {}),
+      },
+      updatedAt: new Date().toISOString(),
+    });
+  };
+
   const handleDeleteNote = async (id: string) => {
     const linkedNote = findLinkedEntry(id, "note");
     if (linkedNote) {
@@ -619,10 +658,13 @@ export default function App() {
 
     // 1. Timeline-born event → write back to entries store
     const linked = findLinkedEntry(eventData.id, "event");
+    const incomingCreated = (eventData as { createdAt?: string }).createdAt;
+
     if (linked) {
       await appDb.put("entries", {
         ...linked,
         title: eventData.title ?? linked.title,
+        createdAt: incomingCreated ?? linked.createdAt,
         scheduledAt: eventData.startAt ?? linked.scheduledAt,
         tags: eventData.tags ?? linked.tags,
         metadata: {
@@ -761,6 +803,8 @@ export default function App() {
     const entry = item.original as TimelineEntry;
     if (entry.type === "log") {
       setSheetMode({ type: "log", data: entry, isNew: false });
+    } else if (entry.type === "task") {
+      setSheetMode({ type: "task", data: entry, isNew: false });
     } else {
       setSheetMode({
         type: "note",
@@ -806,7 +850,7 @@ export default function App() {
     } else if (contextTarget?.type === "event" || item.startAt !== undefined) {
       setSheetMode({ type: "event", data: item, isNew: false });
     } else {
-      // Timeline entry or task
+      // Timeline entry — dispatch on `type`
       if (item.type === "note") {
         setSheetMode({
           type: "note",
@@ -820,27 +864,24 @@ export default function App() {
           isNew: false,
         });
       } else if (item.type === "log") {
-        // Logs use the note-style editor, but stay type: "log" — the save
-        // path (handleSaveNote → linkedLog branch) preserves that.
-        setSheetMode({
-          type: "log",
-          data: item, // pass the raw entry; LogForm reads metadata.notes
-          isNew: false,
-        });
+        setSheetMode({ type: "log", data: item, isNew: false });
+      } else if (item.type === "task") {
+        // First-class task editor
+        setSheetMode({ type: "task", data: item, isNew: false });
       } else {
-        // Open note editor for quick task detail
+        // Unknown type — fall back to note for safety
         setSheetMode({
           type: "note",
-          data: {
-            id: item.id,
-            title: item.title,
-            content: item.metadata?.notes || "",
-            tags: item.tags,
-          },
+          data: buildNoteSheetData(item),
           isNew: false,
         });
       }
     }
+  };
+
+  const handleOpenTaskDetail = (entryId: string) => {
+    const entry = entries.find((e) => e.id === entryId && e.type === "task");
+    if (entry) setSheetMode({ type: "task", data: entry, isNew: false });
   };
 
   const handleContextMenuDuplicate = async (item: any) => {
@@ -1465,6 +1506,7 @@ export default function App() {
               onDeleteEntry={handleDeleteEntry}
               displayMode={settings.timelineDisplayMode ?? "default"}
               onUpdateEntryTitle={handleUpdateEntryTitle}
+              onOpenTaskDetail={handleOpenTaskDetail}
               onOpenNoteDetail={(entryId) => {
                 const entry = entries.find((e) => e.id === entryId);
                 if (entry)
@@ -1487,6 +1529,7 @@ export default function App() {
                 handleOpenContextMenu(item, "timeline", pos)
               }
               onUpdateEntryTime={handleUpdateEntryTime}
+              onUpdateEntryDate={handleUpdateEntryDate}
               showEntryContent={settings.showEntryContent}
               onOpenLogDetail={(entryId) => {
                 const entry = entries.find((e) => e.id === entryId);
@@ -1635,6 +1678,8 @@ export default function App() {
         onSaveListItem={handleSaveListItem}
         onDeleteListItem={handleDeleteListItem}
         onSaveLog={handleSaveLog}
+        onSaveTask={handleSaveTask}
+        onDeleteEntry={handleDeleteEntry}
         onToggleAchievement={handleToggleAchievement}
       />
       {/* 4. Settings & Workspace Backup Modal */}

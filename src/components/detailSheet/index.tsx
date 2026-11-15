@@ -19,6 +19,7 @@ import { ListItemForm, ListItemFormHandle } from "./ListItemForm";
 import { DetailSheetMode } from "./types";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { LogForm, LogFormHandle } from "./LogForm";
+import { TaskForm, TaskFormHandle } from "./TaskForm";
 
 export type { DetailSheetMode } from "./types";
 
@@ -39,7 +40,9 @@ interface DetailSheetProps {
   onSaveListItem?: (item: Partial<ListItem>) => void;
   onDeleteListItem?: (id: string) => void;
   onSaveLog?: (entry: Partial<TimelineEntry>) => void;
-  onDeleteLog?: (id: string) => void; // optional; logs use onDeleteEntry via context menu
+  onDeleteLog?: (id: string) => void;
+  onSaveTask?: (task: Partial<TimelineEntry>) => void;
+  onDeleteEntry?: (id: string) => void;
   onToggleAchievement?: (id: string) => void;
 }
 
@@ -59,6 +62,8 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
   onDeleteListItem,
   onSaveLog,
   onDeleteLog,
+  onSaveTask,
+  onDeleteEntry,
   onToggleAchievement,
 }) => {
   const noteRef = useRef<NoteFormHandle>(null);
@@ -66,6 +71,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
   const habitRef = useRef<HabitFormHandle>(null);
   const itemRef = useRef<ListItemFormHandle>(null);
   const logRef = useRef<LogFormHandle>(null);
+  const taskRef = useRef<TaskFormHandle>(null);
 
   const [isNotePinned, setIsNotePinned] = useState(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -105,6 +111,8 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
               ? habitRef
               : sheetMode.type === "log"
               ? logRef
+              : sheetMode.type === "task"
+              ? taskRef
               : itemRef;
           const draft = ref.current?.collect();
           if (draft) {
@@ -115,6 +123,8 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
               onSaveHabit?.(draft as Partial<Habit>);
             if (sheetMode.type === "log")
               onSaveLog?.(draft as Partial<TimelineEntry>);
+            if (sheetMode.type === "task")
+              onSaveTask?.(draft as Partial<TimelineEntry>);
             if (sheetMode.type === "list_item")
               onSaveListItem?.(draft as Partial<ListItem>);
           }
@@ -142,6 +152,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
     if (sheetMode.type === "event" && onDeleteEvent) onDeleteEvent(id);
     if (sheetMode.type === "habit" && onDeleteHabit) onDeleteHabit(id);
     if (sheetMode.type === "log" && onDeleteLog) onDeleteLog(id);
+    if (sheetMode.type === "task" && onDeleteEntry) onDeleteEntry(id);
     if (sheetMode.type === "list_item" && onDeleteListItem)
       onDeleteListItem(id);
     onClose();
@@ -161,6 +172,7 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
     | { kind: "habit"; payload: Partial<Habit> }
     | { kind: "list_item"; payload: Partial<ListItem> }
     | { kind: "log"; payload: Partial<TimelineEntry> }
+    | { kind: "task"; payload: Partial<TimelineEntry> }
     | null => {
     if (!sheetMode) return null;
     switch (sheetMode.type) {
@@ -183,6 +195,10 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
       case "log":
         return logRef.current
           ? { kind: "log", payload: logRef.current.collect() }
+          : null;
+      case "task":
+        return taskRef.current
+          ? { kind: "task", payload: taskRef.current.collect() }
           : null;
       default:
         return null;
@@ -218,6 +234,9 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
         break;
       case "log":
         onSaveLog?.(collected.payload);
+        break;
+      case "task":
+        onSaveTask?.(collected.payload);
         break;
     }
   };
@@ -261,6 +280,9 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
             break;
           case "log":
             onSaveLog?.(collected.payload);
+            break;
+          case "task":
+            onSaveTask?.(collected.payload);
             break;
         }
       }
@@ -428,6 +450,16 @@ export const DetailSheet: React.FC<DetailSheetProps> = ({
         <LogForm
           ref={logRef}
           data={sheetMode.data}
+          onDirty={scheduleAutosave}
+        />
+      )}
+      {sheetMode.type === "task" && (
+        <TaskForm
+          ref={taskRef}
+          data={sheetMode.data}
+          availableLists={availableLists}
+          listTagsById={listTagsById}
+          allTags={allTags}
           onDirty={scheduleAutosave}
         />
       )}

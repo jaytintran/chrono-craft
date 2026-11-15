@@ -2,7 +2,7 @@
  * ChronoCraft - Shared Timeline Entry Row
  */
 
-import React from "react";
+import React, { useState } from "react";
 import {
   CheckCircle2,
   Circle,
@@ -13,11 +13,13 @@ import {
   Hourglass,
   MoreVertical,
   Minus,
+  Calendar,
 } from "lucide-react";
 import { TimelineEntry, TimelineDisplayMode } from "../../types";
 import { InlineTitle } from "../../components/ui/InlineTitle";
 import { RichContent } from "../../components/editors/RichContent";
 import { toLocalDateKey } from "../../utils/date";
+import { DatePickerPopover } from "@/components/ui/DatePickerPopover";
 
 export interface ProcessedTimelineItem {
   id: string;
@@ -47,6 +49,8 @@ interface TimelineEntryRowProps {
     position: { x: number; y: number },
   ) => void;
   onOpenLogDetail?: (logId: string) => void;
+  onOpenTaskDetail?: (entryId: string) => void;
+  onUpdateEntryDate?: (entryId: string, newIso: string) => Promise<void>;
 }
 
 export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
@@ -61,7 +65,9 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
   onOpenEventDetail,
   onOpenContextMenu,
   onOpenTimePicker,
+  onUpdateEntryDate,
   onOpenLogDetail,
+  onOpenTaskDetail,
 }) => {
   const entry = item.originalEntry;
 
@@ -70,6 +76,89 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
   if (!entry || !entry.type) {
     return null;
   }
+
+  const [datePicker, setDatePicker] = useState<{
+    pos: { x: number; y: number };
+  } | null>(null);
+
+  // Right-side trigger buttons. Rendered in default + flat modes only;
+  // compact mode already has its own inline clickable timestamp.
+  const renderTimestampTriggers = () => {
+    const hasScheduled = !!entry.scheduledAt;
+    const hasCompleted = !!entry.completedAt;
+    const hasDate = hasScheduled || hasCompleted;
+    const showDateBtn = hasScheduled && onUpdateEntryDate;
+    const showScheduledBtn = hasScheduled && onOpenTimePicker;
+    const showCompletedBtn = hasCompleted && onOpenTimePicker;
+
+    if (!showDateBtn && !showScheduledBtn && !showCompletedBtn) return null;
+
+    return (
+      <div className="flex items-center gap-0.5 shrink-0">
+        {showDateBtn && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              const rect = (
+                e.currentTarget as HTMLElement
+              ).getBoundingClientRect();
+              setDatePicker({
+                pos: { x: rect.left - 120, y: rect.bottom + 6 },
+              });
+            }}
+            title="Change date"
+            aria-label="Change date"
+            className="p-1 rounded-md text-muted hover:text-accent hover:bg-hover transition-colors cursor-pointer opacity-60 md:opacity-0 md:group-hover:opacity-100"
+          >
+            <Calendar className="w-3.5 h-3.5" />
+          </button>
+        )}
+
+        {showScheduledBtn && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              const rect = (
+                e.currentTarget as HTMLElement
+              ).getBoundingClientRect();
+              onOpenTimePicker!(entry.id, entry.scheduledAt!, {
+                x: rect.left - 200,
+                y: rect.bottom + 6,
+              });
+            }}
+            title="Change scheduled time"
+            aria-label="Change scheduled time"
+            className="p-1 rounded-md text-muted hover:text-info hover:bg-hover transition-colors cursor-pointer opacity-60 md:opacity-0 md:group-hover:opacity-100"
+          >
+            <Clock className="w-3.5 h-3.5" />
+          </button>
+        )}
+
+        {showCompletedBtn && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              const rect = (
+                e.currentTarget as HTMLElement
+              ).getBoundingClientRect();
+              onOpenTimePicker!(entry.id, entry.completedAt!, {
+                x: rect.left - 200,
+                y: rect.bottom + 6,
+              });
+            }}
+            title="Change completion time"
+            aria-label="Change completion time"
+            className="p-1 rounded-md text-muted hover:text-success hover:bg-hover transition-colors cursor-pointer opacity-60 md:opacity-0 md:group-hover:opacity-100"
+          >
+            <CheckCircle2 className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+    );
+  };
 
   const isCompleted = entry.status === "completed";
   const isNoteOrEvent =
@@ -156,6 +245,8 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
     else if (entry.type === "event" && onOpenEventDetail)
       onOpenEventDetail(entry.id);
     else if (entry.type === "log" && onOpenLogDetail) onOpenLogDetail(entry.id);
+    else if (entry.type === "task" && onOpenTaskDetail)
+      onOpenTaskDetail(entry.id);
   };
 
   const handleContextMenu = (e: React.MouseEvent) => {
@@ -282,9 +373,13 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
           {getEntryIcon()}
         </button>
         <div
-          onClick={isNoteOrEvent ? handleTitleClick : undefined}
-          className={`flex-1 min-w-0 px-3 py-2 rounded-xl bg-raised border border-soft shadow-2xs hover:border-accent/40 transition-all ${
-            isNoteOrEvent ? "cursor-pointer" : ""
+          onClick={
+            isNoteOrEvent || entry.type === "task"
+              ? handleTitleClick
+              : undefined
+          }
+          className={`flex-1 min-w-0 transition-all p-4 rounded-xl bg-raised border border-soft shadow-xs hover:border-accent/40 hover:shadow-md ${
+            isNoteOrEvent || entry.type === "task" ? "cursor-pointer" : ""
           }`}
         >
           <div className="flex items-center justify-between gap-3">
@@ -484,6 +579,7 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
             </div>
           </div>
           <div className="flex items-center gap-1 shrink-0">
+            {renderTimestampTriggers()}
             <button
               type="button"
               onClick={handleThreeDotClick}
@@ -499,6 +595,20 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
           <RichContent
             content={getEntryContent()}
             className="mt-2 pt-2 border-t border-soft text-xs text-secondary leading-relaxed"
+          />
+        )}
+
+        {datePicker && onUpdateEntryDate && (
+          <DatePickerPopover
+            isOpen
+            initialIso={entry.createdAt}
+            position={datePicker.pos}
+            title="Change Date"
+            onSave={(iso) => {
+              onUpdateEntryDate(entry.id, iso);
+              setDatePicker(null);
+            }}
+            onClose={() => setDatePicker(null)}
           />
         )}
       </div>

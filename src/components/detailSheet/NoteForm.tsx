@@ -3,6 +3,7 @@ import { Note, CustomList } from "../../types";
 import { RichTextEditor } from "../editors/RichTextEditor";
 import { MetaRow } from "./MetaRow";
 import { TitleInput } from "./TitleInput";
+import { TimestampRow } from "./TimestampRow";
 
 interface NoteFormProps {
   data: Partial<Note>;
@@ -16,7 +17,7 @@ interface NoteFormProps {
 }
 
 export interface NoteFormHandle {
-  collect: () => Partial<Note>;
+  collect: () => Partial<Note> & { scheduledAt?: string };
   togglePinned: () => void;
   isPinned: () => boolean;
 }
@@ -31,6 +32,12 @@ export const NoteForm = React.forwardRef<NoteFormHandle, NoteFormProps>(
     const [tags, setTags] = useState<string[]>(data.tags || []);
     const [listIds, setListIds] = useState<string[]>(data.listIds || []);
     const [isPinned, setIsPinned] = useState(data.isPinned || false);
+    const [createdAt, setCreatedAt] = useState<string | undefined>(
+      (data as { createdAt?: string }).createdAt,
+    );
+    const [scheduledAt, setScheduledAt] = useState<string | undefined>(
+      (data as { scheduledAt?: string }).scheduledAt,
+    );
     const lastIdRef = useRef(data.id);
 
     // Hydrate all fields whenever the sheet switches to a different note
@@ -42,6 +49,8 @@ export const NoteForm = React.forwardRef<NoteFormHandle, NoteFormProps>(
         setTags(data.tags || []);
         setListIds(data.listIds || []);
         setIsPinned(data.isPinned || false);
+        setCreatedAt((data as { createdAt?: string }).createdAt);
+        setScheduledAt((data as { scheduledAt?: string }).scheduledAt);
         onPinChange?.(data.isPinned || false);
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -50,7 +59,7 @@ export const NoteForm = React.forwardRef<NoteFormHandle, NoteFormProps>(
     useEffect(() => {
       onDirty?.();
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [title, content, tags, listIds, isPinned]);
+    }, [title, content, tags, listIds, isPinned, createdAt, scheduledAt]);
 
     const togglePinned = () => {
       setIsPinned((prev) => {
@@ -70,11 +79,22 @@ export const NoteForm = React.forwardRef<NoteFormHandle, NoteFormProps>(
           tags,
           listIds,
           isPinned,
+          createdAt,
+          scheduledAt,
         }),
         togglePinned,
         isPinned: () => isPinned,
       }),
-      [data.id, title, content, tags, listIds, isPinned],
+      [
+        data.id,
+        title,
+        content,
+        tags,
+        listIds,
+        isPinned,
+        createdAt,
+        scheduledAt,
+      ],
     );
 
     return (
@@ -93,6 +113,18 @@ export const NoteForm = React.forwardRef<NoteFormHandle, NoteFormProps>(
           }}
           placeholder="Untitled note"
           className="text-2xl font-semibold text-primary placeholder-muted leading-tight"
+        />
+
+        <TimestampRow
+          createdAt={createdAt}
+          scheduledAt={scheduledAt}
+          onCreatedChange={(iso) => setCreatedAt(iso ?? undefined)}
+          onDateChange={(iso) => setCreatedAt(iso)}
+          onScheduledChange={(iso) => setScheduledAt(iso ?? undefined)}
+          showDate
+          showScheduled
+          showCompleted={false}
+          allowAddScheduled
         />
 
         <MetaRow

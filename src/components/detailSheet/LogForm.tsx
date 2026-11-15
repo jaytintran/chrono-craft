@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { TimelineEntry } from "../../types";
 import { RichTextEditor } from "../editors/RichTextEditor";
 import { TitleInput } from "./TitleInput";
+import { TimestampRow } from "./TimestampRow";
 
 export interface LogFormHandle {
   collect: () => Partial<TimelineEntry>;
@@ -18,12 +19,16 @@ export const LogForm = React.forwardRef<LogFormHandle, LogFormProps>(
     const [content, setContent] = useState(data.metadata?.notes || "");
     const [tags, setTags] = useState<string[]>(data.tags || []);
     const lastIdRef = useRef(data.id);
+    const [createdAt, setCreatedAt] = useState<string | undefined>(
+      data.createdAt,
+    );
 
     useEffect(() => {
       if (lastIdRef.current !== data.id) {
         lastIdRef.current = data.id;
         setTitle(data.title || "");
         setContent(data.metadata?.notes || "");
+        setCreatedAt(data.createdAt);
         setTags(data.tags || []);
       }
     }, [data.id]);
@@ -31,25 +36,24 @@ export const LogForm = React.forwardRef<LogFormHandle, LogFormProps>(
     useEffect(() => {
       onDirty?.();
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [title, content, tags]);
+    }, [title, content, tags, createdAt]);
 
     React.useImperativeHandle(
       ref,
       () => ({
         collect: () => ({
           id: data.id,
-          // Deliberately preserve every field the entry already had.
-          // The caller merges this into the existing entry.
           type: "log",
           title: title.trim(),
           tags,
+          createdAt,
           metadata: {
             ...(data.metadata ?? {}),
             notes: content,
           },
         }),
       }),
-      [data.id, data.metadata, title, content, tags],
+      [data.id, data.metadata, title, content, tags, createdAt],
     );
 
     return (
@@ -67,6 +71,16 @@ export const LogForm = React.forwardRef<LogFormHandle, LogFormProps>(
           }}
           placeholder="Untitled log"
           className="text-2xl font-semibold text-primary placeholder-muted leading-tight"
+        />
+
+        <TimestampRow
+          createdAt={createdAt}
+          scheduledAt={data.scheduledAt}
+          onCreatedChange={(iso) => setCreatedAt(iso ?? undefined)}
+          onDateChange={(iso) => setCreatedAt(iso)}
+          showDate
+          showScheduled={false}
+          showCompleted={false}
         />
 
         <RichTextEditor

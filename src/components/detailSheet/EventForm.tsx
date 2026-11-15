@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Calendar } from "lucide-react";
+import { ArrowRight, Calendar, Clock, Sun, X } from "lucide-react";
+import { DatePickerPopover } from "../ui/DatePickerPopover";
+import { CustomTimePickerPopover } from "../modals/CustomTimePickerPopover";
 import { CalendarEvent, CustomList } from "../../types";
 import { RichTextEditor } from "../editors/RichTextEditor";
 import { MetaRow } from "./MetaRow";
 import { formatDateTimeLocal } from "./types";
 import { TitleInput } from "./TitleInput";
+import { TimestampRow } from "./TimestampRow";
 
 export interface EventFormHandle {
   collect: () => Partial<CalendarEvent>;
@@ -42,7 +45,19 @@ export const EventForm = React.forwardRef<EventFormHandle, EventFormProps>(
     const [isAchievement, setIsAchievement] = useState(
       data.isAchievement || false,
     );
+
+    const [createdAt, setCreatedAt] = useState<string | undefined>(
+      data.createdAt,
+    );
     const lastIdRef = useRef(data.id);
+
+    const [picker, setPicker] = useState<
+      | { kind: "start-date"; pos: { x: number; y: number } }
+      | { kind: "end-date"; pos: { x: number; y: number } }
+      | { kind: "start-time"; pos: { x: number; y: number } }
+      | { kind: "end-time"; pos: { x: number; y: number } }
+      | null
+    >(null);
 
     useEffect(() => {
       if (lastIdRef.current !== data.id) {
@@ -54,6 +69,7 @@ export const EventForm = React.forwardRef<EventFormHandle, EventFormProps>(
         setAllDay(data.allDay || false);
         setCategory(data.category || "personal");
         setIsAchievement(data.isAchievement || false);
+        setCreatedAt(data.createdAt);
 
         const curStart = data.startAt ? new Date(data.startAt) : new Date();
         setStartAt(formatDateTimeLocal(curStart));
@@ -81,6 +97,7 @@ export const EventForm = React.forwardRef<EventFormHandle, EventFormProps>(
       tags,
       listIds,
       isAchievement,
+      createdAt,
     ]);
 
     const splitDT = (v: string) => {
@@ -117,8 +134,34 @@ export const EventForm = React.forwardRef<EventFormHandle, EventFormProps>(
     );
     const endInvalid = durMins < 0;
 
-    const dtInput =
-      "px-2.5 py-1.5 rounded-lg bg-raised border border-soft text-xs font-mono text-primary focus:outline-none focus:border-accent";
+    const anchorPos = (e: React.MouseEvent) => {
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      return { x: rect.left, y: rect.bottom + 6 };
+    };
+
+    const fmtDate = (v: string) => {
+      const d = new Date(v);
+      if (Number.isNaN(d.getTime())) return "Set date";
+      const today = new Date();
+      const isToday = d.toDateString() === today.toDateString();
+      const isSameYear = d.getFullYear() === today.getFullYear();
+      const weekday = d.toLocaleDateString("en-US", { weekday: "short" });
+      const dd = String(d.getDate()).padStart(2, "0");
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      if (isToday) return `Today, ${dd}/${mm}`;
+      return isSameYear
+        ? `${weekday}, ${dd}/${mm}`
+        : `${weekday}, ${dd}/${mm}/${d.getFullYear()}`;
+    };
+
+    const fmtTime = (v: string) => {
+      const d = new Date(v);
+      if (Number.isNaN(d.getTime())) return "--:--";
+      return d.toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+      });
+    };
 
     React.useImperativeHandle(
       ref,
@@ -133,6 +176,7 @@ export const EventForm = React.forwardRef<EventFormHandle, EventFormProps>(
           category,
           tags,
           listIds: isAchievement ? [] : listIds,
+          createdAt,
         }),
       }),
       [
@@ -146,6 +190,7 @@ export const EventForm = React.forwardRef<EventFormHandle, EventFormProps>(
         tags,
         listIds,
         isAchievement,
+        createdAt,
       ],
     );
 
@@ -166,117 +211,137 @@ export const EventForm = React.forwardRef<EventFormHandle, EventFormProps>(
           className="text-2xl font-semibold text-primary placeholder-muted leading-tight"
         />
 
-        <div className="inline-flex p-0.5 rounded-xl bg-sunken border border-soft">
-          {(
-            [
-              {
-                id: "official",
-                label: "Official",
-                on: "bg-accent text-accent-fg shadow-xs",
-              },
-              {
-                id: "personal",
-                label: "Personal",
-                on: "bg-danger text-white shadow-xs",
-              },
-            ] as const
-          ).map((opt) => (
-            <button
-              key={opt.id}
-              type="button"
-              onClick={() => setCategory(opt.id)}
-              className={`px-3 py-1.5 rounded-[10px] text-xs font-medium transition-colors cursor-pointer ${
-                category === opt.id
-                  ? opt.on
-                  : "text-secondary hover:text-primary"
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
+        <TimestampRow
+          createdAt={createdAt}
+          completedAt={data.completedAt}
+          onCreatedChange={(iso) => setCreatedAt(iso ?? undefined)}
+          onDateChange={(iso) => setCreatedAt(iso)}
+          showDate
+          showScheduled={false}
+          showCompleted
+        />
 
-        <div className="rounded-2xl bg-sunken border border-soft divide-y divide-soft">
-          <div className="flex items-center justify-between px-4 py-3">
-            <div className="flex items-center gap-2 text-xs font-medium text-secondary">
-              <Calendar className="w-3.5 h-3.5 text-muted" />
-              All-day milestone
+        <div className="rounded-2xl border border-soft">
+          {/* Header: eyebrow + category segmented control */}
+          <div className="flex flex-wrap items-center gap-2 px-4 pt-3 pb-2 border-b border-soft/60">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-muted">
+              Type
+            </span>
+            <div className="inline-flex p-0.5 rounded-lg bg-raised border border-soft text-[11px] font-mono">
+              {(
+                [
+                  { id: "official", label: "Official" },
+                  { id: "personal", label: "Personal" },
+                ] as const
+              ).map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setCategory(opt.id)}
+                  className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
+                    category === opt.id
+                      ? "bg-accent text-accent-fg font-semibold shadow-xs"
+                      : "text-secondary hover:text-primary"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
             </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={allDay}
-              onClick={() => setAllDay((v) => !v)}
-              className={`relative w-9 h-5 rounded-full transition-colors cursor-pointer ${
-                allDay ? "bg-accent" : "bg-strong"
-              }`}
-            >
-              <span
-                className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
-                  allDay ? "translate-x-4" : ""
-                }`}
-              />
-            </button>
           </div>
 
-          <div className="flex items-center gap-3 px-4 py-3">
-            <span className="w-10 text-[11px] font-mono uppercase text-muted">
-              Start
-            </span>
-            <input
-              type="date"
-              value={splitDT(startAt).d}
-              onChange={(e) =>
-                handleStartChange(e.target.value, splitDT(startAt).t)
-              }
-              className={`${dtInput} flex-1`}
-            />
-            {!allDay && (
-              <input
-                type="time"
-                value={splitDT(startAt).t}
-                onChange={(e) =>
-                  handleStartChange(splitDT(startAt).d, e.target.value)
-                }
-                className={`${dtInput} w-28`}
-              />
+          {/* Start / End rows */}
+          <div className="px-4 py-3 flex flex-wrap items-center gap-3">
+            {/* Start group */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-mono uppercase tracking-wider text-muted">
+                From
+              </span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPicker({ kind: "start-date", pos: anchorPos(e) });
+                }}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-raised border border-soft hover:border-strong hover:bg-hover text-xs font-mono text-primary transition-colors cursor-pointer"
+              >
+                <Calendar className="w-3.5 h-3.5 text-muted" />
+                <span className="tabular-nums">{fmtDate(startAt)}</span>
+              </button>
+
+              {!allDay && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPicker({ kind: "start-time", pos: anchorPos(e) });
+                  }}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-raised border border-soft hover:border-strong hover:bg-hover text-xs font-mono text-primary transition-colors cursor-pointer"
+                >
+                  <Clock className="w-3.5 h-3.5 text-muted" />
+                  <span className="tabular-nums">{fmtTime(startAt)}</span>
+                </button>
+              )}
+            </div>
+
+            {/* Arrow separator */}
+            <ArrowRight className="w-3.5 h-3.5 text-muted shrink-0" />
+
+            {/* End group */}
+            {!allDay ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPicker({ kind: "end-date", pos: anchorPos(e) });
+                  }}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-raised border text-xs font-mono text-primary transition-colors cursor-pointer ${
+                    endInvalid
+                      ? "border-danger/50 hover:border-danger"
+                      : "border-soft hover:border-strong hover:bg-hover"
+                  }`}
+                >
+                  <Calendar className="w-3.5 h-3.5 text-muted" />
+                  <span className="tabular-nums">{fmtDate(endAt)}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPicker({ kind: "end-time", pos: anchorPos(e) });
+                  }}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-raised border text-xs font-mono text-primary transition-colors cursor-pointer ${
+                    endInvalid
+                      ? "border-danger/50 hover:border-danger"
+                      : "border-soft hover:border-strong hover:bg-hover"
+                  }`}
+                >
+                  <Clock className="w-3.5 h-3.5 text-muted" />
+                  <span className="tabular-nums">{fmtTime(endAt)}</span>
+                </button>
+                {endInvalid && (
+                  <span className="text-[10px] font-mono text-danger">
+                    End is before start
+                  </span>
+                )}
+              </div>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-sunken border border-dashed border-strong text-xs font-mono text-muted">
+                <Sun className="w-3.5 h-3.5" />
+                All-day
+              </span>
             )}
           </div>
 
-          {!allDay && (
-            <div>
-              <div className="flex items-center gap-3 px-4 py-3">
-                <span className="w-10 text-[11px] font-mono uppercase text-muted">
-                  End
-                </span>
-                <input
-                  type="date"
-                  value={splitDT(endAt).d}
-                  onChange={(e) =>
-                    handleEndChange(e.target.value, splitDT(endAt).t)
-                  }
-                  className={`${dtInput} flex-1 ${
-                    endInvalid ? "!border-danger" : ""
-                  }`}
-                />
-                <input
-                  type="time"
-                  value={splitDT(endAt).t}
-                  onChange={(e) =>
-                    handleEndChange(splitDT(endAt).d, e.target.value)
-                  }
-                  className={`${dtInput} w-28 ${
-                    endInvalid ? "!border-danger" : ""
-                  }`}
-                />
-              </div>
-              <div className="pb-3 space-y-1.5">
-                <div className="flex items-center gap-1.5 text-[11px] font-mono pl-[4.25rem]">
-                  {endInvalid && (
-                    <span className="text-danger">End is before start</span>
-                  )}
-                </div>
-                <div className="flex flex-wrap items-center gap-1 pl-[4.25rem]">
+          {/* Footer row: duration chips + all-day toggle */}
+          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 border-t border-soft/60">
+            <div className="flex flex-wrap items-center gap-1.5">
+              {!allDay ? (
+                <>
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-muted mr-1">
+                    Duration
+                  </span>
                   {[5, 10, 15, 20, 30, 45, 60, 90, 120, 180].map((m) => {
                     const label =
                       m < 60
@@ -299,10 +364,29 @@ export const EventForm = React.forwardRef<EventFormHandle, EventFormProps>(
                       </button>
                     );
                   })}
-                </div>
-              </div>
+                </>
+              ) : (
+                <span className="text-[11px] font-mono text-muted">
+                  All-day milestone
+                </span>
+              )}
             </div>
-          )}
+
+            <button
+              type="button"
+              role="switch"
+              aria-checked={allDay}
+              onClick={() => setAllDay((v) => !v)}
+              className={`flex items-center gap-2 px-2.5 py-1 rounded-md border text-[11px] font-mono transition-colors cursor-pointer ${
+                allDay
+                  ? "bg-accent/10 border-accent/40 text-accent"
+                  : "bg-transparent border-soft text-muted hover:text-primary hover:border-strong"
+              }`}
+            >
+              <Sun className="w-3.5 h-3.5" />
+              <span>All-day</span>
+            </button>
+          </div>
         </div>
 
         {!isAchievement && (
@@ -336,6 +420,62 @@ export const EventForm = React.forwardRef<EventFormHandle, EventFormProps>(
             minHeight="40vh"
           />
         </div>
+
+        {picker?.kind === "start-date" && (
+          <DatePickerPopover
+            isOpen
+            initialIso={startAt}
+            position={picker.pos}
+            title="Start Date"
+            onSave={(iso) => {
+              handleStartChange(iso.slice(0, 10), splitDT(startAt).t);
+              setPicker(null);
+            }}
+            onClose={() => setPicker(null)}
+          />
+        )}
+
+        {picker?.kind === "end-date" && (
+          <DatePickerPopover
+            isOpen
+            initialIso={endAt}
+            position={picker.pos}
+            title="End Date"
+            onSave={(iso) => {
+              handleEndChange(iso.slice(0, 10), splitDT(endAt).t);
+              setPicker(null);
+            }}
+            onClose={() => setPicker(null)}
+          />
+        )}
+
+        {picker?.kind === "start-time" && (
+          <CustomTimePickerPopover
+            isOpen
+            initialIso={startAt}
+            position={picker.pos}
+            title="Start Time"
+            onSave={(iso) => {
+              handleStartChange(splitDT(startAt).d, iso.slice(11, 16));
+              setPicker(null);
+            }}
+            onClose={() => setPicker(null)}
+          />
+        )}
+
+        {picker?.kind === "end-time" && (
+          <CustomTimePickerPopover
+            isOpen
+            initialIso={endAt}
+            position={picker.pos}
+            title="End Time"
+            onSave={(iso) => {
+              handleEndChange(splitDT(endAt).d, iso.slice(11, 16));
+              setPicker(null);
+            }}
+            onClose={() => setPicker(null)}
+          />
+        )}
       </div>
     );
   },

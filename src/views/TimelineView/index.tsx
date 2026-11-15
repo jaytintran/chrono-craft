@@ -38,6 +38,8 @@ interface TimelineViewProps {
   displayMode?: TimelineDisplayMode;
   onUpdateEntryTitle?: (entryId: string, newTitle: string) => Promise<void>;
   onOpenLogDetail?: (logId: string) => void;
+  onOpenTaskDetail?: (entryId: string) => void;
+  onUpdateEntryDate?: (entryId: string, newIso: string) => Promise<void>;
 }
 
 const getEntryAnchorIso = (e: TimelineEntry): string =>
@@ -65,9 +67,11 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
   onOpenEventDetail,
   onOpenContextMenu,
   onUpdateEntryTime,
+  onUpdateEntryDate,
   displayMode = "default",
   onUpdateEntryTitle,
   onOpenLogDetail,
+  onOpenTaskDetail,
 }) => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [filterType, setFilterType] = useState<"all" | EntryType | "habit">(
@@ -317,7 +321,9 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
             onOpenEventDetail={onOpenEventDetail}
             onOpenContextMenu={onOpenContextMenu}
             onOpenTimePicker={openTimePicker}
+            onUpdateEntryDate={onUpdateEntryDate}
             onOpenLogDetail={onOpenLogDetail}
+            onOpenTaskDetail={onOpenTaskDetail}
           />
         ) : (
           <div className="max-w-6xl mx-auto">
@@ -420,7 +426,9 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                       onOpenEventDetail={onOpenEventDetail}
                       onOpenContextMenu={onOpenContextMenu}
                       onOpenTimePicker={openTimePicker}
+                      onUpdateEntryDate={onUpdateEntryDate}
                       onOpenLogDetail={onOpenLogDetail}
+                      onOpenTaskDetail={onOpenTaskDetail}
                     />
                   ))}
                 </div>

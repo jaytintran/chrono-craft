@@ -12,6 +12,52 @@ interface CustomCalendarDropdownProps {
   onSelectDate: (date: Date) => void;
   onClose: () => void;
 }
+export interface CalendarDay {
+  dayNum: number;
+  date: Date;
+  isCurrentMonth: boolean;
+}
+
+export function buildMonthGrid(viewDate: Date): {
+  monthTitle: string;
+  daysArray: CalendarDay[];
+} {
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+  let firstDayIndex = new Date(year, month, 1).getDay() - 1;
+  if (firstDayIndex === -1) firstDayIndex = 6;
+  const totalDays = new Date(year, month + 1, 0).getDate();
+  const prevMonthLastDay = new Date(year, month, 0).getDate();
+  const daysArray: CalendarDay[] = [];
+  for (let i = firstDayIndex - 1; i >= 0; i--) {
+    const d = prevMonthLastDay - i;
+    daysArray.push({
+      dayNum: d,
+      date: new Date(year, month - 1, d),
+      isCurrentMonth: false,
+    });
+  }
+  for (let d = 1; d <= totalDays; d++) {
+    daysArray.push({
+      dayNum: d,
+      date: new Date(year, month, d),
+      isCurrentMonth: true,
+    });
+  }
+  const remaining = (7 - (daysArray.length % 7)) % 7;
+  for (let d = 1; d <= remaining; d++) {
+    daysArray.push({
+      dayNum: d,
+      date: new Date(year, month + 1, d),
+      isCurrentMonth: false,
+    });
+  }
+  const monthTitle = viewDate.toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+  return { monthTitle, daysArray };
+}
 
 export const CustomCalendarDropdown: React.FC<CustomCalendarDropdownProps> = ({
   selectedDate,
@@ -64,50 +110,7 @@ export const CustomCalendarDropdown: React.FC<CustomCalendarDropdownProps> = ({
     onClose();
   };
 
-  const monthTitle = viewDate.toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
-
-  const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
-  const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
-
-  let firstDayIndex = firstDayOfMonth.getDay() - 1;
-  if (firstDayIndex === -1) firstDayIndex = 6;
-
-  const totalDays = lastDayOfMonth.getDate();
-  const daysArray: Array<{
-    dayNum: number;
-    date: Date;
-    isCurrentMonth: boolean;
-  }> = [];
-
-  const prevMonthLastDay = new Date(currentYear, currentMonth, 0).getDate();
-  for (let i = firstDayIndex - 1; i >= 0; i--) {
-    const d = prevMonthLastDay - i;
-    daysArray.push({
-      dayNum: d,
-      date: new Date(currentYear, currentMonth - 1, d),
-      isCurrentMonth: false,
-    });
-  }
-
-  for (let d = 1; d <= totalDays; d++) {
-    daysArray.push({
-      dayNum: d,
-      date: new Date(currentYear, currentMonth, d),
-      isCurrentMonth: true,
-    });
-  }
-
-  const remaining = (7 - (daysArray.length % 7)) % 7;
-  for (let d = 1; d <= remaining; d++) {
-    daysArray.push({
-      dayNum: d,
-      date: new Date(currentYear, currentMonth + 1, d),
-      isCurrentMonth: false,
-    });
-  }
+  const { monthTitle, daysArray } = buildMonthGrid(viewDate);
 
   const todayStr = new Date().toDateString();
   const selectedStr = selectedDate.toDateString();
@@ -173,10 +176,10 @@ export const CustomCalendarDropdown: React.FC<CustomCalendarDropdownProps> = ({
                 isSelected
                   ? "bg-accent text-accent-fg font-bold shadow-xs scale-105"
                   : isToday
-                    ? "border border-accent text-accent font-semibold bg-accent/10"
-                    : item.isCurrentMonth
-                      ? "text-primary hover:bg-hover"
-                      : "text-muted hover:bg-hover/60"
+                  ? "border border-accent text-accent font-semibold bg-accent/10"
+                  : item.isCurrentMonth
+                  ? "text-primary hover:bg-hover"
+                  : "text-muted hover:bg-hover/60"
               }`}
             >
               {item.dayNum}
