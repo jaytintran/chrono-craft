@@ -15,6 +15,7 @@ import { AppSettings, TimelineEntry } from "../../types";
 import { NLPInputBar } from "../../components/NLPInputBar";
 import { Keyboard } from "@capacitor/keyboard";
 import { toLocalDateKey } from "../../utils/date";
+import { InlineTitle } from "../../components/ui/InlineTitle";
 
 interface TodayTabProps {
   anchorEntries: TimelineEntry[];
@@ -28,6 +29,7 @@ interface TodayTabProps {
   onOpenSettings: () => void;
   onOpenContextMenu?: (item: any, pos: { x: number; y: number }) => void;
   onRemoveFromFocus: (entryIds: string[]) => Promise<void>;
+  onUpdateEntryTitle?: (entryId: string, newTitle: string) => Promise<void>;
 }
 
 export const TodayTab: React.FC<TodayTabProps> = ({
@@ -42,6 +44,7 @@ export const TodayTab: React.FC<TodayTabProps> = ({
   onOpenSettings,
   onOpenContextMenu,
   onRemoveFromFocus,
+  onUpdateEntryTitle,
 }) => {
   const [keyboardHeight, setKeyboardHeight] = React.useState(0);
   const [collapsedDays, setCollapsedDays] = React.useState<Set<string>>(() => {
@@ -219,9 +222,12 @@ export const TodayTab: React.FC<TodayTabProps> = ({
                     <Circle className="w-4 h-4" />
                   </button>
                   <div className="min-w-0">
-                    <div className="text-sm font-semibold text-primary truncate">
-                      {anchor.title}
-                    </div>
+                    <InlineTitle
+                      value={anchor.title}
+                      onSave={(t) => onUpdateEntryTitle?.(anchor.id, t)}
+                      className="text-sm font-semibold text-primary truncate block"
+                      allowMobileEdit
+                    />
                     {anchor.scheduledAt && (
                       <div className="flex items-center gap-1.5 text-xs font-mono text-info mt-0.5">
                         <Clock className="w-3 h-3" />
@@ -304,20 +310,15 @@ export const TodayTab: React.FC<TodayTabProps> = ({
         <NLPInputBar
           placeholder={
             isEngineAtCapacity
-              ? `Capacity full (${settings.xActiveLimit}/${settings.xActiveLimit})! Complete a task or raise limit in settings.`
+              ? `Capacity full (${settings.xActiveLimit}/${settings.xActiveLimit}) — complete a task to unlock.`
               : "Add immediate task to active queue..."
           }
           defaultType="task"
           showTypeSwitcher={false}
           compact={isMobile}
           buttonLabel="Engage Task"
+          disabled={isEngineAtCapacity}
           onSubmit={(parsed) => {
-            if (isEngineAtCapacity) {
-              alert(
-                `X-Active Engine is at full capacity (${settings.xActiveLimit} tasks). Complete an active task or raise the limit in settings.`,
-              );
-              return;
-            }
             onAddEntry({
               type: "task",
               title: parsed.title,
@@ -358,9 +359,12 @@ export const TodayTab: React.FC<TodayTabProps> = ({
                     <Circle className="w-4 h-4" />
                   </button>
                   <div className="min-w-0">
-                    <span className="text-sm font-semibold text-primary truncate block">
-                      {task.title}
-                    </span>
+                    <InlineTitle
+                      value={task.title}
+                      onSave={(t) => onUpdateEntryTitle?.(task.id, t)}
+                      className="text-sm font-semibold text-primary truncate block"
+                      allowMobileEdit
+                    />
                     {task.tags.length > 0 && (
                       <div className="text-xs text-secondary mt-0.5">
                         {task.tags.map((t) => `#${t}`).join(" ")}

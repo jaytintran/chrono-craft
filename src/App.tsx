@@ -1447,6 +1447,7 @@ export default function App() {
                 handleOpenContextMenu(item, "focus", pos)
               }
               onRemoveFromFocus={handleRemoveFromFocus}
+              onUpdateEntryTitle={handleUpdateEntryTitle}
             />
           )}
 

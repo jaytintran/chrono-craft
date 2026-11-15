@@ -4,12 +4,19 @@ interface InlineTitleProps {
   value: string;
   onSave: (next: string) => void;
   className?: string;
+  /**
+   * Opt-in to inline editing on mobile. Defaults to false so existing
+   * usages (Timeline / Lists / etc.) keep the current behavior where a
+   * mobile tap opens the DetailSheet instead.
+   */
+  allowMobileEdit?: boolean;
 }
 
 export const InlineTitle: React.FC<InlineTitleProps> = ({
   value,
   onSave,
   className = "",
+  allowMobileEdit = false,
 }) => {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
@@ -54,7 +61,10 @@ export const InlineTitle: React.FC<InlineTitleProps> = ({
   };
 
   if (!editing) {
-    if (isMobile) {
+    // When inline editing is allowed on mobile, we want the same tap-to-edit
+    // behavior as desktop — so the branch only applies when the caller has
+    // NOT opted in.
+    if (isMobile && !allowMobileEdit) {
       // No stopPropagation: the tap bubbles up to the card and opens the Detail Sheet.
       // Wrap instead of truncate so long titles stay fully readable.
       // We strip the caller's truncate class and add wrap-friendly ones.
@@ -69,7 +79,7 @@ export const InlineTitle: React.FC<InlineTitleProps> = ({
         </span>
       );
     }
-    // Desktop unchanged
+    // Desktop / mobile-with-opt-in
     return (
       <span
         role="button"

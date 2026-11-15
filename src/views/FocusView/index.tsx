@@ -36,6 +36,7 @@ interface FocusViewProps {
   onOpenSettings: () => void;
   onOpenContextMenu?: (item: any, pos: { x: number; y: number }) => void;
   onRemoveFromFocus: (entryIds: string[]) => Promise<void>;
+  onUpdateEntryTitle?: (entryId: string, newTitle: string) => Promise<void>;
 }
 
 export const FocusView: React.FC<FocusViewProps> = ({
@@ -56,6 +57,7 @@ export const FocusView: React.FC<FocusViewProps> = ({
   onOpenSettings,
   onOpenContextMenu,
   onRemoveFromFocus,
+  onUpdateEntryTitle,
 }) => {
   const [activeTab, setActiveTab] = useState<"today" | "scratchpad" | string>(
     "today",
@@ -240,6 +242,7 @@ export const FocusView: React.FC<FocusViewProps> = ({
             onOpenSettings={onOpenSettings}
             onOpenContextMenu={onOpenContextMenu}
             onRemoveFromFocus={onRemoveFromFocus}
+            onUpdateEntryTitle={onUpdateEntryTitle}
           />
         )}
 

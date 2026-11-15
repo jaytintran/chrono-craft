@@ -134,6 +134,9 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
     item.type === "event" ||
     (item.type === "task" && item.status === "completed");
   const isAlreadyAchievement = item.isAchievement === true;
+
+  const isFocusOrigin =
+    item.source === "focus-anchor" || item.source === "focus-active";
   const isEventItem = item.startAt !== undefined;
   const evDone = isEventItem && !!item.completedAt;
   const evMissed = isEventItem && !!item.missedAt;
@@ -210,14 +213,16 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
         </span>
       </div>
 
-      <button
-        type="button"
-        onClick={() => closeAndRun(() => onEdit(item))}
-        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-hover transition-colors cursor-pointer text-secondary font-medium"
-      >
-        <Edit3 className="w-3.5 h-3.5 text-accent" />
-        <span>Edit Details</span>
-      </button>
+      {!isFocusOrigin && (
+        <button
+          type="button"
+          onClick={() => closeAndRun(() => onEdit(item))}
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-hover transition-colors cursor-pointer text-secondary font-medium"
+        >
+          <Edit3 className="w-3.5 h-3.5 text-accent" />
+          <span>Edit Details</span>
+        </button>
+      )}
 
       {isAchievementEligible && onMarkAchievement && (
         <button
@@ -341,14 +346,16 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   const renderActionsMobile = () => (
     <div className="divide-y divide-soft">
       <div className="py-1">
-        <button
-          type="button"
-          onClick={() => closeAndRun(() => onEdit(item))}
-          className="w-full flex items-center gap-3 py-2.5 px-2 text-sm font-medium hover:bg-hover rounded-xl transition-colors"
-        >
-          <Edit3 className={`w-4 h-4 ${ICON_COLOR.neutral}`} />
-          <span>Edit Details</span>
-        </button>
+        {!isFocusOrigin && (
+          <button
+            type="button"
+            onClick={() => closeAndRun(() => onEdit(item))}
+            className="w-full flex items-center gap-3 py-2.5 px-2 text-sm font-medium hover:bg-hover rounded-xl transition-colors"
+          >
+            <Edit3 className={`w-4 h-4 ${ICON_COLOR.neutral}`} />
+            <span>Edit Details</span>
+          </button>
+        )}
 
         <button
           type="button"

@@ -37,6 +37,7 @@ interface NLPInputBarProps {
     timeBlock?: TimeBlockInfo;
   }) => void;
   typeSwitcherVariant?: "cycle" | "segmented";
+  disabled?: boolean;
 }
 
 export const NLPInputBar: React.FC<NLPInputBarProps> = ({
@@ -50,6 +51,7 @@ export const NLPInputBar: React.FC<NLPInputBarProps> = ({
   allowTimeBlock = true,
   baseDate = new Date(),
   onSubmit,
+  disabled = false,
 }) => {
   const [text, setText] = useState("");
   const [selectedType, setSelectedType] = useState<EntryType>(defaultType);
@@ -70,7 +72,7 @@ export const NLPInputBar: React.FC<NLPInputBarProps> = ({
 
   const isTimeBlockActive =
     selectedType === "timeblock" || parsed.type === "timeblock";
-  const isSubmitDisabled = !text.trim();
+  const isSubmitDisabled = disabled || !text.trim();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -147,8 +149,9 @@ export const NLPInputBar: React.FC<NLPInputBarProps> = ({
                 aria-selected={active}
                 aria-label={cfg.label}
                 title={cfg.label}
+                disabled={disabled}
                 onClick={() => setSelectedType(type)}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 max-sm:px-6 max-sm:flex-1 max-sm:justify-center rounded-lg text-[11px] font-mono uppercase tracking-wide transition-colors shrink-0 cursor-pointer ${
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 max-sm:px-6 max-sm:flex-1 max-sm:justify-center rounded-lg text-[11px] font-mono uppercase tracking-wide transition-colors shrink-0 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ${
                   active
                     ? `${cfg.color} border font-semibold`
                     : "text-secondary hover:text-primary hover:bg-hover border border-transparent"
@@ -169,7 +172,9 @@ export const NLPInputBar: React.FC<NLPInputBarProps> = ({
         className={`relative flex items-center gap-2 ${
           compact ? "p-1" : "p-1.5 md:p-2"
         } rounded-xl transition-all duration-200 border ${
-          isFocused
+          disabled
+            ? "bg-raised border-soft opacity-60 cursor-not-allowed"
+            : isFocused
             ? "bg-raised border-accent/60 ring-2 ring-accent/20 shadow-lg shadow-accent/5"
             : "bg-raised border-soft hover:border-strong"
         }`}
@@ -178,10 +183,9 @@ export const NLPInputBar: React.FC<NLPInputBarProps> = ({
           <button
             type="button"
             onClick={cycleType}
+            disabled={disabled}
             title="Click to cycle entry type"
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors shrink-0 cursor-pointer ${
-              typeConfig[selectedType].color
-            }`}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors shrink-0 cursor-pointer ${typeConfig[selectedType].color}`}
           >
             {typeConfig[selectedType].icon}
             <span className="hidden sm:inline font-mono uppercase tracking-wide text-[11px]">
@@ -203,9 +207,10 @@ export const NLPInputBar: React.FC<NLPInputBarProps> = ({
               : placeholder
           }
           autoFocus={autoFocus}
+          disabled={disabled}
           className={`flex-1 bg-transparent px-2 ${
             compact ? "py-0.5" : "py-1"
-          } text-sm text-primary placeholder-muted focus:outline-none min-w-0`}
+          } text-sm text-primary placeholder-muted focus:outline-none min-w-0 disabled:cursor-not-allowed`}
         />
 
         <button
