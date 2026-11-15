@@ -47,6 +47,7 @@ import type { AchievementItem } from "./views/AchievementsView/helpers";
 import { ListsView } from "./views/ListsView";
 import { toLocalDateKey } from "./utils/date";
 import { applyNativeTheme } from "./utils/nativeTheme";
+import { TimestampsPopover } from "./components/menu/TimestampsPopover";
 
 export default function App() {
   // Navigation State
@@ -99,6 +100,10 @@ export default function App() {
     y: number;
   } | null>(null);
   const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
+
+  const [timestampsPopover, setTimestampsPopover] = useState<{
+    item: any;
+  } | null>(null);
 
   // Load all data from IndexedDB
   const refreshData = useCallback(async () => {
@@ -417,6 +422,43 @@ export default function App() {
       createdAt: newIso,
       updatedAt: new Date().toISOString(),
     });
+  };
+
+  const handleUpdateEntryField = async (
+    entryId: string,
+    field: "createdAt" | "scheduledAt" | "completedAt",
+    iso: string | null,
+  ) => {
+    const entry = entries.find((e) => e.id === entryId);
+    if (!entry || !entry.type) return;
+
+    const patch: Partial<TimelineEntry> = {
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (field === "completedAt") {
+      patch.completedAt = iso ?? undefined;
+      if (entry.type === "log") {
+        // Logs are always "completed" by existence; don't flip status when
+        // the user clears or restores the completedAt timestamp.
+        // Keep status as-is.
+      } else {
+        patch.status = iso
+          ? "completed"
+          : entry.source === "focus-active"
+          ? "active"
+          : "pending";
+        if (!iso && entry.type === "task") patch.isAchievement = undefined;
+      }
+    } else {
+      patch[field] = iso ?? undefined;
+    }
+
+    await appDb.put("entries", { ...entry, ...patch });
+  };
+
+  const handleOpenTimestampsPopover = (item: any) => {
+    setTimestampsPopover({ item });
   };
 
   const handleUpdateEntryTitle = async (entryId: string, newTitle: string) => {
@@ -1718,7 +1760,73 @@ export default function App() {
         onResolveEvent={handleResolveEvent}
         onSetTags={handleContextMenuSetTags}
         availableTags={availableTags}
+        onEditTimestamps={handleOpenTimestampsPopover}
       />
+
+      {timestampsPopover && (
+        <TimestampsPopover
+          isOpen
+          createdAt={timestampsPopover.item.createdAt}
+          scheduledAt={
+            timestampsPopover.item.scheduledAt || timestampsPopover.item.startAt
+          }
+          completedAt={timestampsPopover.item.completedAt}
+          showScheduled={
+            // task/event always; log/note only when a value exists; real events hide
+            timestampsPopover.item.type === "task" ||
+            timestampsPopover.item.type === "event" ||
+            (timestampsPopover.item.type === "log" &&
+              !!timestampsPopover.item.scheduledAt) ||
+            (timestampsPopover.item.type === "note" &&
+              !!timestampsPopover.item.scheduledAt)
+          }
+          showCompleted={
+            // task, log, event, and real CalendarEvent all show Completed
+            timestampsPopover.item.type === "task" ||
+            timestampsPopover.item.type === "log" ||
+            timestampsPopover.item.type === "event" ||
+            (timestampsPopover.item.startAt !== undefined &&
+              timestampsPopover.item.type === undefined)
+          }
+          onFieldChange={(field, iso) => {
+            const id = timestampsPopover.item.id;
+            if (!id) return;
+
+            // Real CalendarEvent (no `type`) → write to events store
+            if (
+              timestampsPopover.item.startAt !== undefined &&
+              timestampsPopover.item.type === undefined
+            ) {
+              const existing = events.find((e) => e.id === id);
+              if (!existing) return;
+
+              if (field === "completedAt") {
+                appDb.put("events", {
+                  ...existing,
+                  completedAt: iso ?? undefined,
+                });
+                return;
+              }
+              if (field === "createdAt") {
+                if (!iso) return;
+                appDb.put("events", {
+                  ...existing,
+                  createdAt: iso,
+                  updatedAt: new Date().toISOString(),
+                });
+                return;
+              }
+              // Scheduled is hidden for real events (Start/End in EventForm owns it),
+              // so there's nothing else to write. Bail safely.
+              return;
+            }
+
+            // Timeline entry → dispatch to handleUpdateEntryField
+            handleUpdateEntryField(id, field, iso);
+          }}
+          onClose={() => setTimestampsPopover(null)}
+        />
+      )}
     </div>
   );
 }

@@ -14,6 +14,7 @@ import {
   Trophy,
   CheckCircle2,
   MinusCircle,
+  Clock,
 } from "lucide-react";
 import { TimelineEntry } from "@/types";
 import { TagEditorPanel } from "./TagEditorPanel";
@@ -41,6 +42,7 @@ interface ContextMenuProps {
   ) => void;
   onSetTags?: (item: any, tags: string[]) => void;
   availableTags?: string[];
+  onEditTimestamps?: (item: any) => void;
 }
 
 type Panel = "actions" | "tags";
@@ -64,6 +66,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   onAddTag,
   onDelete,
   onRemoveTag,
+  onEditTimestamps,
   onMarkAchievement,
   onResolveEvent,
   onSetTags,
@@ -134,6 +137,13 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
     item.type === "event" ||
     (item.type === "task" && item.status === "completed");
   const isAlreadyAchievement = item.isAchievement === true;
+
+  const isTimestampEligible =
+    item.type === "task" ||
+    item.type === "log" ||
+    item.type === "note" ||
+    item.type === "event" ||
+    (item.startAt !== undefined && item.type === undefined);
 
   const isFocusOrigin =
     item.source === "focus-anchor" || item.source === "focus-active";
@@ -240,6 +250,20 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
               ? "Unmark Achievement"
               : "Mark as Achievement"}
           </span>
+        </button>
+      )}
+
+      {isTimestampEligible && onEditTimestamps && (
+        <button
+          type="button"
+          onClick={() => {
+            onEditTimestamps(item);
+            onClose();
+          }}
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-hover transition-colors cursor-pointer text-secondary font-medium"
+        >
+          <Clock className="w-3.5 h-3.5 text-info" />
+          <span>Edit Timestamps</span>
         </button>
       )}
 
@@ -382,6 +406,20 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
                 ? "Unmark Achievement"
                 : "Mark as Achievement"}
             </span>
+          </button>
+        )}
+
+        {isTimestampEligible && onEditTimestamps && (
+          <button
+            type="button"
+            onClick={() => {
+              onEditTimestamps(item);
+              onClose();
+            }}
+            className="w-full flex items-center gap-3 py-2.5 px-2 text-sm font-medium hover:bg-hover rounded-xl transition-colors"
+          >
+            <Clock className={`w-4 h-4 ${ICON_COLOR.neutral}`} />
+            <span>Edit Timestamps</span>
           </button>
         )}
       </div>
