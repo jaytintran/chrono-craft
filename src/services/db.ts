@@ -31,6 +31,24 @@ type StoreName =
   | "scratchpad"
   | "settings";
 
+/**
+ * Stores whose records carry an `updatedAt` field. `put` will stamp it
+ * automatically unless the caller passes `{ raw: true }`. Excludes
+ * `settings` (keyed store, no per-record updatedAt) and any future
+ * append-only log stores.
+ */
+const STORES_WITH_UPDATED_AT: ReadonlySet<StoreName> = new Set([
+  "entries",
+  "notes",
+  "events",
+  "habits",
+  "habit_logs",
+  "lists",
+  "list_items",
+  "custom_tabs",
+  "scratchpad",
+]);
+
 class ChronoDB {
   private dbPromise: Promise<IDBDatabase> | null = null;
   private listeners: Set<() => void> = new Set();
@@ -170,13 +188,37 @@ class ChronoDB {
     });
   }
 
-  // Generic Put (Create or Update)
-  public async put<T>(storeName: StoreName, value: T): Promise<void> {
+  /**
+   * Generic Put (Create or Update).
+   *
+   * By default, records in stores that carry an `updatedAt` field get a
+   * fresh timestamp on every write. This is required for the sync engine's
+   * last-write-wins merge to see local mutations as "newer" than the remote
+   * copy. Pass `{ raw: true }` to bypass stamping — used by mergeSnapshot
+   * and any other flow that must preserve a record's historical timestamp
+   * (e.g. restoring a backup).
+   */
+  public async put<T>(
+    storeName: StoreName,
+    value: T,
+    opts?: { raw?: boolean },
+  ): Promise<void> {
     const db = await this.init();
+
+    const shouldStamp =
+      !opts?.raw &&
+      STORES_WITH_UPDATED_AT.has(storeName) &&
+      value !== null &&
+      typeof value === "object";
+
+    const record = shouldStamp
+      ? { ...(value as any), updatedAt: new Date().toISOString() }
+      : value;
+
     return new Promise((resolve, reject) => {
       const tx = db.transaction(storeName, "readwrite");
       const store = tx.objectStore(storeName);
-      const req = store.put(value);
+      const req = store.put(record);
       req.onsuccess = () => {
         resolve();
         this.notify();

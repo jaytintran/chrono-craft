@@ -385,6 +385,7 @@ export default function App() {
       ...entry,
       status: isNowCompleted ? "completed" : "pending",
       completedAt: isNowCompleted ? new Date().toISOString() : undefined,
+      updatedAt: new Date().toISOString(),
     };
     await appDb.put("entries", updated);
   };

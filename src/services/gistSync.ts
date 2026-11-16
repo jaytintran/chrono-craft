@@ -210,7 +210,7 @@ async function mergeSnapshot(
 
       // New record — insert as-is (whether live or a tombstone)
       if (!localRecord) {
-        await appDb.put(storeName as any, remoteRecord);
+        await appDb.put(storeName as any, remoteRecord, { raw: true });
         pulled++;
         continue;
       }
@@ -228,7 +228,7 @@ async function mergeSnapshot(
         tombConflict ||
         (remoteIsTomb && remoteT >= localT)
       ) {
-        await appDb.put(storeName as any, remoteRecord);
+        await appDb.put(storeName as any, remoteRecord, { raw: true });
         pulled++;
       }
     }
