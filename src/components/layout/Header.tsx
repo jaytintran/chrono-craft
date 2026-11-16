@@ -65,6 +65,7 @@ interface HeaderProps {
   lastSyncResult: string | null;
   onGistPush: () => Promise<void> | void;
   onGistPull: () => Promise<void> | void;
+  hasUnsyncedChanges: boolean;
 }
 
 interface SyncControlProps {
@@ -75,6 +76,7 @@ interface SyncControlProps {
   onPull: () => Promise<void> | void;
   onOpenSettings: () => void;
   compact?: boolean;
+  hasUnsyncedChanges: boolean;
 }
 
 const SyncControl: React.FC<SyncControlProps> = ({
@@ -84,6 +86,7 @@ const SyncControl: React.FC<SyncControlProps> = ({
   onPush,
   onPull,
   onOpenSettings,
+  hasUnsyncedChanges,
   compact = false,
 }) => {
   const state = getSyncState(settings, lastSyncResult);
@@ -144,12 +147,24 @@ const SyncControl: React.FC<SyncControlProps> = ({
           type="button"
           disabled={isSyncing}
           onClick={() => onPush()}
-          title="Push local state to Gist"
-          className={`flex items-center gap-1 rounded-md md:border md:border-soft md:bg-surface text-secondary hover:bg-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer ${
+          title={
+            hasUnsyncedChanges
+              ? "You have unsynced local changes — click to push"
+              : "Push local state to Gist"
+          }
+          className={`relative flex items-center gap-1 rounded-md md:border transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+            hasUnsyncedChanges
+              ? "md:border-accent/50 md:bg-accent/10 text-accent hover:bg-accent/15 animate-pulse"
+              : "md:border-soft md:bg-surface text-secondary hover:bg-hover"
+          } ${
             compact ? "px-1.5 py-0.5 text-[10px]" : "px-2 py-1 text-[10px]"
           } font-semibold uppercase tracking-wider`}
         >
-          <ArrowUpFromLine className="w-3 h-3 text-accent" />
+          <ArrowUpFromLine
+            className={`w-3 h-3 ${
+              hasUnsyncedChanges ? "text-accent" : "text-accent"
+            }`}
+          />
           <span>Push</span>
         </button>
 
@@ -187,6 +202,7 @@ export const Header: React.FC<HeaderProps> = ({
   lastSyncResult,
   onGistPush,
   onGistPull,
+  hasUnsyncedChanges,
 }) => {
   const viewOptions: Array<{
     id: ActiveView;
@@ -252,6 +268,7 @@ export const Header: React.FC<HeaderProps> = ({
           onPull={onGistPull}
           onOpenSettings={onOpenGistSettings}
           compact
+          hasUnsyncedChanges
         />
       </div>
 
@@ -384,6 +401,7 @@ export const Header: React.FC<HeaderProps> = ({
             onPush={onGistPush}
             onPull={onGistPull}
             onOpenSettings={onOpenGistSettings}
+            hasUnsyncedChanges
           />
 
           {/* Desktop: full view-button; Mobile: icon-only (Settings lives in mobile tab strip) */}

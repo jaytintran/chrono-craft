@@ -1473,6 +1473,51 @@ export default function App() {
     return out;
   }, [listItems]);
 
+  // True when any synced record has been touched more recently than the
+  // last successful push/pull. Requires `gistSync.lastSyncedAt` to be set;
+  // otherwise treat everything as "already in sync" (first push needed,
+  // but that's handled by the "Set up sync" chip, not this indicator).
+  const hasUnsyncedChanges = React.useMemo(() => {
+    const lastAt = settings.gistSync?.lastSyncedAt;
+    if (!lastAt) return false;
+    const lastMs = new Date(lastAt).getTime();
+    if (isNaN(lastMs)) return false;
+
+    // Collect every synced record's most-recent touch time.
+    const stores: Array<Array<{ updatedAt?: string; deletedAt?: string }>> = [
+      entries,
+      notes,
+      events,
+      habits,
+      habitLogs,
+      lists,
+      listItems,
+      customTabs,
+      scratchpadCards,
+    ];
+
+    for (const store of stores) {
+      for (const r of store) {
+        const t = r.deletedAt ?? r.updatedAt;
+        if (!t) continue;
+        const ms = new Date(t).getTime();
+        if (!isNaN(ms) && ms > lastMs) return true;
+      }
+    }
+    return false;
+  }, [
+    entries,
+    notes,
+    events,
+    habits,
+    habitLogs,
+    lists,
+    listItems,
+    customTabs,
+    scratchpadCards,
+    settings.gistSync?.lastSyncedAt,
+  ]);
+
   return (
     <div className="flex flex-col h-[100dvh] w-full bg-app text-primary antialiased overflow-hidden transition-colors selection:bg-accent/30 selection:text-accent">
       {/* 1. Global Header Navigation */}
@@ -1490,6 +1535,7 @@ export default function App() {
         lastSyncResult={lastSyncResult}
         onGistPush={handleGistPush}
         onGistPull={handleGistPull}
+        hasUnsyncedChanges={hasUnsyncedChanges}
       />
       {/* 2. Workspace Body: Desktop Sidebar + Main Canvas */}
       <div className="flex-1 flex overflow-hidden">
