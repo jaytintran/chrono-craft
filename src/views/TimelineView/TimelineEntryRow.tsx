@@ -14,6 +14,7 @@ import {
   MoreVertical,
   Minus,
   Calendar,
+  Inbox,
 } from "lucide-react";
 import { TimelineEntry, TimelineDisplayMode } from "../../types";
 import { InlineTitle } from "../../components/ui/InlineTitle";
@@ -48,6 +49,12 @@ interface TimelineEntryRowProps {
     iso: string,
     position: { x: number; y: number },
   ) => void;
+  onOpenChipTimePicker?: (
+    entryId: string,
+    field: "createdAt" | "scheduledAt" | "completedAt",
+    iso: string,
+    position: { x: number; y: number },
+  ) => void;
   onOpenLogDetail?: (logId: string) => void;
   onOpenTaskDetail?: (entryId: string) => void;
   onUpdateEntryDate?: (entryId: string, newIso: string) => Promise<void>;
@@ -68,6 +75,7 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
   onUpdateEntryDate,
   onOpenLogDetail,
   onOpenTaskDetail,
+  onOpenChipTimePicker,
 }) => {
   const entry = item.originalEntry;
 
@@ -189,10 +197,22 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
     (entry as any).content ||
     "";
 
+  const formatTimestampChip = (isoString?: string) => {
+    if (!isoString) return "";
+    const d = new Date(isoString);
+    return d.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+  };
   const formatTimestamp = (isoString?: string) => {
     if (!isoString) return "";
     const d = new Date(isoString);
-    return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    return d.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   const formatCreatedAt = (iso?: string) => {
@@ -201,6 +221,23 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
     const dd = String(d.getDate()).padStart(2, "0");
     const mm = String(d.getMonth() + 1).padStart(2, "0");
     return `${dd}/${mm} · ${formatTimestamp(iso)}`;
+  };
+
+  // Chip anchor: scheduled → completed → created.
+  const getChipIso = (): string | undefined =>
+    entry.scheduledAt || entry.completedAt || entry.createdAt;
+
+  // Chip anchor + which field the chip is actually reflecting.
+  const getChip = (): {
+    field: "createdAt" | "scheduledAt" | "completedAt";
+    iso: string;
+  } | null => {
+    if (entry.scheduledAt)
+      return { field: "scheduledAt", iso: entry.scheduledAt };
+    if (entry.completedAt)
+      return { field: "completedAt", iso: entry.completedAt };
+    if (entry.createdAt) return { field: "createdAt", iso: entry.createdAt };
+    return null;
   };
 
   const getElapsedDuration = (startIso: string, endIso: string) => {
@@ -349,6 +386,14 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
           isContainedInBlock ? "ml-2 pl-4 border-l-2 border-accent/30" : ""
         }`}
       >
+        {getChipIso() && (
+          <span
+            className="relative z-10 shrink-0 px-1.5 py-0.5 rounded-md bg-sunken border border-soft text-[10px] font-mono tabular-nums text-secondary"
+            title={new Date(getChipIso()!).toLocaleString()}
+          >
+            {formatTimestamp(getChipIso())}
+          </span>
+        )}
         <button
           type="button"
           onClick={() => {
@@ -465,6 +510,42 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
         isContainedInBlock ? "ml-3 pl-4 border-l-2 border-accent/30" : ""
       }`}
     >
+      {/* Time chip — anchors the row visually on the spine */}
+      {(() => {
+        const chip = getChip();
+        if (!chip) return null;
+        const isEditable = !!onOpenChipTimePicker;
+        if (!isEditable) {
+          return (
+            <span
+              className="z-10 shrink-0 w-5 self-start mt-3.25 px-1 py-0.5 text-[10px] font-mono tabular-nums text-secondary"
+              title={new Date(chip.iso).toLocaleString()}
+            >
+              {formatTimestampChip(chip.iso)}
+            </span>
+          );
+        }
+        return (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              const rect = (
+                e.currentTarget as HTMLElement
+              ).getBoundingClientRect();
+              onOpenChipTimePicker!(entry.id, chip.field, chip.iso, {
+                x: rect.left - 100,
+                y: rect.bottom + 6,
+              });
+            }}
+            title={`${new Date(chip.iso).toLocaleString()} — click to edit`}
+            className="z-10 shrink-0 w-5 self-start mt-3.25 px-1 py-0.5 text-[10px] font-mono tabular-nums text-secondary hover:text-accent rounded-md transition-colors cursor-pointer"
+          >
+            {formatTimestampChip(chip.iso)}
+          </button>
+        );
+      })()}
+
       <button
         type="button"
         onClick={() => {
@@ -513,51 +594,69 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
                 }`}
               />
             </div>
+
+            {/* Time Metadata Chips of The Row  */}
             <div className="flex flex-wrap max-sm:text-[10px] items-center gap-2 max-sm:gap-0.5 max-sm:tracking-tight text-xs text-secondary font-mono">
+              {/* Created — always shown (unless it's a log, which already
+                  treats createdAt as "At" below) */}
+              {!isLog && entry.createdAt && (
+                <>
+                  <span className="flex gap-2 items-center">
+                    <Inbox className="w-3 h-3 text-info" />
+                    <span className="text-secondary tabular-nums">
+                      {formatTimestamp(entry.createdAt)}
+                    </span>
+                  </span>
+                </>
+              )}
+
+              {/* Scheduled — always shown if a value exists, with Done label
+                  falling through to the completed block below */}
               {entry.scheduledAt && (
                 <>
-                  {/* <span className="text-muted">·</span> */}
-                  <span className="flex items-center gap-1 text-info">
-                    {/* <Clock className="w-3 h-3" /> */}
-                    <span>
-                      {isLog ? "At " : "Scheduled "}
-                      {formatTimestamp(entry.scheduledAt)}
-                    </span>
-                  </span>
-                </>
-              )}
-              {isCompleted &&
-                !isLog &&
-                !entry.scheduledAt &&
-                entry.completedAt && (
-                  <>
-                    {/* <span className="text-muted">·</span> */}
-                    <span className="text-success font-medium">
-                      Created {formatTimestamp(entry.createdAt)} · Done{" "}
-                      {formatTimestamp(entry.completedAt)} (
-                      {getElapsedDuration(entry.createdAt, entry.completedAt)})
-                    </span>
-                  </>
-                )}
-              {isCompleted && entry.scheduledAt && entry.completedAt && (
-                <>
                   <span className="text-muted">·</span>
-                  <span className="text-success font-medium tracking-tight">
-                    Done {formatTimestamp(entry.completedAt)}
+                  <span className="flex items-center gap-1 text-info">
+                    <span className="flex gap-2 items-center">
+                      <Calendar className="w-3 h-3 text-info" />
+                      <span className="tabular-nums">
+                        {formatTimestamp(entry.scheduledAt)}
+                      </span>
+                    </span>
                   </span>
                 </>
               )}
-              {!isCompleted && !entry.scheduledAt && entry.createdAt && (
-                <>
-                  {/* <span className="text-muted">·</span> */}
-                  <span>Created {formatTimestamp(entry.createdAt)}</span>
-                </>
-              )}
+
+              {/* Completed — only when present. Duration is appended inline when we have a valid start anchor (scheduled else created). */}
+              {entry.completedAt &&
+                (() => {
+                  const startIso = entry.scheduledAt || entry.createdAt;
+                  return (
+                    <>
+                      <span className="text-muted">·</span>
+                      <span
+                        className={`flex gap-2 items-center ${
+                          isLog ? "text-info" : "text-success font-medium"
+                        }`}
+                      >
+                        <CheckCircle2 className="w-3 h-3 text-base" />
+
+                        <span className="tabular-nums">
+                          {formatTimestamp(entry.completedAt)}
+                        </span>
+                        {startIso && (
+                          <span className="text-muted font-normal">
+                            · {getElapsedDuration(startIso, entry.completedAt)}
+                          </span>
+                        )}
+                      </span>
+                    </>
+                  );
+                })()}
+
               {isLog && entry.createdAt && !entry.scheduledAt && (
                 <>
-                  {/* <span className="text-muted">·</span> */}
-                  <span>
-                    Created{" "}
+                  <span className="flex gap-2 items-center">
+                    <Inbox className="w-3 h-3 text-info" />
                     {toLocalDateKey(new Date(entry.createdAt)) ===
                     selectedDateStr
                       ? formatTimestamp(entry.createdAt)

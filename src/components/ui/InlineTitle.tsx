@@ -79,12 +79,7 @@ export const InlineTitle: React.FC<InlineTitleProps> = ({
       // Wrap instead of truncate so long titles stay fully readable.
       // We strip the caller's truncate class and add wrap-friendly ones.
       return (
-        <span
-          className={`min-w-0 !whitespace-normal !overflow-visible !text-clip break-words ${className.replace(
-            /\btruncate\b/g,
-            "",
-          )}`}
-        >
+        <span className="min-w-0 !whitespace-normal !overflow-visible break-words text-sm">
           {value}
         </span>
       );
@@ -105,7 +100,7 @@ export const InlineTitle: React.FC<InlineTitleProps> = ({
             setEditing(true);
           }
         }}
-        className={`min-w-0 cursor-text rounded px-1 -mx-1 hover:bg-hover transition-colors ${className}`}
+        className={`min-w-0 cursor-pointer border-none focus:outline-none! text-sm ${className}`}
       >
         {value}
       </span>
@@ -135,7 +130,7 @@ export const InlineTitle: React.FC<InlineTitleProps> = ({
           inputRef.current?.blur();
         }
       }}
-      className={`w-full bg-transparent outline-none border-b border-accent/60 px-1 -mx-1 resize-none leading-inherit ${className}`}
+      className={`w-full outline-none px-1 -mx-1 resize-none leading-inherit ${className}`}
       style={{
         alignSelf: "flex-start",
         flexBasis: 0,

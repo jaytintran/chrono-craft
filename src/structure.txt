@@ -18,10 +18,13 @@ C:.
 |   |       LogForm.tsx
 |   |       MetaRow.tsx
 |   |       NoteForm.tsx
+|   |       TaskForm.tsx
+|   |       TimestampRow.tsx
 |   |       TitleInput.tsx
 |   |       types.ts
 |   |       
 |   +---editors
+|   |       CodeBlockLanguage.tsx
 |   |       RichContent.tsx
 |   |       RichTextEditor.tsx
 |   |       SlashCommand.tsx
@@ -33,6 +36,7 @@ C:.
 |   +---menu
 |   |       ContextMenu.tsx
 |   |       TagEditorPanel.tsx
+|   |       TimestampsPopover.tsx
 |   |       
 |   +---modals
 |   |       CreateListModal.tsx
@@ -42,6 +46,7 @@ C:.
 |   |       
 |   \---ui
 |           ConfirmDialog.tsx
+|           DatePickerPopover.tsx
 |           FilterSelect.tsx
 |           InlineTitle.tsx
 |           MultiGroupFilterPopover.tsx
@@ -64,9 +69,15 @@ C:.
 |       
 +---utils
 |       date.ts
+|       highlight.ts
 |       nativeTheme.ts
 |       
 \---views
+    +---AchievementsView
+    |       AchievementRow.tsx
+    |       helpers.ts
+    |       index.tsx
+    |       
     +---EventsView
     |       EventDatePickerModal.tsx
     |       index.tsx

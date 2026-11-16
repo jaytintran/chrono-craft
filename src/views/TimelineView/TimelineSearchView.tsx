@@ -55,6 +55,12 @@ interface TimelineSearchViewProps {
   ) => void;
   onUpdateEntryDate?: (entryId: string, newIso: string) => Promise<void>;
   onOpenTaskDetail?: (entryId: string) => void;
+  onOpenChipTimePicker?: (
+    entryId: string,
+    field: "createdAt" | "scheduledAt" | "completedAt",
+    iso: string,
+    position: { x: number; y: number },
+  ) => void;
 }
 
 export const TimelineSearchView: React.FC<TimelineSearchViewProps> = ({
@@ -73,6 +79,7 @@ export const TimelineSearchView: React.FC<TimelineSearchViewProps> = ({
   onUpdateEntryDate,
   onOpenLogDetail,
   onOpenTaskDetail,
+  onOpenChipTimePicker,
 }) => {
   const matched = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -210,6 +217,7 @@ export const TimelineSearchView: React.FC<TimelineSearchViewProps> = ({
                       onUpdateEntryDate={onUpdateEntryDate}
                       onOpenLogDetail={onOpenLogDetail}
                       onOpenTaskDetail={onOpenTaskDetail}
+                      onOpenChipTimePicker={onOpenChipTimePicker}
                     />
                   ))}
                 </div>

@@ -1583,6 +1583,7 @@ export default function App() {
                   });
                 }
               }}
+              onUpdateEntryField={handleUpdateEntryField}
             />
           )}
 

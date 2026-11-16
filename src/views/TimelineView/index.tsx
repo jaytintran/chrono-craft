@@ -40,6 +40,11 @@ interface TimelineViewProps {
   onOpenLogDetail?: (logId: string) => void;
   onOpenTaskDetail?: (entryId: string) => void;
   onUpdateEntryDate?: (entryId: string, newIso: string) => Promise<void>;
+  onUpdateEntryField?: (
+    entryId: string,
+    field: "createdAt" | "scheduledAt" | "completedAt",
+    iso: string | null,
+  ) => Promise<void>;
 }
 
 const getEntryAnchorIso = (e: TimelineEntry): string =>
@@ -72,6 +77,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
   onUpdateEntryTitle,
   onOpenLogDetail,
   onOpenTaskDetail,
+  onUpdateEntryField,
 }) => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [filterType, setFilterType] = useState<"all" | EntryType | "habit">(
@@ -87,6 +93,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
     entryId: string;
     iso: string;
     position: { x: number; y: number };
+    field?: "createdAt" | "scheduledAt" | "completedAt";
   } | null>(null);
 
   const isSearching = searchQuery.trim().length > 0;
@@ -187,6 +194,13 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
     });
     return items.sort((a, b) => a.sortTime - b.sortTime);
   }, [dayEntries, activeTimeBlocks]);
+
+  const openChipTimePicker = (
+    entryId: string,
+    field: "createdAt" | "scheduledAt" | "completedAt",
+    iso: string,
+    position: { x: number; y: number },
+  ) => setTimePickerTarget({ entryId, iso, position, field });
 
   // Keyboard: "/" or Cmd/Ctrl+K focuses search; Esc exits search
   useEffect(() => {
@@ -324,6 +338,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
             onUpdateEntryDate={onUpdateEntryDate}
             onOpenLogDetail={onOpenLogDetail}
             onOpenTaskDetail={onOpenTaskDetail}
+            onOpenChipTimePicker={openChipTimePicker}
           />
         ) : (
           <div className="max-w-6xl mx-auto">
@@ -393,7 +408,9 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
               )}
 
             <div className="relative pt-2">
-              <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-accent/60 via-soft to-transparent" />
+              {processedItems.length !== 0 && (
+                <div className="absolute left-15 top-0 bottom-0 w-0.5 bg-accent/60 via-soft to-transparent" />
+              )}
               {processedItems.length === 0 ? (
                 <div className="relative pl-14 py-8 text-center text-xs text-muted">
                   <div className="p-8 rounded-2xl border border-dashed border-soft bg-raised/40">
@@ -429,6 +446,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
                       onUpdateEntryDate={onUpdateEntryDate}
                       onOpenLogDetail={onOpenLogDetail}
                       onOpenTaskDetail={onOpenTaskDetail}
+                      onOpenChipTimePicker={openChipTimePicker}
                     />
                   ))}
                 </div>
@@ -482,7 +500,15 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
           position={timePickerTarget.position}
           onClose={() => setTimePickerTarget(null)}
           onSave={(iso) => {
-            onUpdateEntryTime?.(timePickerTarget.entryId, iso);
+            if (timePickerTarget.field) {
+              onUpdateEntryField?.(
+                timePickerTarget.entryId,
+                timePickerTarget.field,
+                iso,
+              );
+            } else {
+              onUpdateEntryTime?.(timePickerTarget.entryId, iso);
+            }
             setTimePickerTarget(null);
           }}
         />

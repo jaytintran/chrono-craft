@@ -213,7 +213,7 @@ export const TodayTab: React.FC<TodayTabProps> = ({
                 }}
                 className="group flex items-center justify-between p-3.5 rounded-xl bg-raised border border-soft hover:border-info/40 transition-all shadow-xs"
               >
-                <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div className="flex items-center gap-4 min-w-0 flex-1">
                   <button
                     type="button"
                     onClick={() => onToggleEntryStatus(anchor.id)}
@@ -225,7 +225,7 @@ export const TodayTab: React.FC<TodayTabProps> = ({
                     <InlineTitle
                       value={anchor.title}
                       onSave={(t) => onUpdateEntryTitle?.(anchor.id, t)}
-                      className="text-sm font-semibold text-primary truncate block"
+                      className="text-sm font-semibold text-primary block break-words"
                       allowMobileEdit
                     />
                     {anchor.scheduledAt && (
@@ -349,7 +349,7 @@ export const TodayTab: React.FC<TodayTabProps> = ({
                 }}
                 className="group flex items-center justify-between p-3.5 rounded-xl bg-raised border border-soft hover:border-accent/40 transition-all shadow-xs"
               >
-                <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div className="flex items-start gap-3 min-w-0 flex-1">
                   <button
                     type="button"
                     onClick={() => onToggleEntryStatus(task.id)}
@@ -362,7 +362,7 @@ export const TodayTab: React.FC<TodayTabProps> = ({
                     <InlineTitle
                       value={task.title}
                       onSave={(t) => onUpdateEntryTitle?.(task.id, t)}
-                      className="text-sm font-semibold text-primary truncate block"
+                      className="text-sm font-semibold text-primary block break-words"
                       allowMobileEdit
                     />
                     {task.tags.length > 0 && (
