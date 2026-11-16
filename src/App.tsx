@@ -75,6 +75,10 @@ export default function App() {
   // Gist Sync State
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncResult, setLastSyncResult] = useState<string | null>(null);
+  // The moment the most recent successful push/pull completed. Used by the
+  // `hasUnsyncedChanges` memo as a faster signal than `settings.gistSync.lastSyncedAt`
+  // (which only arrives after the async settings reload finishes).
+  const [lastSyncAttemptMs, setLastSyncAttemptMs] = useState(0);
   // Auto-pull coordination
   const hiddenSinceRef = useRef<number | null>(null);
   const pendingAutoPullRef = useRef(false);
@@ -173,6 +177,8 @@ export default function App() {
           lastSyncedAt: new Date().toISOString(),
         },
       });
+      setLastSyncAttemptMs(Date.now());
+
       if (pulled > 0)
         setLastSyncResult(`Pulled ${pulled} new/updated records.`);
     } catch (err: any) {
@@ -1332,6 +1338,7 @@ export default function App() {
           lastSyncedAt: new Date().toISOString(),
         },
       });
+      setLastSyncAttemptMs(Date.now());
       setLastSyncResult(
         `Synced. ${result.pulled} pulled, ${result.pushed} pushed.`,
       );
@@ -1369,7 +1376,7 @@ export default function App() {
           lastSyncedAt: new Date().toISOString(),
         },
       });
-
+      setLastSyncAttemptMs(Date.now());
       setLastSyncResult(`Pushed ${pushed} records to Gist.`);
     } catch (err: any) {
       setLastSyncResult(`Push failed: ${err?.message ?? String(err)}`);
@@ -1404,7 +1411,7 @@ export default function App() {
           lastSyncedAt: new Date().toISOString(),
         },
       });
-
+      setLastSyncAttemptMs(Date.now());
       setLastSyncResult(`Pulled ${pulled} new/updated records from Gist.`);
       await refreshData();
     } catch (err: any) {
@@ -1480,10 +1487,15 @@ export default function App() {
   const hasUnsyncedChanges = React.useMemo(() => {
     const lastAt = settings.gistSync?.lastSyncedAt;
     if (!lastAt) return false;
-    const lastMs = new Date(lastAt).getTime();
+    let lastMs = new Date(lastAt).getTime();
     if (isNaN(lastMs)) return false;
 
-    // Collect every synced record's most-recent touch time.
+    // A push/pull just completed but the async settings reload might not
+    // have reached React state yet. Treat the moment of completion as the
+    // effective "last synced" cutoff so the indicator doesn't flicker back
+    // on for a render or two.
+    if (lastSyncAttemptMs > lastMs) lastMs = lastSyncAttemptMs;
+
     const stores: Array<Array<{ updatedAt?: string; deletedAt?: string }>> = [
       entries,
       notes,
@@ -1516,6 +1528,7 @@ export default function App() {
     customTabs,
     scratchpadCards,
     settings.gistSync?.lastSyncedAt,
+    lastSyncAttemptMs,
   ]);
 
   return (

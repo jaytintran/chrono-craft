@@ -153,7 +153,7 @@ const SyncControl: React.FC<SyncControlProps> = ({
               : "Push local state to Gist"
           }
           className={`relative flex items-center gap-1 rounded-md md:border transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
-            hasUnsyncedChanges
+            hasUnsyncedChanges && !isSyncing
               ? "md:border-accent/50 md:bg-accent/10 text-accent hover:bg-accent/15 animate-pulse"
               : "md:border-soft md:bg-surface text-secondary hover:bg-hover"
           } ${
