@@ -268,7 +268,7 @@ export const Header: React.FC<HeaderProps> = ({
           onPull={onGistPull}
           onOpenSettings={onOpenGistSettings}
           compact
-          hasUnsyncedChanges
+          hasUnsyncedChanges={hasUnsyncedChanges}
         />
       </div>
 
@@ -401,7 +401,7 @@ export const Header: React.FC<HeaderProps> = ({
             onPush={onGistPush}
             onPull={onGistPull}
             onOpenSettings={onOpenGistSettings}
-            hasUnsyncedChanges
+            hasUnsyncedChanges={hasUnsyncedChanges}
           />
 
           {/* Desktop: full view-button; Mobile: icon-only (Settings lives in mobile tab strip) */}
