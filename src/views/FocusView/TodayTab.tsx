@@ -347,9 +347,9 @@ export const TodayTab: React.FC<TodayTabProps> = ({
                     y: e.clientY,
                   });
                 }}
-                className="group flex items-center justify-between p-3.5 rounded-xl bg-raised border border-soft hover:border-accent/40 transition-all shadow-xs"
+                className="group flex items-center justify-between p-3.5 max-sm:p-1 max-sm:pl-1.5 rounded-xl bg-raised border border-soft hover:border-accent/40 transition-all shadow-xs"
               >
-                <div className="flex items-start gap-3 min-w-0 flex-1">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
                   <button
                     type="button"
                     onClick={() => onToggleEntryStatus(task.id)}
@@ -386,7 +386,7 @@ export const TodayTab: React.FC<TodayTabProps> = ({
                         y: rect.bottom + 4,
                       });
                     }}
-                    className="p-1 text-muted hover:text-primary transition-colors"
+                    className="p-1 text-muted hover:text-primary transition-colors max-sm:hidden"
                   >
                     <MoreVertical className="w-3.5 h-3.5" />
                   </button>
@@ -432,7 +432,10 @@ export const TodayTab: React.FC<TodayTabProps> = ({
               title: parsed.title,
               scheduledAt: parsed.scheduledAt,
               createdAt: now,
-              completedAt: now,
+              // Match the Timeline log path: logs are "completed by existence",
+              // so we don't pre-bake completedAt. If the user later edits the
+              // completed time via the row trigger, handleUpdateEntryField will
+              // write it then.
               status: "completed",
               source: "focus-active",
               tags: parsed.tags,
@@ -539,7 +542,9 @@ export const TodayTab: React.FC<TodayTabProps> = ({
                                   }`}
                                 >
                                   {isLog ? "At " : "Done "}
-                                  {formatTime(done.completedAt)}
+                                  {isLog
+                                    ? formatTime(done.createdAt)
+                                    : formatTime(done.completedAt)}
                                 </span>
                               </div>
                             </div>

@@ -43,8 +43,12 @@ export const InlineTitle: React.FC<InlineTitleProps> = ({
 
   useEffect(() => {
     if (editing) {
-      inputRef.current?.focus();
-      inputRef.current?.select();
+      const el = inputRef.current;
+      if (!el) return;
+      el.focus();
+      // Place caret at the end instead of selecting everything.
+      const len = el.value.length;
+      el.setSelectionRange(len, len);
     }
   }, [editing]);
 

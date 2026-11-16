@@ -3,7 +3,14 @@
  */
 
 import React, { useState } from "react";
-import { Zap, Plus, FileText, Edit2, MoreVertical } from "lucide-react";
+import {
+  Zap,
+  Plus,
+  FileText,
+  Edit2,
+  MoreVertical,
+  ChevronDown,
+} from "lucide-react";
 import {
   AppSettings,
   CustomFocusTab,
@@ -212,18 +219,49 @@ export const FocusView: React.FC<FocusViewProps> = ({
             </span>
           </button>
 
+          {/* Overflow trigger — Option A: full-height pill showing the
+              currently-active custom tab (dot + name + chevron) or "More". */}
           <button
             type="button"
             onClick={() => setMobileTabsOpen((o) => !o)}
             aria-expanded={mobileTabsOpen}
-            aria-label="More focus tabs"
-            className={`w-12 flex items-center justify-center border-b-2 transition-all ${
+            aria-label={
               currentCustomTab
-                ? "border-accent text-accent"
+                ? `Custom tabs — current: ${currentCustomTab.name}`
+                : "More focus tabs"
+            }
+            className={`flex-1 flex items-center justify-center gap-1.5 py-3 px-2 text-xs font-semibold border-b-2 transition-all ${
+              currentCustomTab
+                ? "border-accent text-accent font-bold"
                 : "border-transparent text-secondary"
             }`}
           >
-            <MoreVertical className="w-4 h-4" />
+            {currentCustomTab ? (
+              <>
+                <span
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ backgroundColor: currentCustomTab.bgColor }}
+                />
+                <span className="truncate max-w-[80px]">
+                  {currentCustomTab.name}
+                </span>
+                <ChevronDown
+                  className={`w-3.5 h-3.5 shrink-0 transition-transform ${
+                    mobileTabsOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </>
+            ) : (
+              <>
+                <MoreVertical className="w-4 h-4 shrink-0" />
+                <span>More</span>
+                {customTabs.length > 0 && (
+                  <span className="font-mono text-[10px] opacity-70">
+                    {customTabs.length}
+                  </span>
+                )}
+              </>
+            )}
           </button>
         </div>
       </div>

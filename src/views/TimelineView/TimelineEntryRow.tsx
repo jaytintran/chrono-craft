@@ -656,7 +656,16 @@ export const TimelineEntryRow: React.FC<TimelineEntryRowProps> = ({
               {isLog && entry.createdAt && !entry.scheduledAt && (
                 <>
                   <span className="flex gap-2 items-center">
-                    <Inbox className="w-3 h-3 text-info" />
+                    {entry.source === "focus-active" ? (
+                      <>
+                        {/* <span className="italic text-xs text-muted">
+                          Completed from the Focus View
+                        </span> */}
+                        <CheckCircle2 className="w-3 h-3 text-success" />
+                      </>
+                    ) : (
+                      <Inbox className="w-3 h-3 text-info" />
+                    )}
                     {toLocalDateKey(new Date(entry.createdAt)) ===
                     selectedDateStr
                       ? formatTimestamp(entry.createdAt)
